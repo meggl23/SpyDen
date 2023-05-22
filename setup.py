@@ -13,10 +13,10 @@ setup(
         'torch==1.13.1',
         'torchvision==0.14.1',
         'tifffile',
-        'opencv',
-        'pyqt',
+        'opencv-python',
+        'PyQt5',
         'pyqt5-sip'
-    ]
+    ],
     author='Maximilian Eggl',
     author_email='maximilian.eggl@uni-mainz.de',
     description='Analyse spines and dendrites',
