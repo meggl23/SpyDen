@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='spyne',
-    version='0.0.1',
+    version='0.0.2',
     packages=find_packages(),
     install_requires=[
         'matplotlib',
@@ -16,12 +16,7 @@ setup(
         'opencv',
         'pyqt',
         'pyqt5-sip'
-    ],
-    entry_points={
-        'console_scripts': [
-            'spyne = to_pyqt:main'
-        ]
-    },
+    ]
     author='Maximilian Eggl',
     author_email='maximilian.eggl@uni-mainz.de',
     description='Analyse spines and dendrites',
