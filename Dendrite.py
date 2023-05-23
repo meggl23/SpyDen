@@ -70,7 +70,6 @@ class Dendrite:
             self.downsampled_medial_axis = downsampled_medial_axis
             self.length = length
             self.medial_axis = self.downsampled_medial_axis
-            print('here 3')
             x, y = self.medial_axis[:, 0], self.medial_axis[:, 1]
             Tx, Ty, Hx, Hy, T, H = curvature_polygon(x, y)
             H = H / len(H)
@@ -147,6 +146,15 @@ class Dendrite:
         mask = np.zeros(shape=self.Morphologie.shape)
 
         self.dend_stat = np.zeros(shape= (len(smoothed_all_pts), 5))
+        if(self.SimVars.multitime_flag):
+            Snaps = SimVars.Snapshots
+        else:
+            Snaps = 1
+        if(self.SimVars.multiwindow_flag):
+            Chans = SimVars.Channels
+        else:
+            Chans = 1
+        self.dend_lumin = np.zeros(shape= (len(smoothed_all_pts), Snaps,Chans))
         for pdx, p in enumerate(smoothed_all_pts):
             self.dend_stat[pdx, 0] = p[1]
             self.dend_stat[pdx, 1] = p[0]
@@ -164,6 +172,9 @@ class Dendrite:
                 shape=self.Morphologie.shape,
             )
             mask[rr, cc] = 1
+            for i in range(Snaps):
+                for j in range(Chans):
+                    self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
 
         gaussian_mask = (gaussian_filter(input=mask, sigma=4) >= np.mean(mask)).astype(np.uint8)
         self.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)

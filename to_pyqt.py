@@ -257,8 +257,8 @@ class DataReadWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         self.setWindowIcon(QIcon(QPixmap("brain.png")))
-        self.grid = QGridLayout(self)
-        form_layout = QFormLayout(self)
+        self.grid = QGridLayout()
+        self.setLayout(self.grid)  # Set the grid layout for DataReadWindow
 
         self.mpl = MyPaintWidget(self.tiff_Arr[0, 0, :, :], self)
 
@@ -278,7 +278,6 @@ class DataReadWindow(QWidget):
         self.cell = QLineEdit(self)
         self.cell.setEnabled(False)
         self.cell.editingFinished.connect(lambda: self.handle_editing_finished(0))
-        form_layout.addRow("cell", self.cell)
         self.grid.addWidget(self.cell, 1, 1, 1, 1)
         self.grid.addWidget(QLabel("Filename:"), 1, 0, 1, 1)
 
@@ -574,7 +573,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.dend_width_slider, 5, 3, 1, 6)
         self.dend_width_slider.setMinimum(1)
         self.dend_width_slider.setMaximum(10)
-        self.dend_width_slider.setValue(2.5)
+        self.dend_width_slider.setValue(3)
         self.dend_width_slider.singleStep()
         self.dend_width_counter = QLabel(str(self.dend_width_slider.value()))
         self.grid.addWidget(self.dend_width_counter, 5, 9, 1, 1)
@@ -710,14 +709,16 @@ class DataReadWindow(QWidget):
         Returns: None
         """
 
-        Dend_Stat_Dir = Dend_Dir + "Dend_Stat"+str(i)+".npy"
+        Dend_Struct_Dir = Dend_Dir + "Dend_Struct"+str(i)+".npy"
+        Dend_Stat_Dir = Dend_Dir + "Dend_Stats"+str(i)+".npy"
         Dend_Save_Dir = Dend_Dir + "Dendrite"+str(i)+".npy"
         Dend_Mask_Dir = Dend_Dir + "/Mask_dend"+str(i)+".png"
         np.save(Dend_Save_Dir, Dend.control_points)
         try:
             dend_mask = Dend.get_dendritic_surface_matrix() * 255
             cv.imwrite(Dend_Mask_Dir, dend_mask)
-            np.save(Dend_Stat_Dir, Dend.dend_stat)
+            np.save(Dend_Struct_Dir, Dend.dend_stat)
+            np.save(Dend_Stat_Dir, Dend.dend_lumin)
         except:
             pass
         return None
@@ -1954,7 +1955,6 @@ class DirStructWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        super().__init__()
         self.title = "Data Read Window"
         self.left = 100
         self.top = 100
@@ -1969,8 +1969,6 @@ class DirStructWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         self.grid = QGridLayout(self)
-        form_layout = QFormLayout(self)
-
         # path button
         self.sourcepath_button = QPushButton(self)
         self.sourcepath_button.setText("Select source path!")
@@ -2185,10 +2183,13 @@ class MainWindow(QWidget):
         self.data_read.show()
         self.read_data_button.setChecked(False)
 
-
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
     app.setWindowIcon(QIcon(QPixmap("brain.png")))
     window = MainWindow()
     window.show()
+
     sys.exit(app.exec_())
+
+if __name__ == "__main__":
+    main()

@@ -375,29 +375,55 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
         Snaps = SimVars.Snapshots
     else:
         Snaps = 1
-    if(SimVars.Mode=="Luminosity" or Snaps==1):
-        for S in SynArr:
-            frame.set_status_message.setText(frame.set_status_message.text()+'.')
-            for i in range(SimVars.Channels):
-                Mean,Area,Max,Min,RawIntDen,IntDen,local_bg = MeasureShape_and_BG(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
-                S.max.append(Max)
-                S.min.append(Min)
-                S.RawIntDen.append(RawIntDen)
-                S.IntDen.append(IntDen)
-                S.mean.append(Mean)
-                S.local_bg.append(local_bg)
-            S.area.append(Area[0])
+    if(SimVars.multiwindow_flag):
+        Chans = SimVars.Channels
     else:
-        for S in SynArr:
-            frame.set_status_message.setText(frame.set_status_message.text()+'.')
-            for i in range(SimVars.Channels):
+        Chans = 1
+    if(Chans>1):
+        if(SimVars.Mode=="Luminosity" or Snaps==1):
+            for S in SynArr:
+                frame.set_status_message.setText(frame.set_status_message.text()+'.')
+                for i in range(SimVars.Channels):
+                    Mean,Area,Max,Min,RawIntDen,IntDen,local_bg = MeasureShape_and_BG(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
+                    S.max.append(Max)
+                    S.min.append(Min)
+                    S.RawIntDen.append(RawIntDen)
+                    S.IntDen.append(IntDen)
+                    S.mean.append(Mean)
+                    S.local_bg.append(local_bg)
+                S.area.append(Area[0])
+        else:
+            for S in SynArr:
+                frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
                 S.max.append(Max)
                 S.min.append(Mean)
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
-            S.area.append(Area[0])
+                S.area.append(Area[0])
+    else:
+        if(SimVars.Mode=="Luminosity" or Snaps==1):
+            for S in SynArr:
+                frame.set_status_message.setText(frame.set_status_message.text()+'.')
+                Mean,Area,Max,Min,RawIntDen,IntDen,local_bg = MeasureShape_and_BG(S, tiff_Arr[:,SimVars.frame.actual_channel,:,:], SimVars,Snaps)
+                S.max.append(Max)
+                S.min.append(Min)
+                S.RawIntDen.append(RawIntDen)
+                S.IntDen.append(IntDen)
+                S.mean.append(Mean)
+                S.local_bg.append(local_bg)
+                S.area.append(Area[0])
+        else:
+            for S in SynArr:
+                frame.set_status_message.setText(frame.set_status_message.text()+'.')
+                Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,SimVars.frame.actual_channel,:,:], SimVars,Snaps)
+                S.max.append(Max)
+                S.min.append(Mean)
+                S.RawIntDen.append(RawIntDen)
+                S.IntDen.append(IntDen)
+                S.mean.append(Mean)
+                S.area.append(Area[0])
     return 0
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
