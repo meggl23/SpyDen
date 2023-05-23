@@ -147,11 +147,12 @@ class Dendrite:
 
         self.dend_stat = np.zeros(shape= (len(smoothed_all_pts), 5))
         if(self.SimVars.multitime_flag):
-            Snaps = SimVars.Snapshots
+            print('here')
+            Snaps = self.SimVars.Snapshots
         else:
             Snaps = 1
         if(self.SimVars.multiwindow_flag):
-            Chans = SimVars.Channels
+            Chans = self.SimVars.Channels
         else:
             Chans = 1
         self.dend_lumin = np.zeros(shape= (len(smoothed_all_pts), Snaps,Chans))
