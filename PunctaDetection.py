@@ -9,15 +9,13 @@ Created on Mon Nov  8 12:22:20 2021
 import numpy as np
 import os
 from math import sqrt
-import tifffile as tf
 import matplotlib.pyplot as plt
-from skimage import data, img_as_float
-from skimage.color import rgb2gray
 from skimage.feature import blob_dog, blob_log, blob_doh
 
-from os.path import exists
-from skimage.draw import line, polygon, ellipse, disk
-from skimage import morphology
+from skimage.draw import polygon, disk
+
+from PathFinding import GetAllpointsonPath
+
 
 class Puncta:
 
@@ -40,17 +38,14 @@ class PunctaDetection:
     class that holds meta data for puncta detection and methods for puncta stats calculations
     """
 
-    def __init__(self, SimVars, tiff_Arr, somas, dendrites, channels, width=5,dend_thresh=0.75,soma_thresh=0.5):
+    def __init__(self, SimVars, tiff_Arr, somas, dendrites, channels, dend_thresh=0.75,soma_thresh=0.5):
         self.Dir = SimVars.Dir
         self.tiff_Arr = tiff_Arr
-        self.somas = (
-            somas  # should be a dict with name of dendrite as key and polygone as value
-        )
-        self.dendrites = dendrites  # should be a dict with name of dendrite as key and ROIs as values
+        self.somas = somas  
+        self.dendrites = dendrites  
         self.channels = SimVars.Channels
         self.snaps    = SimVars.Snapshots
-        self.scale = SimVars.Unit  # micons/pixel
-        self.width = width / self.scale
+        self.scale = SimVars.Unit  
         self.dend_thresh = dend_thresh
         self.soma_thresh = soma_thresh
 
@@ -121,10 +116,10 @@ class PunctaDetection:
             prev = a
         return dist_from_origin
 
-    def Is_On_Dendrite(self, dendrite_name, dendrite, point, max_dist):
+    def Is_On_Dendrite(self, dendrite, point, max_dist):
         """
             function that checks on which segment of the dendrite the point is present (if)
-            input: dendrite_name,dendrite,point,max_dist
+            input: dendrite,point,max_dist
             output: True/False and scaled distance from the origin of the dendrite
         """
         length_from_origin = 0
@@ -219,9 +214,8 @@ class PunctaDetection:
         soma_img = np.zeros(np.shape(orig_img), "uint8")
         anti_soma = np.ones(np.shape(orig_img), "uint8")
 
-        for i,soma in enumerate(self.somas.keys()):
+        for i,soma_instance in enumerate(self.somas):
             lsm_img = np.zeros(np.shape(orig_img), "uint8")
-            soma_instance = self.somas[soma]
 
             xs = soma_instance[:, 0]
             ys = soma_instance[:, 1]
@@ -265,20 +259,13 @@ class PunctaDetection:
         dendrite_img = np.zeros(np.shape(orig_img), "uint8")
         dilated = np.zeros(np.shape(orig_img), "uint8")
 
-        for i,dendrite in enumerate(self.dendrites.keys()):
+        for i,dendrite_instance in enumerate(self.dendrites):
 
-            dendrite_instance = self.dendrites[dendrite]
-            xs = dendrite_instance[:, 0]
-            ys = dendrite_instance[:, 1]
-            for lk in range(0, len(xs) - 1):
-                rr, cc = line(
-                    int(ys[lk]), int(xs[lk]), int(ys[lk + 1]), int(xs[lk + 1])
-                )
-                dendrite_img[rr, cc] = 1
-            dilated = morphology.dilation(
-                dendrite_img, morphology.disk(radius=self.width)
-            )
+            dilated = dendrite_instance.get_dendritic_surface_matrix()
             dilated = np.multiply(anti_soma, dilated)
+            xy = GetAllpointsonPath(dendrite_instance.control_points)[:, :]
+            xs = xy[:, 0]
+            ys = xy[:, 1]
             ## uncomment if you don't want to repeat dendritic punctas in overlapping dendritic parts
             # anti_soma = np.multiply(anti_soma,1 - dilated)
             dend_img = np.multiply(dilated, orig_img)
@@ -290,7 +277,7 @@ class PunctaDetection:
             for blob in dend_blobs_log:
                 y, x, r = blob
                 on_dendrite, distance_from_origin = self.Is_On_Dendrite(
-                    dendrite, [xs, ys], [x, y], self.width
+                    [xs, ys], [x, y], dendrite_instance.dend_stat[:,2].max()
                 )
                 puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
                 dp = Puncta([x,y],r,puncta_stats,on_dendrite,distance_from_origin,i)

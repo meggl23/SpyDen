@@ -131,7 +131,6 @@ class Dendrite:
         smoothed_all_pts = np.stack((gaussian_y, gaussian_x), axis=1)
         actual_image = self.tiff_arr[self.actual_timestep, self.actual_channel, :, :]
         median = medfilt2d(actual_image, kernel_size=5)
-        print(self.thresh)
         if self.thresh is not False:
             median_thresh = median >= self.thresh
 
@@ -147,7 +146,6 @@ class Dendrite:
 
         self.dend_stat = np.zeros(shape= (len(smoothed_all_pts), 5))
         if(self.SimVars.multitime_flag):
-            print('here')
             Snaps = self.SimVars.Snapshots
         else:
             Snaps = 1

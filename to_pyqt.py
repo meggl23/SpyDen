@@ -564,21 +564,6 @@ class DataReadWindow(QWidget):
         self.puncta_soma_counter = QLabel(str(self.puncta_soma_slider.value()))
         self.grid.addWidget(self.puncta_soma_counter, 4, 9, 1, 1)
 
-
-        # ============= dend_width_slider slider ==================
-        self.dend_width_label = QLabel("Dendrite width")
-        self.grid.addWidget(self.dend_width_label, 5, 2, 1, 1)
-        self.dend_width_slider = QSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.dend_width_slider.setTickPosition(QSlider.TicksBelow)
-        self.grid.addWidget(self.dend_width_slider, 5, 3, 1, 6)
-        self.dend_width_slider.setMinimum(1)
-        self.dend_width_slider.setMaximum(10)
-        self.dend_width_slider.setValue(3)
-        self.dend_width_slider.singleStep()
-        self.dend_width_counter = QLabel(str(self.dend_width_slider.value()))
-        self.grid.addWidget(self.dend_width_counter, 5, 9, 1, 1)
-
-        self.hide_stuff([self.dend_width_label, self.dend_width_counter, self.dend_width_slider])
         self.hide_stuff([self.puncta_soma_label, self.puncta_soma_counter, self.puncta_soma_slider])
         self.hide_stuff([self.puncta_dend_label, self.puncta_dend_counter, self.puncta_dend_slider])
 
@@ -765,20 +750,6 @@ class DataReadWindow(QWidget):
         self.mpl.canvas.draw()    
         return 0
 
-    def dend_width_slider_update(self):
-        """
-        Updates the dendrite width counter and retrieves puncta based on the slider value.
-
-        This method is triggered when the dendrite width slider is moved.
-        It updates the text of the dendrite width counter to reflect the new slider value.
-        It then calls the 'get_puncta' method to retrieve puncta based on the updated slider value.
-
-        Returns:
-            None
-        """
-        self.dend_width_counter.setText(str(self.dend_width_slider.value()))
-        self.get_puncta()
-
     def dend_threshold_slider_update(self):
 
         """
@@ -822,14 +793,13 @@ class DataReadWindow(QWidget):
         self.set_status_message.setText(self.status_msg["11"])
         QCoreApplication.processEvents()
         self.set_status_message.repaint()
-        soma_dict = self.get_soma_polygons()
-        dend_dict = self.get_dends_as_dict()
+        somas = self.get_soma_polygons()
+
 
         soma_thresh = self.puncta_dend_slider.value()/100.0
         dend_thresh = self.puncta_dend_slider.value()/100.0
 
-        half_width = self.dend_width_slider.value()
-        PD = PunctaDetection(self.SimVars,self.tiff_Arr,soma_dict,dend_dict,half_width,dend_thresh,soma_thresh)
+        PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,self.DendArr,dend_thresh,soma_thresh)
         somatic_punctas, dendritic_punctas = PD.GetPunctas()
         self.punctas = [somatic_punctas,dendritic_punctas]
         self.display_puncta()
@@ -838,6 +808,7 @@ class DataReadWindow(QWidget):
 
         MakeButtonActive(self.save_button)
         self.set_status_message.setText("Punctas are available on all snaphshots/channels")
+
     def save_puncta(self):
         """Saves the detected puncta to files.
 
@@ -851,7 +822,6 @@ class DataReadWindow(QWidget):
         puncta_Dir = self.SimVars.Dir + "/Puncta"
         os.makedirs(puncta_Dir, exist_ok=True)
 
-        half_width = self.dend_width_slider.value()
         width_Dir = puncta_Dir+"/dwidth_{}".format(half_width)
         if os.path.exists(puncta_Dir):
             shutil.rmtree(puncta_Dir)
@@ -926,36 +896,18 @@ class DataReadWindow(QWidget):
         The soma dictionary maps a unique identifier to each soma polygon array.
         The resulting soma dictionary is returned.
         """
-        if(self.SimVars.Mode=="Luminosity"):
-            soma_count = 0
-            soma_dict = {}
-            for spdx, sp_arr in enumerate(self.SpineArr):
-                if sp_arr.type == 2:
-                    soma_dict["Soma_{}".format(soma_count)] = np.asarray(sp_arr.points)
-        else:
-            soma_count = 0
-            soma_dict = {}
-            for spdx, sp_arr in enumerate(self.SpineArr):
-                if sp_arr.type == 2:
-                    soma_dict["Soma_{}".format(soma_count)] = np.array(sp_arr.points[0])
-
+        soma_count = 0
+        soma_dict = []
+        for i,R in enumerate(self.roi_interactor_list):
+            if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
+                self.SpineArr[i].points = R.poly.xy.tolist()[:-1]
+                if(self.SpineArr[i].type==2):
+                    soma_dict.append(np.asarray(self.SpineArr[i].points))
+            else:
+                self.SpineArr[i].points[self.actual_timestep] = R.poly.xy.tolist()[:-1]
+                if(self.SpineArr[i].type==2):
+                    soma_dict.append(np.asarray(self.SpineArr[i].points[0]))
         return soma_dict
-
-    def get_dends_as_dict(self):
-
-        """Returns a dictionary of dendrites.
-
-        This method retrieves the dendrite array and converts the control points into a complete medial axis path.
-        The complete medial axis path is added to the dendrite dictionary, which maps a unique identifier to each dendrite path array.
-        The resulting dendrite dictionary is returned.
-        """
-
-        dend_dict = {}
-        for dx,dend in enumerate(self.DendArr):
-            control_points = dend.control_points
-            complete_medial_axis_path = GetAllpointsonPath(control_points)[:, :]
-            dend_dict["dendrite_{}".format(dx)] = complete_medial_axis_path
-        return dend_dict
 
     def save_results(self):
         """Save the results of the evaluation.
@@ -1070,7 +1022,6 @@ class DataReadWindow(QWidget):
                 ("ML Confidence",self.ml_confidence_slider.value()),
                 ("ROI Tolerance",self.tolerance_slider.value()),
                 ("ROI Sigma",self.sigma_slider.value()),
-                ("Dendritic width (puncta)",self.dend_width_slider.value()),
                 ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
                 ("Somatic puncta threshold",self.puncta_soma_slider.value())
                 ]
@@ -1413,7 +1364,6 @@ class DataReadWindow(QWidget):
                 self.ml_confidence_slider.disconnect()
                 self.sigma_slider.disconnect()
                 self.tolerance_slider.disconnect()
-                self.dend_width_slider.disconnect()
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
             except:
@@ -1477,9 +1427,6 @@ class DataReadWindow(QWidget):
                             self.sigma_val = value
                             self.sigma_slider.setValue(value)
                             self.sigma_counter.setText(str(value))
-                        if(key=="Dendritic width (puncta)"):
-                            self.dend_width_slider.setValue(value)
-                            self.dend_width_counter.setText(str(value))
                         if(key=="Dendritic puncta threshold"):
                             self.puncta_dend_slider.setValue(value)
                             self.puncta_dend_counter.setText(str(value))
@@ -1492,7 +1439,6 @@ class DataReadWindow(QWidget):
             self.ml_confidence_slider.valueChanged.connect(self.thresh_NN)
             self.sigma_slider.valueChanged.connect(self.spine_tolerance_sigma)
             self.tolerance_slider.valueChanged.connect(self.spine_tolerance_sigma)
-            self.dend_width_slider.valueChanged.connect(self.dend_width_slider_update)
             self.puncta_soma_slider.valueChanged.connect(self.soma_threshold_slider_update)
             self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
 
@@ -1560,7 +1506,6 @@ class DataReadWindow(QWidget):
 
 
             MakeButtonActive(self.dendritic_width_button)
-            MakeButtonActive(self.measure_puncta_button)
 
             MakeButtonActive(self.spine_button)
 
@@ -1593,6 +1538,7 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
+        MakeButtonInActive(self.measure_puncta_button)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
             self.DendArr = self.DendMeasure.DendArr
@@ -1667,6 +1613,7 @@ class DataReadWindow(QWidget):
         Returns: None
 
         """
+        MakeButtonInActive(self.GetPunctas)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
             self.DendArr = self.DendMeasure.DendArr
@@ -1721,10 +1668,6 @@ class DataReadWindow(QWidget):
             )
         except:
             pass
-        Dend_Dir = self.SimVars.Dir + "Dendrite/"
-        if os.path.exists(Dend_Dir):
-            shutil.rmtree(Dend_Dir)
-        os.mkdir(path=Dend_Dir)
         for i,D in enumerate(self.DendArr):
             D.set_surface_contours(
                 max_neighbours=self.neighbour_slider.value(), sigma=10
@@ -1737,6 +1680,7 @@ class DataReadWindow(QWidget):
             self.mpl.canvas.draw()
 
         MakeButtonActive(self.save_button)
+        MakeButtonActive(self.measure_puncta_button)
         self.dendritic_width_button.setChecked(False)
     
     def medial_axis_eval_handle(self) -> None:
@@ -1875,7 +1819,6 @@ class DataReadWindow(QWidget):
 
         self.hide_stuff([self.puncta_dend_label,self.puncta_dend_slider,self.puncta_dend_counter])
         self.hide_stuff([self.puncta_soma_label,self.puncta_soma_slider,self.puncta_soma_counter])
-        self.hide_stuff([self.dend_width_label,self.dend_width_slider,self.dend_width_counter])
         self.hide_stuff([self.thresh_slider, self.thresh_label])
         self.hide_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label])
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider,
@@ -1886,7 +1829,6 @@ class DataReadWindow(QWidget):
             if(Name=="Puncta"):
                 self.show_stuff([self.puncta_dend_label,self.puncta_dend_slider,self.puncta_dend_counter])
                 self.show_stuff([self.puncta_soma_label,self.puncta_soma_slider,self.puncta_soma_counter])
-                self.show_stuff([self.dend_width_label,self.dend_width_slider,self.dend_width_counter])
             if(Name=="MedAx"):
                 self.show_stuff([self.thresh_slider, self.thresh_label])
             if(Name=="DendWidth"):
