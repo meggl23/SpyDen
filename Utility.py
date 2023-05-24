@@ -48,9 +48,8 @@ def RunNN(Simvars, DendArr, tiff_Arr):
     Training_x = []
     Training_y = []
     d = DendArr
-    len_x = len(tiff_Arr[0, 0, 0, :])
-    len_y = len(tiff_Arr[0, 0, :, 0])
-    tiff_Arr = tiff_Arr[0, 0, :, :]
+    len_x = len(tiff_Arr[0, :])
+    len_y = len(tiff_Arr[ :, 0])
     tiff_Arr = tiff_Arr.reshape(1, len_y, len_x)
     xmin, xmax = max(min(d[:, 1]) - 50, 0), min(max(d[:, 1]) + 50, tiff_Arr.shape[-2])
     ymin, ymax = max(min(d[:, 0]) - 50, 0), min(max(d[:, 0]) + 50, tiff_Arr.shape[-1])

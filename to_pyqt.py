@@ -822,10 +822,9 @@ class DataReadWindow(QWidget):
         puncta_Dir = self.SimVars.Dir + "/Puncta"
         os.makedirs(puncta_Dir, exist_ok=True)
 
-        width_Dir = puncta_Dir+"/dwidth_{}".format(half_width)
         if os.path.exists(puncta_Dir):
             shutil.rmtree(puncta_Dir)
-        os.makedirs(width_Dir,exist_ok=True)
+        os.makedirs(puncta_Dir,exist_ok=True)
 
         dend_th = self.puncta_dend_slider.value()
         soma_th = self.puncta_soma_slider.value()
@@ -834,12 +833,12 @@ class DataReadWindow(QWidget):
         somatic_punctas_flat = [item for sublist in somatic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
         dendritic_punctas_flat =  [item for sublist in dendritic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
         with open(
-            width_Dir + "/soma_puncta.json",
+            puncta_Dir + "/soma_puncta.json",
             "w",
         ) as f:
             json.dump([vars(P) for P in somatic_punctas_flat], f, indent=4)
         with open(
-            width_Dir + "/dend_puncta.json",
+            puncta_Dir + "/dend_puncta.json",
             "w",
         ) as f:
             json.dump([vars(P) for P in dendritic_punctas_flat], f, indent=4)
@@ -1553,7 +1552,7 @@ class DataReadWindow(QWidget):
         val = self.ml_confidence_slider.value() / 10
         self.confidence_counter.setText(str(val))
 
-        points, scores = RunNN(self.SimVars,np.vstack([Dend.control_points for Dend in self.DendArr]), self.tiff_Arr)
+        points, scores = RunNN(self.SimVars,np.vstack([Dend.control_points for Dend in self.DendArr]), self.tiff_Arr[self.actual_timestep,self.actual_channel])
 
         self.SimVars.points_NN = points
         self.SimVars.scores_NN = scores
@@ -1613,7 +1612,7 @@ class DataReadWindow(QWidget):
         Returns: None
 
         """
-        MakeButtonInActive(self.GetPunctas)
+        MakeButtonInActive(self.measure_puncta_button)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
             self.DendArr = self.DendMeasure.DendArr
