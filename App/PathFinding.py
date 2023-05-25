@@ -6,7 +6,7 @@ from scipy.ndimage import gaussian_filter1d
 import torch.nn as nn
 import math as mt
 
-from Utility import *
+from .Utility import *
 
 
 def FindSoma(mesh, start, end, verbose=False, scale=0.114):

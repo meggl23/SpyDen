@@ -1,10 +1,10 @@
-from Utility import *
+from .Utility import *
 from skimage.feature import canny
 from skimage.registration import phase_cross_correlation
 
 import json
 
-from Spine import Synapse
+from .Spine import Synapse
 
 
 def SpineShift(tiff_Arr_small):

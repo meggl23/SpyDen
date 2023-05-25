@@ -14,7 +14,7 @@ from skimage.feature import blob_dog, blob_log, blob_doh
 
 from skimage.draw import polygon, disk
 
-from PathFinding import GetAllpointsonPath
+from .PathFinding import GetAllpointsonPath
 
 
 class Puncta:

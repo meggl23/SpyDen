@@ -4,7 +4,7 @@ from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 from matplotlib.patches import Polygon
 
-from Utility import *
+from .Utility import *
 
 
 class RoiInteractor:

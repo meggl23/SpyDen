@@ -26,6 +26,95 @@ data_transforms = {
     ),
 }
 
+def MakeButtonActive(button,Flag=0):
+    """Sets the given button as active and enables it with custom styles.
+
+    The function sets the given button as active by making it checkable and enabling it.
+    It also applies custom styles to the button based on the provided Flag.
+
+    Args:
+        button (QPushButton): The button to be made active.
+        Flag (int, optional): A flag to determine the custom styles applied to the button.
+            If Flag is 0, the button will have a smaller size and font size.
+            If Flag is non-zero, the button will have a larger size and font size.
+            Defaults to 0.
+
+    Returns:
+        None
+    """
+    if(Flag==0):
+        button.setCheckable(True)
+        button.setStyleSheet(
+            "QPushButton {"
+            "background-color: green;"
+            "font-family: Courier;"
+            "color: white;"
+            "border-style: outset;"
+            "border-radius: 8px;"
+            "border-color: white;"
+            "border-width = 2px;"
+            "font: bold 15px;"
+            "padding: 3px;"
+            "}"
+            "QPushButton:checked {"
+            "background-color: #80c080;"
+            "font-family: Courier;"
+            "color: white;"
+            "border-style: outset;"
+            "border-radius: 8px;"
+            "border-color: white;"
+            "border-width = 2px;"
+            "font: bold 15px;"
+            "padding: 3px;"
+            "}"
+        )
+    else:
+        button.setCheckable(True)
+        button.setStyleSheet(
+            "QPushButton {"
+            "background-color: green;"
+            "font-family: Courier;"
+            "color: white;"
+            "border-style: outset;"
+            "border-radius: 10px;"
+            "border-width = 2px;"
+            "font: bold 30px;"
+            "padding: 30px;"
+            "border-color: white"
+            "}"
+            "QPushButton:checked {"
+            "background-color: #80c080;"
+            "font-family: Courier;"
+            "color: white;"
+            "border-style: outset;"
+            "border-radius: 10px;"
+            "border-width = 2px;"
+            "font: bold 30px;"
+            "padding: 30px;"
+            "border-color: white"
+            "}"
+        )
+
+    button.setEnabled(True)
+
+    
+
+def MakeButtonInActive(button):
+
+    button.setStyleSheet(
+        "background-color: gray;"
+        "font-family: Courier;"
+        "color: white;"
+        "border-style: outset;"
+        "border-radius: 8px;"
+        "border-color: white;"
+        "border-width = 2px;"
+        "font: bold 15px;"
+        "padding: 3px;"
+    )
+
+    button.setEnabled(False)
+    
 
 def RunNN(Simvars, DendArr, tiff_Arr):
     """
@@ -40,6 +129,7 @@ def RunNN(Simvars, DendArr, tiff_Arr):
         Tuple[numpy.ndarray, numpy.ndarray]: Tuple containing predicted points and scores.
 
     """
+    print(Simvars.model)
     model = torch.load(Simvars.model, map_location=torch.device("cpu"))
     model.eval()
     BoxsList = []
