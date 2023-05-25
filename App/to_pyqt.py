@@ -2,14 +2,14 @@ import os
 import shutil
 import glob
 
-from MPL_Widget import *
-from DataRead import *
+from .MPL_Widget import *
+from .DataRead import *
 from matplotlib.widgets import Slider, Button
 
-import GenFolderStruct as GFS
+from . import GenFolderStruct as GFS
 
-from SynapseFuncs import FindShape
-from RoiInteractor import RoiInteractor,RoiInteractor_BG
+from .SynapseFuncs import FindShape
+from .RoiInteractor import RoiInteractor,RoiInteractor_BG
 
 DevMode = False
 
@@ -65,95 +65,6 @@ def handle_exceptions(cls):
             setattr(cls, name, catch_exceptions(method))
     return cls
 
-def MakeButtonActive(button,Flag=0):
-    """Sets the given button as active and enables it with custom styles.
-
-    The function sets the given button as active by making it checkable and enabling it.
-    It also applies custom styles to the button based on the provided Flag.
-
-    Args:
-        button (QPushButton): The button to be made active.
-        Flag (int, optional): A flag to determine the custom styles applied to the button.
-            If Flag is 0, the button will have a smaller size and font size.
-            If Flag is non-zero, the button will have a larger size and font size.
-            Defaults to 0.
-
-    Returns:
-        None
-    """
-    if(Flag==0):
-        button.setCheckable(True)
-        button.setStyleSheet(
-            "QPushButton {"
-            "background-color: green;"
-            "font-family: Courier;"
-            "color: white;"
-            "border-style: outset;"
-            "border-radius: 8px;"
-            "border-color: white;"
-            "border-width = 2px;"
-            "font: bold 15px;"
-            "padding: 3px;"
-            "}"
-            "QPushButton:checked {"
-            "background-color: #80c080;"
-            "font-family: Courier;"
-            "color: white;"
-            "border-style: outset;"
-            "border-radius: 8px;"
-            "border-color: white;"
-            "border-width = 2px;"
-            "font: bold 15px;"
-            "padding: 3px;"
-            "}"
-        )
-    else:
-        button.setCheckable(True)
-        button.setStyleSheet(
-            "QPushButton {"
-            "background-color: green;"
-            "font-family: Courier;"
-            "color: white;"
-            "border-style: outset;"
-            "border-radius: 10px;"
-            "border-width = 2px;"
-            "font: bold 30px;"
-            "padding: 30px;"
-            "border-color: white"
-            "}"
-            "QPushButton:checked {"
-            "background-color: #80c080;"
-            "font-family: Courier;"
-            "color: white;"
-            "border-style: outset;"
-            "border-radius: 10px;"
-            "border-width = 2px;"
-            "font: bold 30px;"
-            "padding: 30px;"
-            "border-color: white"
-            "}"
-        )
-
-    button.setEnabled(True)
-
-    
-
-def MakeButtonInActive(button):
-
-    button.setStyleSheet(
-        "background-color: gray;"
-        "font-family: Courier;"
-        "color: white;"
-        "border-style: outset;"
-        "border-radius: 8px;"
-        "border-color: white;"
-        "border-width = 2px;"
-        "font: bold 15px;"
-        "padding: 3px;"
-    )
-
-    button.setEnabled(False)
-
 
 @handle_exceptions
 class DataReadWindow(QWidget):
@@ -174,8 +85,18 @@ class DataReadWindow(QWidget):
         self.number_channels = self.tiff_Arr.shape[1]
         self.number_timesteps = self.tiff_Arr.shape[0]
         self.actual_timestep = 0
-        self.punctas = {}
+        self.punctas = []
         self.PunctaCalc = False
+
+        code_dir = os.path.dirname(os.path.abspath(__file__))
+        relative_address = "SynapseMLModel"
+        self.NN_path = os.path.join(code_dir, relative_address)
+
+
+        if(os.path.exists(self.NN_path)):
+            self.NN = True
+        else:
+            self.NN = False
 
         self.SimVars = Simulation(0, 0, 0, 0,0,0)
         self.status_msg = {
@@ -379,27 +300,35 @@ class DataReadWindow(QWidget):
         self.spine_button = QPushButton(self)
         self.spine_button.setText("Spine Localization Manually!")
         MakeButtonInActive(self.spine_button)
-        self.grid.addWidget(self.spine_button, 10, 0, 1, 1)
+        self.grid.addWidget(self.spine_button, 10, 0, 1, 2)
         self.spine_button.clicked.connect(self.spine_eval_handle)
+
+        #============= NN spine button ==================
+        self.button_set_NN = QPushButton(self)
+        self.button_set_NN.setText("Set NN! (default)")
+        MakeButtonActive(self.button_set_NN)
+        self.grid.addWidget(self.button_set_NN, 11, 0, 1, 1)
+        self.button_set_NN.clicked.connect(self.set_NN)
 
         #============= NN spine button ==================
         self.spine_button_NN = QPushButton(self)
         self.spine_button_NN.setText("Spine Localization via NN!")
         MakeButtonInActive(self.spine_button_NN)
-        self.grid.addWidget(self.spine_button_NN, 10, 1, 1, 1)
+        self.grid.addWidget(self.spine_button_NN, 11, 1, 1, 1)
         self.spine_button_NN.clicked.connect(self.spine_NN)
+
 
         #============= spine ROI button ==================
         self.spine_button_ROI = QPushButton(self)
         self.spine_button_ROI.setText("Calculate Spine ROI's")
         MakeButtonInActive(self.spine_button_ROI)
-        self.grid.addWidget(self.spine_button_ROI, 11, 0, 1, 1)
+        self.grid.addWidget(self.spine_button_ROI, 12, 0, 1, 1)
         self.spine_button_ROI.clicked.connect(self.spine_ROI_eval)
 
         #============= load ROI button ==================
         self.old_ROI_button = QPushButton(self)
         self.old_ROI_button.setText("Load old ROIs")
-        self.grid.addWidget(self.old_ROI_button, 11, 1, 1, 1)
+        self.grid.addWidget(self.old_ROI_button, 12, 1, 1, 1)
         self.old_ROI_button.clicked.connect(self.old_ROI_eval)
         MakeButtonInActive(self.old_ROI_button)
 
@@ -408,58 +337,58 @@ class DataReadWindow(QWidget):
         self.measure_spine_button = QPushButton(self)
         self.measure_spine_button.setText("Measure ROIs")
         MakeButtonInActive(self.measure_spine_button)
-        self.grid.addWidget(self.measure_spine_button, 12, 1, 1, 1)
+        self.grid.addWidget(self.measure_spine_button, 13, 1, 1, 1)
         self.measure_spine_button.clicked.connect(self.spine_measure)
 
         #============= spine bg button ==================
         self.spine_bg_button = QPushButton(self)
         self.spine_bg_button.setText("Measure local background")
         MakeButtonInActive(self.spine_bg_button)
-        self.grid.addWidget(self.spine_bg_button, 12, 0, 1, 1)
+        self.grid.addWidget(self.spine_bg_button, 13, 0, 1, 1)
         self.spine_bg_button.clicked.connect(self.spine_bg_measure)
 
 
         label = QLabel("Puncta analysis")
         label.setAlignment(Qt.AlignCenter)  # Centers the label horizontally
         label.setStyleSheet("font-size: 18px;")  # Increases the font size
-        self.grid.addWidget(label, 13, 0, 1, 2)
+        self.grid.addWidget(label, 14, 0, 1, 2)
 
         #============= puncta button ==================
         self.measure_puncta_button = QPushButton(self)
         self.measure_puncta_button.setText("Get and measure punctas")
         MakeButtonInActive(self.measure_puncta_button)
-        self.grid.addWidget(self.measure_puncta_button, 14, 0, 1, 2)
+        self.grid.addWidget(self.measure_puncta_button, 15, 0, 1, 2)
         self.measure_puncta_button.clicked.connect(self.get_puncta)
 
         label = QLabel("Save/clear")
         label.setAlignment(Qt.AlignCenter)  # Centers the label horizontally
         label.setStyleSheet("font-size: 18px;")  # Increases the font size
-        self.grid.addWidget(label, 15, 0, 1, 2)
+        self.grid.addWidget(label, 16, 0, 1, 2)
 
         #============= delete button ==================
         self.delete_old_result_button = QPushButton(self)
         self.delete_old_result_button.setText("Clear all")
-        self.grid.addWidget(self.delete_old_result_button, 16, 0, 1, 1)
+        self.grid.addWidget(self.delete_old_result_button, 17, 0, 1, 1)
         self.delete_old_result_button.clicked.connect(self.clear_stuff)
         MakeButtonInActive(self.delete_old_result_button)
 
         self.save_button = QPushButton(self)
         self.save_button.setText("Save results")
-        self.grid.addWidget(self.save_button, 16, 1, 1, 1)
+        self.grid.addWidget(self.save_button, 17, 1, 1, 1)
         self.save_button.clicked.connect(self.save_results)
         MakeButtonInActive(self.save_button)
 
         #============= dialog field (status) ==================
         self.set_status_message = QLineEdit(self)
         self.set_status_message.setReadOnly(True)
-        self.grid.addWidget(self.set_status_message, 17, 0, 1, 2)
+        self.grid.addWidget(self.set_status_message, 18, 0, 1, 2)
         self.grid.addWidget
         self.set_status_message.setText(self.status_msg["0"])
 
         #============= dialog fields (commands) ==================
         self.command_box = QPlainTextEdit(self)
         self.command_box.setReadOnly(True)
-        self.grid.addWidget(self.command_box, 18, 0, 1, 2)
+        self.grid.addWidget(self.command_box, 19, 0, 1, 2)
         self.command_box.setFixedWidth(550)
         self.command_box.setFixedHeight(100)
 
@@ -567,6 +496,26 @@ class DataReadWindow(QWidget):
         self.hide_stuff([self.puncta_soma_label, self.puncta_soma_counter, self.puncta_soma_slider])
         self.hide_stuff([self.puncta_dend_label, self.puncta_dend_counter, self.puncta_dend_slider])
 
+    def set_NN(self):
+        """
+        Sets the path of a PyTorch neural network (NN) file chosen through a file dialog.
+        Updates the UI by displaying the selected file name on a button.
+        Sets the model path in `SimVars.model` and enables a specific button (`spine_button_NN`) if another button (`spine_button`) is already enabled.
+        Unchecks the "Set NN!" button.
+        """
+        path = QFileDialog.getOpenFileName(self, "Select pytorch NN!")[0]
+
+        if path:
+            self.NN_path = path
+
+            self.button_set_NN.setText("Set NN! ("+os.path.basename(self.NN_path)+")")
+
+            self.SimVars.model = self.NN_path
+            self.NN = True
+            if(self.spine_button.isEnabled()):
+                MakeButtonActive(self.spine_button_NN)
+
+        self.button_set_NN.setChecked(False)
 
     def spine_tolerance_sigma(self) -> None:
         """
@@ -1368,6 +1317,7 @@ class DataReadWindow(QWidget):
             except:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
+            self.SimVars.model = self.NN_path
             self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
                                                                     Channels=multwin)
 
@@ -1508,7 +1458,7 @@ class DataReadWindow(QWidget):
 
             MakeButtonActive(self.spine_button)
 
-            MakeButtonActive(self.spine_button_NN)
+            if self.NN: MakeButtonActive(self.spine_button_NN)
 
             MakeButtonActive(self.delete_old_result_button)
 
@@ -1537,6 +1487,7 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
+
         MakeButtonInActive(self.measure_puncta_button)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
@@ -1693,7 +1644,6 @@ class DataReadWindow(QWidget):
         self.add_commands(["MP_Desc","MP_line"])
         if(hasattr(self,"spine_marker")):
             self.spine_marker.disconnect()
-        self.mpl.clear_plot()
         try:
             self.dend_thresh()
         except:
@@ -1707,12 +1657,15 @@ class DataReadWindow(QWidget):
         Returns: None
 
         """
-        self.folderpath = QFileDialog.getExistingDirectory(self, "Select Folder!")
-        self.folderpath_label.setText(str(self.folderpath))
-        self.set_status_message.setText(self.status_msg["1"])
-        self.cell.setEnabled(True)
-        self.res.setEnabled(True)
+        path = QFileDialog.getExistingDirectory(self, "Select Folder!")
+        if(path):
+            self.folderpath = path
+            self.folderpath_label.setText(str(self.folderpath))
+            self.set_status_message.setText(self.status_msg["1"])
+            self.cell.setEnabled(True)
+            self.res.setEnabled(True)
         self.folderpath_button.setChecked(False)
+
 
     def dend_thresh(self):
 
@@ -1725,14 +1678,15 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
-
         image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
 
         self.default_thresh = self.thresh_slider.value()
-
-        self.mpl.update_plot((image>=self.default_thresh)*image)
         if(hasattr(self,"DendMeasure")):
             self.DendMeasure.thresh = self.default_thresh
+            self.DendMeasure.DendClear()
+        else:
+            self.mpl.clear_plot()
+            self.mpl.update_plot((image>=self.default_thresh)*image)
 
 
     def change_channel(self) -> None:
@@ -1757,13 +1711,14 @@ class DataReadWindow(QWidget):
 
         mean = np.mean(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
         max = np.max(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
+        self.thresh_slider.blockSignals(True)
         self.thresh_slider.setMinimum(int(mean))
         self.thresh_slider.setMaximum(int(max))
         self.thresh_slider.setValue(int(mean))
+        self.thresh_slider.blockSignals(False)
 
         self.update_plot_handle(
-            self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-        )
+            self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
         if(self.PunctaCalc):
             self.display_puncta()
     
@@ -2046,7 +2001,14 @@ class MainWindow(QWidget):
         self.grid.addWidget(self.bottom_right, 10, 8, 1, 1)
 
         # image
-        pixmap = QPixmap("dend.jpg")
+        code_dir = os.path.dirname(os.path.abspath(__file__))
+
+        # Relative path of the image file within the package structure
+        relative_address = "dend.jpg"
+        # Construct the absolute path of the image file within the package structure
+        image_path_in_package = os.path.join(code_dir, relative_address)
+
+        pixmap = QPixmap(image_path_in_package)
         pixmap = pixmap.scaled(900, 600)
         self.image = QLabel(self)
         self.image.setPixmap(pixmap)
@@ -2124,13 +2086,20 @@ class MainWindow(QWidget):
         self.data_read.show()
         self.read_data_button.setChecked(False)
 
-def main():
+def RunWindow():
     app = QApplication(sys.argv)
-    app.setWindowIcon(QIcon(QPixmap("brain.png")))
+    code_dir = os.path.dirname(os.path.abspath(__file__))
+
+    # Relative path of the image file within the package structure
+    relative_address = "brain.png"
+    # Construct the absolute path of the image file within the package structure
+    image_path_in_package = os.path.join(code_dir, relative_address)
+    app.setWindowIcon(QIcon(QPixmap(image_path_in_package)))
+
     window = MainWindow()
     window.show()
 
     sys.exit(app.exec_())
 
 if __name__ == "__main__":
-    main()
+    RunWindow()

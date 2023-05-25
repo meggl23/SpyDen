@@ -4,12 +4,12 @@ import tifffile as tf
 import math
 import re
 
-from Utility import *
-from Spine    import *
-from Dendrite import *
+from .Utility import *
+from .Spine    import *
+from .Dendrite import *
 
-from SynapseFuncs import *
-from PunctaDetection import *
+from .SynapseFuncs import *
+from .PunctaDetection import *
 
 import json
 

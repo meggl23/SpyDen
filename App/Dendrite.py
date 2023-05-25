@@ -1,13 +1,14 @@
-from LineInteractor import *
-from MPL_Widget import *
+from .LineInteractor import *
+from .MPL_Widget import *
 
 from scipy.signal import medfilt2d
 
-from PathFinding import (
+from .PathFinding import (
     medial_axis_path,
     downsampling_max_pool,
     curvature_polygon,
     curvature_eval,
+    GetAllpointsonPath
 )
 
 from matplotlib.patches import Polygon
@@ -15,9 +16,6 @@ from matplotlib.patches import Polygon
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 import cv2 as cv
 from skimage.draw import ellipse
-from PathFinding import GetAllpointsonPath
-
-from to_pyqt import MakeButtonActive
 
 
 class Dendrite:
@@ -273,7 +271,7 @@ class DendriteMeasurement:
 
                 MakeButtonActive(self.SimVars.frame.dendritic_width_button)
                 MakeButtonActive(self.SimVars.frame.spine_button)
-                MakeButtonActive(self.SimVars.frame.spine_button_NN)
+                if self.SimVars.frame.NN: MakeButtonActive(self.SimVars.frame.spine_button_NN)
                 MakeButtonActive(self.SimVars.frame.delete_old_result_button)
 
                 MakeButtonActive(self.SimVars.frame.measure_puncta_button)
@@ -317,14 +315,18 @@ class DendriteMeasurement:
                 self.sc.remove()
                 self.coords = []
         elif event.key == 'backspace':
-            self.AtLeastOne=False
-            self.AnotherDendFlag=True
-            self.coords = ([])
-            self.SimVars.frame.mpl.clear_plot()
-            self.SimVars.frame.dend_thresh()
-            self.canvas = self.SimVars.frame.mpl.canvas
-            self.axis = self.SimVars.frame.mpl.axes
-            self.click_conn = self.SimVars.frame.mpl.canvas.mpl_connect("button_press_event", self.on_left_click)
-            self.press_conn = self.SimVars.frame.mpl.canvas.mpl_connect("key_press_event", self.on_key_press)
-            self.DendArr = []
-            self.SimVars.frame.add_commands(["MP_Desc","MP_line"])
+            self.DendClear()
+
+    def DendClear(self):
+        self.AtLeastOne=False
+        self.AnotherDendFlag=True
+        self.coords = ([])
+        self.SimVars.frame.mpl.clear_plot()
+        image = self.tiff_Arr[self.SimVars.frame.actual_timestep, self.SimVars.frame.actual_channel, :, :]
+        self.SimVars.frame.mpl.update_plot((image>=self.thresh)*image)
+        self.canvas = self.SimVars.frame.mpl.canvas
+        self.axis = self.SimVars.frame.mpl.axes
+        self.click_conn = self.SimVars.frame.mpl.canvas.mpl_connect("button_press_event", self.on_left_click)
+        self.press_conn = self.SimVars.frame.mpl.canvas.mpl_connect("key_press_event", self.on_key_press)
+        self.DendArr = []
+        self.SimVars.frame.add_commands(["MP_Desc","MP_line"])
