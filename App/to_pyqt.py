@@ -89,7 +89,7 @@ class DataReadWindow(QWidget):
         self.PunctaCalc = False
 
         code_dir = os.path.dirname(os.path.abspath(__file__))
-        relative_address = "SynapseMLModel"
+        relative_address = "../MLModel/SynapseMLModel"
         self.NN_path = os.path.join(code_dir, relative_address)
 
 
@@ -971,7 +971,8 @@ class DataReadWindow(QWidget):
                 ("ROI Tolerance",self.tolerance_slider.value()),
                 ("ROI Sigma",self.sigma_slider.value()),
                 ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
-                ("Somatic puncta threshold",self.puncta_soma_slider.value())
+                ("Somatic puncta threshold",self.puncta_soma_slider.value()),
+                ("MLLocation",self.NN_path)
                 ]
 
         for value in values:
@@ -1352,7 +1353,12 @@ class DataReadWindow(QWidget):
                 for line in lines:
                     # Split each line into key-value pairs
                     key, value = line.strip().split(":")
-                    if(key=="multi-time"):
+                    if(key=="MLLocation"):
+                        if(os.path.isfile(value)):
+                            self.NN_path = value
+                            self.NN = True
+                            self.button_set_NN.setText("Set NN! (saved)")
+                    elif(key=="multi-time"):
                         boolean_value = value == "True"
                         self.multitime_check.setChecked(boolean_value)
                         self.SimVars.multitime_flag = boolean_value
@@ -1382,6 +1388,7 @@ class DataReadWindow(QWidget):
                         if(key=="Dendritic puncta threshold"):
                             self.puncta_soma_slider.setValue(value)
                             self.puncta_soma_counter.setText(str(value))
+        
 
             self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
             self.thresh_slider.valueChanged.connect(self.dend_thresh)
