@@ -10,6 +10,7 @@ from . import GenFolderStruct as GFS
 
 from .SynapseFuncs import FindShape
 from .RoiInteractor import RoiInteractor,RoiInteractor_BG
+from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 
 DevMode = False
 
@@ -653,7 +654,7 @@ class DataReadWindow(QWidget):
             cv.imwrite(Dend_Mask_Dir, dend_mask)
             np.save(Dend_Struct_Dir, Dend.dend_stat)
             np.save(Dend_Stat_Dir, Dend.dend_lumin)
-        except:
+        except Exception as e:
             pass
         return None
 
@@ -758,40 +759,6 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.save_button)
         self.set_status_message.setText("Punctas are available on all snaphshots/channels")
 
-    def save_puncta(self):
-        """Saves the detected puncta to files.
-
-        This method creates a directory for puncta files and subdirectories for different parameters.
-        It retrieves the current slider values for half width, dendritic threshold, and somatic threshold.
-        The somatic and dendritic punctas are obtained from the punctas list and flattened.
-        The somatic punctas are saved to a JSON file under the 'soma_puncta.json' filename.
-        The dendritic punctas are saved to a JSON file under the 'dend_puncta.json' filename.
-        Both files are stored in the corresponding subdirectory of the puncta directory.
-        """
-        puncta_Dir = self.SimVars.Dir + "/Puncta"
-        os.makedirs(puncta_Dir, exist_ok=True)
-
-        if os.path.exists(puncta_Dir):
-            shutil.rmtree(puncta_Dir)
-        os.makedirs(puncta_Dir,exist_ok=True)
-
-        dend_th = self.puncta_dend_slider.value()
-        soma_th = self.puncta_soma_slider.value()
-
-        somatic_punctas,dendritic_punctas = self.punctas[0],self.punctas[1]
-        somatic_punctas_flat = [item for sublist in somatic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
-        dendritic_punctas_flat =  [item for sublist in dendritic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
-        with open(
-            puncta_Dir + "/soma_puncta.json",
-            "w",
-        ) as f:
-            json.dump([vars(P) for P in somatic_punctas_flat], f, indent=4)
-        with open(
-            puncta_Dir + "/dend_puncta.json",
-            "w",
-        ) as f:
-            json.dump([vars(P) for P in dendritic_punctas_flat], f, indent=4)
-
     def display_puncta(self):
         """Displays the puncta on the plot.
 
@@ -810,7 +777,6 @@ class DataReadWindow(QWidget):
             pass
         self.plot_puncta(self.punctas[0][int(self.timestep_slider.value())][int(self.channel_slider.value())],"soma")
         self.plot_puncta(self.punctas[1][int(self.timestep_slider.value())][int(self.channel_slider.value())],"dendrite")
-
 
     def plot_puncta(self,puncta_dict,flag='dendrite'):
 
@@ -878,7 +844,8 @@ class DataReadWindow(QWidget):
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
-            except:
+                DendSave_csv(Dend_Dir,self.DendArr)
+            except Exception as e:
                 SaveFlag[0] = False
                 pass
         else:
@@ -892,10 +859,9 @@ class DataReadWindow(QWidget):
                         file_path = os.path.join(Spine_Dir, file_name)
                         
                         # check if the file is the one to keep
-                        if ((file_name == 'Synapse_a.json' and self.SimVars.Mode=="Luminosity")
-                            or (file_name == 'Synapse_l.json' and self.SimVars.Mode=="Area")) :
+                        if ((file_name.startswith('Synapse_a') and self.SimVars.Mode=="Luminosity")
+                            or (file_name.startswith('Synapse_l') and self.SimVars.Mode=="Area")):
                             continue  # skip the file if it's the one to keep
-                        
                         # delete the file if it's not the one to keep
                         os.remove(file_path)
                 else:
@@ -906,16 +872,19 @@ class DataReadWindow(QWidget):
                     Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
                     xperts = R.getPolyXYs()
                     mask = np.zeros_like(self.tiff_Arr[0,0])
-                    c = xperts[:, 1]
-                    r = xperts[:, 0]
+                    c = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2])
+                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1])
                     rr, cc = polygon(r, c)
                     mask[cc, rr] = 255
                     cv.imwrite(Spine_Mask_Dir, mask)
+                nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
+                nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
                 if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                     SaveSynDict(self.SpineArr, Spine_Dir, "Luminosity")
+                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,'Luminosity')
                 else:
                     SaveSynDict(self.SpineArr, Spine_Dir, self.SimVars.Mode)
-
+                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,self.SimVars.Mode)
             except Exception as e:
                 SaveFlag[1] = False
                 pass
@@ -923,7 +892,13 @@ class DataReadWindow(QWidget):
             SaveFlag[1] = False
         if(len(self.punctas)>0):
             try:
-                self.save_puncta()
+                puncta_Dir = self.SimVars.Dir + "/Puncta/"
+                os.makedirs(puncta_Dir, exist_ok=True)
+
+                if os.path.exists(puncta_Dir):
+                    shutil.rmtree(puncta_Dir)
+                os.makedirs(puncta_Dir,exist_ok=True)
+                save_puncta(puncta_Dir,self.punctas)
             except:
                 SaveFlag[2] = False
                 pass

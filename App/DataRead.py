@@ -9,7 +9,6 @@ from .Spine    import *
 from .Dendrite import *
 
 from .SynapseFuncs import *
-from .PunctaDetection import *
 
 import json
 
@@ -401,7 +400,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
-                S.area.append(Area[0])
+                S.area.append(Area)
     else:
         if(SimVars.Mode=="Luminosity" or Snaps==1):
             for S in SynArr:
@@ -423,7 +422,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
-                S.area.append(Area[0])
+                S.area.append(Area)
     return 0
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):

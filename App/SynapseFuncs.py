@@ -5,6 +5,8 @@ from skimage.registration import phase_cross_correlation
 import json
 
 from .Spine import Synapse
+import csv
+
 
 
 def SpineShift(tiff_Arr_small):
@@ -222,6 +224,7 @@ def FindShape(
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
         xpert = xpert.tolist()
+
     return xpert, SpineMinDir, OppDir,Closest
 
 
@@ -409,3 +412,51 @@ def ReadSynDict(Dir, nSnaps, unit, Mode):
                 SynArr[-1].shift = np.zeros([9, 2]).tolist()
 
     return SynArr
+
+def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode):
+    if(Mode=='Luminosity'):
+        custom_header =(['', 'type','location','bgloc','area','distance'] + 
+        ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)])
+        for c in range(nChans):
+            csv_file_path = Dir+'Synapse_l_Channel_' + str(c)+'.csv'
+            with open(csv_file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(custom_header) 
+                for i,s in enumerate(Spine_Arr):
+                    row = ['Spine: '+str(i),s.type,
+                                     str(s.location),str(s.bgloc),s.area,s.distance]
+                    row.extend(s.mean[c])
+                    row.extend(s.min[c])
+                    row.extend(s.max[c])
+                    row.extend(s.RawIntDen[c])
+                    row.extend(s.IntDen[c])
+                    row.extend(s.local_bg[c])
+                    writer.writerow(row)   
+    else:
+        custom_header =(['', 'type','location','distance'] + 
+        ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
+        ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)])
+        for c in range(nChans):
+            csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
+            with open(csv_file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(custom_header) 
+                for i,s in enumerate(Spine_Arr):
+                    row = ['Spine: '+str(i),s.type,
+                                     str(s.location),s.distance]
+                    row.extend(s.area[c])
+                    row.extend(s.mean[c])
+                    row.extend(s.min[c])
+                    row.extend(s.max[c])
+                    row.extend(s.RawIntDen[c])
+                    row.extend(s.IntDen[c])
+                    writer.writerow(row)   

@@ -15,7 +15,8 @@ from skimage.feature import blob_dog, blob_log, blob_doh
 from skimage.draw import polygon, disk
 
 from .PathFinding import GetAllpointsonPath
-
+import json
+import csv
 
 class Puncta:
 
@@ -284,3 +285,51 @@ class PunctaDetection:
                 dendritic_puncta.append(dp)
 
         return dendritic_puncta
+
+def save_puncta(puncta_Dir,punctas):
+    """Saves the detected puncta to files.
+
+    This method creates a directory for puncta files and subdirectories for different parameters.
+    It retrieves the current slider values for half width, dendritic threshold, and somatic threshold.
+    The somatic and dendritic punctas are obtained from the punctas list and flattened.
+    The somatic punctas are saved to a JSON file under the 'soma_puncta.json' filename.
+    The dendritic punctas are saved to a JSON file under the 'dend_puncta.json' filename.
+    Both files are stored in the corresponding subdirectory of the puncta directory.
+    """
+
+    somatic_punctas,dendritic_punctas = punctas[0],punctas[1]
+    somatic_punctas_flat = [item for sublist in somatic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
+    dendritic_punctas_flat =  [item for sublist in dendritic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
+    with open(
+        puncta_Dir + "soma_puncta.json",
+        "w",
+    ) as f:
+        json.dump([vars(P) for P in somatic_punctas_flat], f, indent=4)
+    with open(
+        puncta_Dir + "dend_puncta.json",
+        "w",
+    ) as f:
+        json.dump([vars(P) for P in dendritic_punctas_flat], f, indent=4)
+
+    PunctaSave_csv(puncta_Dir,somatic_punctas_flat,dendritic_punctas_flat)
+
+def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat):
+    custom_header = ['','channel','snapshot','location','radius','max','min','mean','std','median','distance']
+
+    csv_file_path = Dir+'soma_puncta.csv'
+    with open(csv_file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(custom_header) 
+        for i,p in enumerate(somatic_punctas_flat):
+            row = ['Puncta: '+str(i),p.channel,p.snapshot,str(p.location),
+                   p.radius,p.max,p.min,p.mean,p.std,p.median,p.distance]
+            writer.writerow(row)
+
+    csv_file_path = Dir+'dend_puncta.csv'
+    with open(csv_file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(custom_header) 
+        for i,p in enumerate(dendritic_punctas_flat):
+            row = ['Puncta: '+str(i),p.channel,p.snapshot,str(p.location),
+                   p.radius,p.max,p.min,p.mean,p.std,p.median,p.distance]
+            writer.writerow(row)

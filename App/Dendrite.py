@@ -16,6 +16,7 @@ from matplotlib.patches import Polygon
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 import cv2 as cv
 from skimage.draw import ellipse
+import csv
 
 
 class Dendrite:
@@ -330,3 +331,40 @@ class DendriteMeasurement:
         self.press_conn = self.SimVars.frame.mpl.canvas.mpl_connect("key_press_event", self.on_key_press)
         self.DendArr = []
         self.SimVars.frame.add_commands(["MP_Desc","MP_line"])
+
+
+def DendSave_csv(Dir,Dend_Arr):
+
+
+    nChans = Dend_Arr[0].dend_lumin.shape[-1]
+    nSnaps = Dend_Arr[0].dend_lumin.shape[-2]
+    customhead = ['Dendrite']
+    oglist = [['Dendrite: '+str(i)]+ ['Timestep '+ str(i) + ' (Luminosity)' for i in range(1,nSnaps+1)] for i in range(len(Dend_Arr))]
+    flattened_list = [item for sublist in oglist for item in sublist]
+    for c in range(nChans):
+        csv_file_path = Dir+'Dendrite_Channel_'+str(c)+'.csv'
+        DendVar = []
+        for D in Dend_Arr:
+            loc = np.array([str([x,y]) for x,y in D.dend_stat[:,:2]])
+            x =  np.hstack([loc.reshape(-1,1),D.dend_lumin[:,:,c]])
+            DendVar.append(x)
+        max_sublists = max(len(var) for var in DendVar)
+        max_length = max(max(len(sublist) for sublist in var) for var in DendVar)
+
+        flattened_data = []
+
+        # Iterate over the sublists
+        for i in range(max_sublists):
+            sublist_data = []
+            for var in DendVar:
+                sublist = var[i] if i < len(var) else []
+                sublist_data.extend(sublist)
+                sublist_data.append('')  # Add an empty column after each sublist
+            flattened_data.append(sublist_data)
+
+        # Write data to CSV file
+        with open(csv_file_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(flattened_list)
+            for row in flattened_data:
+                writer.writerow(row)
