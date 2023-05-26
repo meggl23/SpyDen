@@ -409,7 +409,7 @@ def ReadSynDict(Dir, nSnaps, unit, Mode):
                         closest_Dend=t["closest_Dend"]
                     )
                 )
-                SynArr[-1].shift = np.zeros([9, 2]).tolist()
+                SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
 
     return SynArr
 

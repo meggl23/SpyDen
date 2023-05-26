@@ -917,6 +917,7 @@ class DataReadWindow(QWidget):
             if(SaveFlag[2]):
                 Text += "Punctas saved properly"
             self.set_status_message.setText(Text)
+        self.PlotSyn()
         self.save_button.setChecked(False)
         self.mpl.canvas.draw()
 
@@ -953,8 +954,46 @@ class DataReadWindow(QWidget):
         for value in values:
             file.write(value[0]+":"+str(value[1]) + "\n")
         file.close()
+    def PlotSyn(self):
+
+        """
+        Input:
+                
+                tiff_Arr (np.array) : The pixel values of the of tiff files
+                SynArr (np.array of Synapses) : Array holding synaps information
+                SimVars  (class)    : The class holding all simulation parameters
+
+        Output:
+                N/A
+        Function:
+                Plots Stuff
+        """ 
+
+        fig = plt.figure()
+
+        plt.imshow(self.tiff_Arr[0,0])
+        if(hasattr(self,'roi_interactor_list')):
+            for i,S in enumerate(self.SpineArr):
+                xy = np.array(S.points)
+                plt.plot(xy[:,0],xy[:,1],'-r')
 
 
+                try:
+                    labelpt = np.array(S.bgloc)
+                    plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
+                except:
+                    labelpt = np.max(xy,axis=0)
+                    plt.text(labelpt[0]+5 ,labelpt[1]+5, str(i), color='red')
+        try:
+            for i,D in enumerate(self.DendArr):
+                plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
+                labelpt = D.control_points[1,:]
+                plt.text(labelpt[0] ,labelpt[1], str(i), color='k')
+        except Exception as e:
+            print(e)
+        plt.tight_layout()
+
+        fig.savefig(self.SimVars.Dir+'ROIs.png')
     def spine_ROI_eval(self):
 
         """Evaluate and calculate ROIs for spines.
