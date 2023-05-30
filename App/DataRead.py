@@ -508,8 +508,8 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
             SynL = SynA
             SynBg = SynA-np.array(S.location)+np.array(S.bgloc)
 
-        SynBg[:,0] = np.clip(SynBg[:,0],0,tiff_Arr.shape[-1])
-        SynBg[:,1] = np.clip(SynBg[:,1],0,tiff_Arr.shape[-2])
+        SynBg[:,0] = np.clip(SynBg[:,0],0,tiff_Arr.shape[-1]-1)
+        SynBg[:,1] = np.clip(SynBg[:,1],0,tiff_Arr.shape[-2]-1)
 
         if SynL.ndim == 2:
             mask = np.zeros(shape=tiff_Arr.shape[-2:], dtype=np.uint8)
