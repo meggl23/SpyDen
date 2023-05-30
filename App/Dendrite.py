@@ -334,7 +334,16 @@ class DendriteMeasurement:
 
 
 def DendSave_csv(Dir,Dend_Arr):
+    """
+    Saves dendrite data to multiple CSV files, each corresponding to a specific channel.
 
+    Args:
+        Dir (str): Directory path where the CSV files will be saved.
+        Dend_Arr (list): List of dendrite arrays.
+
+    Returns:
+        None
+    """
 
     nChans = Dend_Arr[0].dend_lumin.shape[-1]
     nSnaps = Dend_Arr[0].dend_lumin.shape[-2]

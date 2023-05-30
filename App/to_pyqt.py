@@ -230,7 +230,6 @@ class DataReadWindow(QWidget):
         self.multiwindow_check.setEnabled(False)
         self.SimVars.multiwindow_flag  = False
         self.grid.addWidget(self.multiwindow_check, 2, 0, 1, 1)
-        self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
 
         #========= multiwindow checkbox ================
         self.multitime_check = QCheckBox(self)
@@ -238,15 +237,14 @@ class DataReadWindow(QWidget):
         self.multitime_check.setEnabled(False)
         self.SimVars.multitime_flag  = False
         self.grid.addWidget(self.multitime_check, 2, 1, 1, 1)
-        self.multitime_check.stateChanged.connect(lambda state: self.check_changed(state,1))
 
         #========= resolution input ================
         self.res = QLineEdit(self)
         self.res.setEnabled(False)
-        self.res.editingFinished.connect(lambda: self.handle_editing_finished(1))
         self.grid.addWidget(self.res, 5,1,1,1)
         self.grid.addWidget(QLabel("Resolution (\u03BCm /pixel)"), 5, 0, 1, 1)
-
+        self.res.editingFinished.connect(lambda: self.handle_editing_finished(1))
+        
         #========= channel slider ================
         self.channel_label = QLabel("Channel")
         self.grid.addWidget(self.channel_label, 1, 8, 1, 1)
@@ -648,14 +646,23 @@ class DataReadWindow(QWidget):
         Dend_Stat_Dir = Dend_Dir + "Dend_Stats"+str(i)+".npy"
         Dend_Save_Dir = Dend_Dir + "Dendrite"+str(i)+".npy"
         Dend_Mask_Dir = Dend_Dir + "/Mask_dend"+str(i)+".png"
-        np.save(Dend_Save_Dir, Dend.control_points)
+        if(len(self.SimVars.yLims)>0):
+            np.save(Dend_Save_Dir, Dend.control_points -
+                np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+        else:
+            np.save(Dend_Save_Dir, Dend.control_points)
         try:
             dend_mask = Dend.get_dendritic_surface_matrix() * 255
             cv.imwrite(Dend_Mask_Dir, dend_mask)
+            if(len(self.SimVars.yLims)>0):
+                Dend.dend_stat[:,:2]  = Dend.dend_stat[:,:2] + np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
             np.save(Dend_Struct_Dir, Dend.dend_stat)
+            if(len(self.SimVars.yLims)>0):
+                Dend.dend_stat[:,:2]  = Dend.dend_stat[:,:2] - np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
             np.save(Dend_Stat_Dir, Dend.dend_lumin)
         except Exception as e:
-            pass
+            raise
+            return e
         return None
 
     
@@ -846,6 +853,7 @@ class DataReadWindow(QWidget):
                     self.dend_measure(Dend,i,Dend_Dir)
                 DendSave_csv(Dend_Dir,self.DendArr)
             except Exception as e:
+                if DevMode: print(e)
                 SaveFlag[0] = False
                 pass
         else:
@@ -880,14 +888,15 @@ class DataReadWindow(QWidget):
                 nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
                 if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                    SaveSynDict(self.SpineArr, Spine_Dir, "Luminosity")
-                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,'Luminosity')
+                    SaveSynDict(self.SpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
                 else:
-                    SaveSynDict(self.SpineArr, Spine_Dir, self.SimVars.Mode)
-                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,self.SimVars.Mode)
+                    SaveSynDict(self.SpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
             except Exception as e:
-                SaveFlag[1] = False
-                pass
+               if DevMode: print(e)
+               SaveFlag[1] = False
+               pass
         else:
             SaveFlag[1] = False
         if(len(self.punctas)>0):
@@ -898,8 +907,9 @@ class DataReadWindow(QWidget):
                 if os.path.exists(puncta_Dir):
                     shutil.rmtree(puncta_Dir)
                 os.makedirs(puncta_Dir,exist_ok=True)
-                save_puncta(puncta_Dir,self.punctas)
-            except:
+                save_puncta(puncta_Dir,self.punctas,[self.SimVars.yLims,self.SimVars.xLims])
+            except Exception as e:
+                if DevMode: print(e)
                 SaveFlag[2] = False
                 pass
         else:
@@ -968,32 +978,60 @@ class DataReadWindow(QWidget):
         Function:
                 Plots Stuff
         """ 
+        if(self.SimVars.Mode=="Area"):
+            for i,t in enumerate(self.tiff_Arr[:,0]):
+                fig = plt.figure()
 
-        fig = plt.figure()
-
-        plt.imshow(self.tiff_Arr[0,0])
-        if(hasattr(self,'roi_interactor_list')):
-            for i,S in enumerate(self.SpineArr):
-                xy = np.array(S.points)
-                plt.plot(xy[:,0],xy[:,1],'-r')
+                plt.imshow(self.tiff_Arr[0,0])
+                if(hasattr(self,'roi_interactor_list')):
+                    for i,S in enumerate(self.SpineArr):
+                        xy = np.array(S.points[i])
+                        plt.plot(xy[:,0],xy[:,1],'-r')
 
 
+                        try:
+                            labelpt = np.array(S.bgloc)
+                            plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
+                        except:
+                            labelpt = np.max(xy,axis=0)
+                            plt.text(labelpt[0]+5 ,labelpt[1]+5, str(i), color='red')
                 try:
-                    labelpt = np.array(S.bgloc)
-                    plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
-                except:
-                    labelpt = np.max(xy,axis=0)
-                    plt.text(labelpt[0]+5 ,labelpt[1]+5, str(i), color='red')
-        try:
-            for i,D in enumerate(self.DendArr):
-                plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
-                labelpt = D.control_points[1,:]
-                plt.text(labelpt[0] ,labelpt[1], str(i), color='k')
-        except Exception as e:
-            print(e)
-        plt.tight_layout()
+                    for i,D in enumerate(self.DendArr):
+                        plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
+                        labelpt = D.control_points[1,:]
+                        plt.text(labelpt[0] ,labelpt[1], str(i), color='k')
+                except Exception as e:
+                    print(e)
+                plt.tight_layout()
 
-        fig.savefig(self.SimVars.Dir+'ROIs.png')
+                fig.savefig(self.SimVars.Dir+'ROIs_'+str(i)+'.png')
+
+        else:
+            fig = plt.figure()
+
+            plt.imshow(self.tiff_Arr[0,0])
+            if(hasattr(self,'roi_interactor_list')):
+                for i,S in enumerate(self.SpineArr):
+                    xy = np.array(S.points)
+                    plt.plot(xy[:,0],xy[:,1],'-r')
+
+
+                    try:
+                        labelpt = np.array(S.bgloc)
+                        plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
+                    except:
+                        labelpt = np.max(xy,axis=0)
+                        plt.text(labelpt[0]+5 ,labelpt[1]+5, str(i), color='red')
+            try:
+                for i,D in enumerate(self.DendArr):
+                    plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
+                    labelpt = D.control_points[1,:]
+                    plt.text(labelpt[0] ,labelpt[1], str(i), color='k')
+            except Exception as e:
+                print(e)
+            plt.tight_layout()
+
+            fig.savefig(self.SimVars.Dir+'ROIs.png')
     def spine_ROI_eval(self):
 
         """Evaluate and calculate ROIs for spines.
@@ -1340,6 +1378,9 @@ class DataReadWindow(QWidget):
             self.channel_slider.setMaximum(self.number_channels-1)
             self.channel_slider.setMinimum(0)
             self.channel_slider.setValue(0)
+            self.channel_slider.setVisible(True)
+            self.channel_counter.setVisible(True)
+            self.channel_label.setVisible(True)
 
             self.number_timesteps = self.tiff_Arr.shape[0]
             self.timestep_slider.setMinimum(0)
@@ -1376,6 +1417,9 @@ class DataReadWindow(QWidget):
                         boolean_value = value == "True"
                         self.multitime_check.setChecked(boolean_value)
                         self.SimVars.multitime_flag = boolean_value
+                        self.timestep_slider.setVisible(True)
+                        self.timestep_counter.setVisible(True)
+                        self.timestep_label.setVisible(True)
                     elif(key=="resolution"):
                         scale = float(value)
                     else:
@@ -1411,12 +1455,12 @@ class DataReadWindow(QWidget):
             self.tolerance_slider.valueChanged.connect(self.spine_tolerance_sigma)
             self.puncta_soma_slider.valueChanged.connect(self.soma_threshold_slider_update)
             self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
-
+            self.multitime_check.stateChanged.connect(lambda state: self.check_changed(state,1))
+            self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
             self.SimVars.Unit = scale
             # Get shifting of snapshots
             if (self.SimVars.Snapshots > 1):
                 self.tiff_Arr = GetTiffShift(self.tiff_Arr, self.SimVars)
-
 
                 # Get Background values
             cArr_m = np.zeros_like(self.tiff_Arr[0, :, :, :])
@@ -1430,18 +1474,14 @@ class DataReadWindow(QWidget):
             self.multitime_check.setEnabled(True)
             self.projection.setEnabled(True)
             self.analyze.setEnabled(True)
-
             if(scale>0):
                 self.res.setText("%.3f" % scale)
                 MakeButtonActive(self.medial_axis_path_button)
-                self.CheckOldDend()
-
         if(indx==1):
             if(not CallTwice):
                 self.clear_stuff()
             self.SimVars.Unit = float(self.res.text())
             MakeButtonActive(self.medial_axis_path_button)
-
             self.CheckOldDend()
         
     
@@ -1464,6 +1504,8 @@ class DataReadWindow(QWidget):
             for D in DList:
                 Dend = Dendrite(self.tiff_Arr,self.SimVars)
                 Dend.control_points = np.load(D) 
+                if(len(self.SimVars.xLims)>0):
+                    Dend.control_points = Dend.control_points+np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
                 Dend.complete_medial_axis_path = GetAllpointsonPath(Dend.control_points)[:, :]
                 Dend.medial_axis = Dend.control_points
                 Dend.thresh      = int(self.thresh_slider.value())
@@ -1485,7 +1527,7 @@ class DataReadWindow(QWidget):
 
             SpineDir = self.SimVars.Dir+'Spine/'
             if os.path.isfile(SpineDir+'Synapse_l.json') or os.path.isfile(SpineDir+'Synapse_a.json'):
-                self.SpineArr = ReadSynDict(SpineDir, 0, self.SimVars.Unit, self.SimVars.Mode)
+                self.SpineArr = ReadSynDict(SpineDir, self.SimVars)
                 self.spine_marker = spine_eval(self.SimVars,np.array([S.location for S in self.SpineArr]),np.array([1 for S in self.SpineArr]),np.array([S.type for S in self.SpineArr]),False)
                 self.spine_marker.disconnect()
                 MakeButtonActive(self.spine_button_ROI)

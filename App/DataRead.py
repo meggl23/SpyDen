@@ -320,7 +320,8 @@ def GetTiffShift(tiff_Arr, SimVars):
 
     MinDirCum = MinDirCum.astype(int)
 
-    return ShiftArr(tiff_Arr, MinDirCum)
+    tf,SimVars.xLims,SimVars.yLims = ShiftArr(tiff_Arr, MinDirCum)
+    return tf
 
 
 def ShiftArr(tiff_Arr, MinDirCum):
@@ -352,7 +353,7 @@ def ShiftArr(tiff_Arr, MinDirCum):
         ]
     )
 
-    return tiff_Arr_m
+    return tiff_Arr_m,xLim,yLim
 
 
 def Measure(SynArr, tiff_Arr, SimVars,frame=None):

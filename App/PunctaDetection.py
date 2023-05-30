@@ -286,7 +286,7 @@ class PunctaDetection:
 
         return dendritic_puncta
 
-def save_puncta(puncta_Dir,punctas):
+def save_puncta(puncta_Dir,punctas,xLims):
     """Saves the detected puncta to files.
 
     This method creates a directory for puncta files and subdirectories for different parameters.
@@ -296,10 +296,26 @@ def save_puncta(puncta_Dir,punctas):
     The dendritic punctas are saved to a JSON file under the 'dend_puncta.json' filename.
     Both files are stored in the corresponding subdirectory of the puncta directory.
     """
+    
+    if(len(xLims[0])==0):
+        Lims = 0
+    else:
+        Lims = np.array([xLims[0][0],xLims[1][0]])
 
     somatic_punctas,dendritic_punctas = punctas[0],punctas[1]
     somatic_punctas_flat = [item for sublist in somatic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
     dendritic_punctas_flat =  [item for sublist in dendritic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
+    try:
+        for sp in somatic_punctas_flat:
+            sp.location = (location - Lims).tolist()
+    except:
+        pass
+    try:
+        for dp in dendritic_punctas_flat:
+            dp.location = (location - Lims).tolist()
+    except:
+        pass
+
     with open(
         puncta_Dir + "soma_puncta.json",
         "w",
@@ -314,6 +330,17 @@ def save_puncta(puncta_Dir,punctas):
     PunctaSave_csv(puncta_Dir,somatic_punctas_flat,dendritic_punctas_flat)
 
 def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat):
+    """
+    Saves somatic and dendritic puncta data to separate CSV files.
+
+    Args:
+        Dir (str): Directory path where the CSV files will be saved.
+        somatic_punctas_flat (list): List of somatic puncta objects.
+        dendritic_punctas_flat (list): List of dendritic puncta objects.
+
+    Returns:
+        None
+    """
     custom_header = ['','channel','snapshot','location','radius','max','min','mean','std','median','distance']
 
     csv_file_path = Dir+'soma_puncta.csv'
