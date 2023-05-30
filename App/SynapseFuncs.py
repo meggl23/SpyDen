@@ -5,7 +5,9 @@ from skimage.registration import phase_cross_correlation
 import json
 
 from .Spine import Synapse
+import csv
 
+import traceback
 
 def SpineShift(tiff_Arr_small):
 
@@ -71,8 +73,8 @@ def FindShape(
         if ErrorCorrect:
             tiff_Arr_small = tiff_Arr_m[
                 :,
-                max(pt[1] - 50, 0) : min(pt[1] + 50, tiff_Arr_m.shape[-2]),
-                max(pt[0] - 50, 0) : min(pt[0] + 50, tiff_Arr_m.shape[-1]),
+                max(pt[1] - 20, 0) : min(pt[1] + 20, tiff_Arr_m.shape[-2]),
+                max(pt[0] - 20, 0) : min(pt[0] + 20, tiff_Arr_m.shape[-1]),
             ]
             SpineMinDir = SpineShift(tiff_Arr_small).T.astype(int).tolist()
             tiff_Arr = np.array(
@@ -222,6 +224,7 @@ def FindShape(
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
         xpert = xpert.tolist()
+
     return xpert, SpineMinDir, OppDir,Closest
 
 
@@ -296,7 +299,7 @@ class NumpyEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
-def SaveSynDict(SynArr, Dir, Mode):
+def SaveSynDict(SynArr, Dir, Mode,xLims):
 
     """
     Input:
@@ -310,14 +313,25 @@ def SaveSynDict(SynArr, Dir, Mode):
     Function:
             Save list of spines as json file
     """
-
+    if(len(xLims[0])==0):
+        xLims = 0
+    else:
+        Lims = np.array([xLims[0][0],xLims[1][0]])
     for S in SynArr:
         try:
-            S.points = [arr.tolist() for arr in S.points]
+            S.points   = S.points   - Lims
+            S.location = S.location - Lims
+            S.bgloc    = S.bgloc    - Lims
+        except Exception as e:
+            pass
+        try:
+            S.points   = [arr.tolist() for arr in S.points]
+            S.location = S.location.tolist()
+            S.bgloc    = S.bgloc.tolist()
         except:
             pass
         try:
-            S.radloc = S.radloc.tolist()
+            S.bgloc = S.bgloc.tolist()
         except:
             pass
     if Mode == "Area":
@@ -333,7 +347,7 @@ def SaveSynDict(SynArr, Dir, Mode):
     return 0
 
 
-def ReadSynDict(Dir, nSnaps, unit, Mode):
+def ReadSynDict(Dir, SimVars):
 
     """
     Input:
@@ -346,6 +360,16 @@ def ReadSynDict(Dir, nSnaps, unit, Mode):
     Function:
             Read Json file to obtain saved list of synapses
     """
+    unit   = SimVars.Unit
+    Mode   = SimVars.Mode
+    nSnaps = SimVars.Snapshots
+    if(len(SimVars.xLims)==0):
+        xLim = 0
+        yLim = 0
+    else:
+        xLim   = SimVars.xLims[0]
+        yLim   = SimVars.yLims[0]
+
     if(Mode=="Area"):
         FileName="Synapse_a.json"
         FileName2="Synapse_l.json"
@@ -354,58 +378,114 @@ def ReadSynDict(Dir, nSnaps, unit, Mode):
         FileName2="Synapse_a.json"
 
     try:
-        with open(Dir + FileName, "r") as fp:
-            temp = json.load(fp)
-    except:
-        with open(Dir + FileName2, "r") as fp:
-            temp = json.load(fp)
-
-    SynArr = []
-
-    for t in temp:
         try:
-            SynArr.append(
-                Synapse(
-                    t["location"],
-                    t["radloc"],
-                    nSnaps=nSnaps,
-                    stack=0,
-                    Unit=unit,
-                    Syntype=t["type"],
-                    dist=t["distance"],
-                    xpert=t["xpert"],
-                    shift=t["shift"],
-                )
-            )
+            with open(Dir + FileName, "r") as fp:
+                temp = json.load(fp)
         except:
-            try:
-                SynArr.append(
-                    Synapse(
-                        t["location"],
-                        t["bgloc"],
-                        Syntype=t["type"],
-                        dist=t["distance"],
-                        pts=t["points"],
-                        shift=t["shift"],
-                        channel=t["channel"],
-                        local_bg=t["local_bg"],
-                        closest_Dend=t["closest_Dend"]
-                    )
-                )
-            except:
-                SynArr.append(
-                    Synapse(
-                        t["location"],
-                        t["bgloc"],
-                        Syntype=t["type"],
-                        dist=t["distance"],
-                        pts=t["points"],
-                        shift=t["shift"],
-                        channel=t["channel"],
-                        local_bg=t["local_bg"],
-                        closest_Dend=t["closest_Dend"]
-                    )
-                )
-                SynArr[-1].shift = np.zeros([9, 2]).tolist()
+            with open(Dir + FileName2, "r") as fp:
+                temp = json.load(fp)
+        SynArr = []
 
+        for t in temp:
+                try:
+                    SynArr.append(
+                        Synapse(
+                            (t["location"]+np.array([yLim,xLim])).tolist(),
+                            (t["bgloc"]+np.array([yLim,xLim])).tolist(),
+                            Syntype=t["type"],
+                            dist=t["distance"],
+                            pts=(t["points"]+np.array([yLim,xLim])).tolist(),
+                            shift=t["shift"],
+                            channel=t["channel"],
+                            local_bg=t["local_bg"],
+                            closest_Dend=t["closest_Dend"]
+                        )
+                    )
+                except:
+                    pts = []
+                    for pt in t['points']: 
+                        pts.append((pt+np.array([yLim,xLim])).tolist())
+                    SynArr.append(
+                        Synapse(
+                            (t["location"]+np.array([yLim,xLim])).tolist(),
+                            t["bgloc"],
+                            Syntype=t["type"],
+                            dist=t["distance"],
+                            pts=pts,
+                            shift=t["shift"],
+                            channel=t["channel"],
+                            local_bg=t["local_bg"],
+                            closest_Dend=t["closest_Dend"]
+                        )
+                    )
+                    SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
+    except Exception as e:
+       print(e)
+       return []
     return SynArr
+
+def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
+    """
+    Save Spine data into CSV files.
+
+    Args:
+        Dir (str): Directory path where the CSV files will be saved.
+        Spine_Arr (list): List of synapse objects.
+        nChans (int): Number of channels.
+        nSnaps (int): Number of snapshots.
+        Mode (str): Mode for saving the data. Can be 'Luminosity' or 'Area'.
+        xLims (list): List containing limits of the tiff_Arr.
+    Returns:
+        None
+    """   
+    if(len(xLims[0])==0):
+        Lims = 0
+    else:
+        Lims = np.array([xLims[0][0],xLims[1][0]])
+
+    if(Mode=='Luminosity'):
+        custom_header =(['', 'type','location','bgloc','area','distance'] + 
+        ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)])
+        for c in range(nChans):
+            csv_file_path = Dir+'Synapse_l_Channel_' + str(c)+'.csv'
+            with open(csv_file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(custom_header) 
+                for i,s in enumerate(Spine_Arr):
+                    row = ['Spine: '+str(i),s.type,
+                                     str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance]
+                    row.extend(s.mean[c])
+                    row.extend(s.min[c])
+                    row.extend(s.max[c])
+                    row.extend(s.RawIntDen[c])
+                    row.extend(s.IntDen[c])
+                    row.extend(s.local_bg[c])
+                    writer.writerow(row)   
+    else:
+        custom_header =(['', 'type','location','distance'] + 
+        ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
+        ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)])
+        for c in range(nChans):
+            csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
+            with open(csv_file_path, 'w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(custom_header) 
+                for i,s in enumerate(Spine_Arr):
+                    row = ['Spine: '+str(i),s.type,
+                                     str(s.location-Lims),s.distance]
+                    row.extend(s.area[c])
+                    row.extend(s.mean[c])
+                    row.extend(s.min[c])
+                    row.extend(s.max[c])
+                    row.extend(s.RawIntDen[c])
+                    row.extend(s.IntDen[c])
+                    writer.writerow(row)   

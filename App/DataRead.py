@@ -9,7 +9,6 @@ from .Spine    import *
 from .Dendrite import *
 
 from .SynapseFuncs import *
-from .PunctaDetection import *
 
 import json
 
@@ -321,7 +320,8 @@ def GetTiffShift(tiff_Arr, SimVars):
 
     MinDirCum = MinDirCum.astype(int)
 
-    return ShiftArr(tiff_Arr, MinDirCum)
+    tf,SimVars.xLims,SimVars.yLims = ShiftArr(tiff_Arr, MinDirCum)
+    return tf
 
 
 def ShiftArr(tiff_Arr, MinDirCum):
@@ -353,7 +353,7 @@ def ShiftArr(tiff_Arr, MinDirCum):
         ]
     )
 
-    return tiff_Arr_m
+    return tiff_Arr_m,xLim,yLim
 
 
 def Measure(SynArr, tiff_Arr, SimVars,frame=None):
@@ -401,7 +401,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
-                S.area.append(Area[0])
+                S.area.append(Area)
     else:
         if(SimVars.Mode=="Luminosity" or Snaps==1):
             for S in SynArr:
@@ -423,7 +423,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
-                S.area.append(Area[0])
+                S.area.append(Area)
     return 0
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
@@ -509,8 +509,8 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
             SynL = SynA
             SynBg = SynA-np.array(S.location)+np.array(S.bgloc)
 
-        SynBg[:,0] = np.clip(SynBg[:,0],0,tiff_Arr.shape[-1])
-        SynBg[:,1] = np.clip(SynBg[:,1],0,tiff_Arr.shape[-2])
+        SynBg[:,0] = np.clip(SynBg[:,0],0,tiff_Arr.shape[-1]-1)
+        SynBg[:,1] = np.clip(SynBg[:,1],0,tiff_Arr.shape[-2]-1)
 
         if SynL.ndim == 2:
             mask = np.zeros(shape=tiff_Arr.shape[-2:], dtype=np.uint8)

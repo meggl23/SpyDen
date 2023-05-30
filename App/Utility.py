@@ -129,7 +129,6 @@ def RunNN(Simvars, DendArr, tiff_Arr):
         Tuple[numpy.ndarray, numpy.ndarray]: Tuple containing predicted points and scores.
 
     """
-    print(Simvars.model)
     model = torch.load(Simvars.model, map_location=torch.device("cpu"))
     model.eval()
     BoxsList = []
@@ -297,6 +296,9 @@ class Simulation:
 
         self.multitime_flag = False
         self.multiwindow_flag = False
+
+        self.xLims = []
+        self.yLims = []
 
 
 def dist(x, y):

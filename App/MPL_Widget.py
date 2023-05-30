@@ -89,3 +89,10 @@ class MyPaintWidget(QWidget):
     def connect_to_clicker_event(self, clicker_type: str, func: Callable) -> None:
         cid = self.canvas.mpl_connect(clicker_type, func)
         return cid
+
+def debug_trace():
+  '''Set a tracepoint in the Python debugger that works with Qt'''
+
+  from pdb import set_trace
+  pyqtRemoveInputHook()
+  set_trace()
