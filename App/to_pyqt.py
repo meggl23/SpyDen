@@ -304,7 +304,10 @@ class DataReadWindow(QWidget):
 
         #============= NN spine button ==================
         self.button_set_NN = QPushButton(self)
-        self.button_set_NN.setText("Set NN! (default)")
+        if(self.NN):
+            self.button_set_NN.setText("Set NN! (default)")
+        else:
+            self.button_set_NN.setText("Set NN! (default not found)")
         MakeButtonActive(self.button_set_NN)
         self.grid.addWidget(self.button_set_NN, 11, 0, 1, 1)
         self.button_set_NN.clicked.connect(self.set_NN)
