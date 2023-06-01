@@ -118,7 +118,6 @@ class Dendrite:
         Returns:
 
         """
-
         all_points = GetAllpointsonPath(self.control_points)[:, :]
 
         gaussian_x = gaussian_filter1d(
@@ -318,12 +317,13 @@ class DendriteMeasurement:
         elif event.key == 'backspace':
             self.DendClear()
 
-    def DendClear(self):
+    def DendClear(self,tiff_Arr):
         self.AtLeastOne=False
         self.AnotherDendFlag=True
         self.coords = ([])
         self.SimVars.frame.mpl.clear_plot()
-        image = self.tiff_Arr[self.SimVars.frame.actual_timestep, self.SimVars.frame.actual_channel, :, :]
+        self.tiff_Arr = tiff_Arr
+        image = tiff_Arr[self.SimVars.frame.actual_timestep, self.SimVars.frame.actual_channel, :, :]
         self.SimVars.frame.mpl.update_plot((image>=self.thresh)*image)
         self.canvas = self.SimVars.frame.mpl.canvas
         self.axis = self.SimVars.frame.mpl.axes

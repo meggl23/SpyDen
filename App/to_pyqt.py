@@ -368,7 +368,7 @@ class DataReadWindow(QWidget):
         self.delete_old_result_button = QPushButton(self)
         self.delete_old_result_button.setText("Clear all")
         self.grid.addWidget(self.delete_old_result_button, 17, 0, 1, 1)
-        self.delete_old_result_button.clicked.connect(self.clear_stuff)
+        self.delete_old_result_button.clicked.connect(lambda: self.clear_stuff(True))
         MakeButtonInActive(self.delete_old_result_button)
 
         self.save_button = QPushButton(self)
@@ -399,7 +399,6 @@ class DataReadWindow(QWidget):
         self.thresh_slider = QSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.thresh_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.thresh_slider, 3, 2, 1, 6)
-        self.thresh_slider.singleStep()
         self.hide_stuff([self.thresh_slider,self.thresh_label])
 
         #============= dend width slider ==================
@@ -1252,7 +1251,7 @@ class DataReadWindow(QWidget):
 
         self.set_status_message.setText(self.status_msg["9"])
 
-    def clear_stuff(self):
+    def clear_stuff(self,RePlot):
         """Clear and reset various components and data.
 
         The method clears and resets various components and data used in the application. It deactivates
@@ -1289,12 +1288,18 @@ class DataReadWindow(QWidget):
         except:
             pass
         self.mpl.clear_plot()
-        try:
+        if(RePlot):
+            try:
+                self.update_plot_handle(
+                    self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+                )
+            except:
+                pass
+        else:
+            self.tiff_Arr = np.zeros(shape=(1024, 1024))
             self.update_plot_handle(
-                self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-            )
-        except:
-            pass
+                    self.tiff_Arr
+                )
         self.delete_old_result_button.setChecked(False)
 
     
@@ -1358,7 +1363,6 @@ class DataReadWindow(QWidget):
 
         if(indx==0):
 
-            self.clear_stuff()
             try:
                 self.neighbour_slider.disconnect()
                 self.thresh_slider.disconnect()
@@ -1367,13 +1371,17 @@ class DataReadWindow(QWidget):
                 self.tolerance_slider.disconnect()
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
-            except:
+            except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
             self.SimVars.model = self.NN_path
-            self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
+            try:
+                self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
                                                                     Channels=multwin)
-
+                self.clear_stuff(True)
+            except:
+                self.clear_stuff(False)
+                raise
             self.number_channels = self.tiff_Arr.shape[1]
             self.channel_slider.setMaximum(self.number_channels-1)
             self.channel_slider.setMinimum(0)
@@ -1390,6 +1398,8 @@ class DataReadWindow(QWidget):
             self.default_thresh = int(np.mean(self.tiff_Arr[0, 0, :, :]))
             self.thresh_slider.setMaximum(int(np.max(self.tiff_Arr[0, 0, :, :])))
             self.thresh_slider.setMinimum(int(np.mean(self.tiff_Arr[0, 0, :, :])))
+            step = (np.max(self.tiff_Arr[0, 0, :, :])-np.mean(self.tiff_Arr[0, 0, :, :]))//100
+            self.thresh_slider.setSingleStep(int(step))
             self.thresh_slider.setValue(self.default_thresh)
 
             self.update_plot_handle(self.tiff_Arr[0, 0])
@@ -1479,7 +1489,7 @@ class DataReadWindow(QWidget):
                 MakeButtonActive(self.medial_axis_path_button)
         if(indx==1):
             if(not CallTwice):
-                self.clear_stuff()
+                self.clear_stuff(True)
             self.SimVars.Unit = float(self.res.text())
             MakeButtonActive(self.medial_axis_path_button)
             self.CheckOldDend()
@@ -1681,7 +1691,9 @@ class DataReadWindow(QWidget):
             )
         except:
             pass
-        for i,D in enumerate(self.DendArr):
+        for i,D in enumerate(self.DendArr): 
+            D.actual_channel = self.actual_channel
+            D.actual_timestep= self.actual_timestep
             D.set_surface_contours(
                 max_neighbours=self.neighbour_slider.value(), sigma=10
             )
@@ -1746,7 +1758,7 @@ class DataReadWindow(QWidget):
         self.default_thresh = self.thresh_slider.value()
         if(hasattr(self,"DendMeasure")):
             self.DendMeasure.thresh = self.default_thresh
-            self.DendMeasure.DendClear()
+            self.DendMeasure.DendClear(self.tiff_Arr)
         else:
             self.mpl.clear_plot()
             self.mpl.update_plot((image>=self.default_thresh)*image)
@@ -1907,7 +1919,7 @@ class DataReadWindow(QWidget):
             elif(flag==1):
                 self.SimVars.multitime_flag = False
                 self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
-
+@handle_exceptions
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""
 
@@ -1941,7 +1953,7 @@ class DirStructWindow(QWidget):
 
         self.targetpath_button = QPushButton(self)
         self.targetpath_button.setText("Select target path!")
-        MakeButtonActive(self.targetpath_button)
+        MakeButtonInActive(self.targetpath_button)
         self.targetpath_button.clicked.connect(self.get_target)
         self.grid.addWidget(self.targetpath_button, 1, 0)
         self.targetpath_label = QLineEdit(self)
@@ -1949,70 +1961,54 @@ class DirStructWindow(QWidget):
         self.targetpath_label.setText(str(self.targetpath))
         self.grid.addWidget(self.targetpath_label, 1, 1)
 
-        # resolution input
+        # name input
         self.FolderName = QLineEdit(self)
         self.grid.addWidget(self.FolderName, 2, 1)
-        self.grid.addWidget(QLabel("Name of new folder"), 2, 0)
+        self.grid.addWidget(QLabel("Name of new folder (optional)"), 2, 0)
+        self.FolderName.setEnabled(False)
+
+        self.set_status_message = QLineEdit(self)
+        self.set_status_message.setReadOnly(True)
+        self.grid.addWidget(self.set_status_message, 3, 0, 1, 1)
+        self.grid.addWidget
+        self.set_status_message.setText("Select the data with your raw data")
 
         self.generate_button = QPushButton(self)
         self.generate_button.setText("Go!")
-        MakeButtonActive(self.generate_button)
-        self.grid.addWidget(self.generate_button, 3, 0)
+        MakeButtonInActive(self.generate_button)
+        self.grid.addWidget(self.generate_button, 3, 1,1,1)
         self.generate_button.clicked.connect(self.generate_func)
 
     def get_source(self):
         """Allow user to select a directory and store it in global var called source_path"""
 
         self.sourcepath = QFileDialog.getExistingDirectory(self, "Select Folder!")
-        self.sourcepath_label.setText(str(self.sourcepath))
-        self.sourcepath_button.setChecked(True)
+        if(self.sourcepath):
+            self.sourcepath_label.setText(str(self.sourcepath))
+            MakeButtonActive(self.targetpath_button)
+            self.set_status_message.setText("Now select where you want to put the copy")
+        self.sourcepath_button.setChecked(False)
+
     def get_target(self):
         """Allow user to select a directory and store it in global var called source_path"""
 
         self.targetpath = QFileDialog.getExistingDirectory(self, "Select Folder!")
-        self.targetpath_label.setText(str(self.targetpath))
-        self.targetpath_button.setChecked(True)
+        if(self.targetpath):
+            self.targetpath_label.setText(str(self.targetpath))
+            self.FolderName.setEnabled(True)
+            MakeButtonActive(self.generate_button)
+            self.set_status_message.setText("If you want a subfolder, give the name here")
+        self.targetpath_button.setChecked(False)
+
     def generate_func(self):
         """Generate the target directory, and deleting the directory if it already exists"""
         # try:
-        GFS.CreateCellDirs(self.sourcepath, self.targetpath, self.FolderName.text())
+        flag = GFS.CreateCellDirs(self.sourcepath, self.targetpath, self.FolderName.text())
         self.generate_button.setChecked(False)
-
-    class DeleteDirPopup(QDialog):
-        def __init__(self, dir_path, delete_function):
-            super().__init__()
-            self.dir_path = dir_path
-            self.setWindowTitle("Warning!")
-            self.setModal(True)
-
-            message = f"This file already exists! \n Do you want to delete {self.dir_path}? \n There might be files in it."
-            message_label = QLabel(message)
-
-            ok_button = QPushButton("OK")
-            ok_button.clicked.connect(self.ok_clicked)
-
-            cancel_button = QPushButton("Cancel")
-            cancel_button.clicked.connect(self.cancel_clicked)
-
-            layout = QVBoxLayout()
-            layout.addWidget(message_label)
-            layout.addWidget(ok_button)
-            layout.addWidget(cancel_button)
-            self.setLayout(layout)
-
-        def ok_clicked(self):
-            self.DeleteDir(self.dir_path)
-            self.accept()
-
-        def cancel_clicked(self):
-            self.reject()
-
-        def DeleteDir(self, root):
-            """It's done - the files will be deleted."""
-            if os.path.exists(self.root):
-                shutil.rmtree(self.root)
-                root.destroy()
-
+        if flag == 0: 
+            self.set_status_message.setText("Success: Your new folder exists")
+        else:
+            self.set_status_message.setText("Your source had no lsm or tif files")
     def get_path(self) -> None:
         """
         opens a dialog field where you can select the folder
@@ -2047,7 +2043,9 @@ class MainWindow(QWidget):
         self.grid = QGridLayout(self)
 
         # headline
-        self.headline = QLabel("The Dendritic Spine Tool", self)
+        self.headline = QLabel(self)
+        self.headline.setTextFormat(Qt.TextFormat.RichText)
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.2</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
@@ -2146,7 +2144,7 @@ class MainWindow(QWidget):
 
         """
         self.data_read = DataReadWindow()
-        self.data_read.show()
+        self.data_read.showMaximized()
         self.read_data_button.setChecked(False)
 
 def RunWindow():
