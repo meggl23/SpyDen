@@ -118,7 +118,6 @@ class Dendrite:
         Returns:
 
         """
-
         all_points = GetAllpointsonPath(self.control_points)[:, :]
 
         gaussian_x = gaussian_filter1d(

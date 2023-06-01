@@ -1691,7 +1691,9 @@ class DataReadWindow(QWidget):
             )
         except:
             pass
-        for i,D in enumerate(self.DendArr):
+        for i,D in enumerate(self.DendArr): 
+            D.actual_channel = self.actual_channel
+            D.actual_timestep= self.actual_timestep
             D.set_surface_contours(
                 max_neighbours=self.neighbour_slider.value(), sigma=10
             )
