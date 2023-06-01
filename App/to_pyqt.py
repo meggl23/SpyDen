@@ -1918,7 +1918,6 @@ class DataReadWindow(QWidget):
                 self.SimVars.multitime_flag = True
                 self.show_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
         else:
-            from .MPL_Widget import debug_trace; debug_trace()
             if(flag==0):
                 self.SimVars.multiwindow_flag = False
                 self.hide_stuff([self.channel_label,self.channel_slider,self.channel_counter])
