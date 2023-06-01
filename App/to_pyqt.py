@@ -304,7 +304,10 @@ class DataReadWindow(QWidget):
 
         #============= NN spine button ==================
         self.button_set_NN = QPushButton(self)
-        self.button_set_NN.setText("Set NN! (default)")
+        if(self.NN):
+            self.button_set_NN.setText("Set NN! (default)")
+        else:
+            self.button_set_NN.setText("Set NN! (default not found)")
         MakeButtonActive(self.button_set_NN)
         self.grid.addWidget(self.button_set_NN, 11, 0, 1, 1)
         self.button_set_NN.clicked.connect(self.set_NN)
@@ -436,7 +439,7 @@ class DataReadWindow(QWidget):
         self.tolerance_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.tolerance_slider, 3, 2, 1, 6)
         self.tolerance_slider.setMinimum(0)
-        self.tolerance_slider.setMaximum(10)
+        self.tolerance_slider.setMaximum(50)
         self.tolerance_slider.setValue(5)
         self.tol_val = 5
         self.tolerance_slider.singleStep()
@@ -451,7 +454,7 @@ class DataReadWindow(QWidget):
         self.sigma_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.sigma_slider, 4, 2, 1, 6)
         self.sigma_slider.setMinimum(0)
-        self.sigma_slider.setMaximum(10)
+        self.sigma_slider.setMaximum(20)
         self.sigma_slider.setValue(5)
         self.sigma_val = 5
         self.sigma_slider.singleStep()
@@ -1374,7 +1377,6 @@ class DataReadWindow(QWidget):
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
-            self.SimVars.model = self.NN_path
             try:
                 self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
                                                                     Channels=multwin)
@@ -1457,7 +1459,7 @@ class DataReadWindow(QWidget):
                             self.puncta_soma_slider.setValue(value)
                             self.puncta_soma_counter.setText(str(value))
         
-
+            self.SimVars.model = self.NN_path
             self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
             self.thresh_slider.valueChanged.connect(self.dend_thresh)
             self.ml_confidence_slider.valueChanged.connect(self.thresh_NN)
