@@ -67,7 +67,7 @@ def handle_exceptions(cls):
     return cls
 
 
-#@handle_exceptions
+@handle_exceptions
 class DataReadWindow(QWidget):
     """
     class that makes the Data Read Window
@@ -1919,7 +1919,7 @@ class DataReadWindow(QWidget):
             elif(flag==1):
                 self.SimVars.multitime_flag = False
                 self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
-
+@handle_exceptions
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""
 
@@ -1953,7 +1953,7 @@ class DirStructWindow(QWidget):
 
         self.targetpath_button = QPushButton(self)
         self.targetpath_button.setText("Select target path!")
-        MakeButtonActive(self.targetpath_button)
+        MakeButtonInActive(self.targetpath_button)
         self.targetpath_button.clicked.connect(self.get_target)
         self.grid.addWidget(self.targetpath_button, 1, 0)
         self.targetpath_label = QLineEdit(self)
@@ -1961,70 +1961,54 @@ class DirStructWindow(QWidget):
         self.targetpath_label.setText(str(self.targetpath))
         self.grid.addWidget(self.targetpath_label, 1, 1)
 
-        # resolution input
+        # name input
         self.FolderName = QLineEdit(self)
         self.grid.addWidget(self.FolderName, 2, 1)
-        self.grid.addWidget(QLabel("Name of new folder"), 2, 0)
+        self.grid.addWidget(QLabel("Name of new folder (optional)"), 2, 0)
+        self.FolderName.setEnabled(False)
+
+        self.set_status_message = QLineEdit(self)
+        self.set_status_message.setReadOnly(True)
+        self.grid.addWidget(self.set_status_message, 3, 0, 1, 1)
+        self.grid.addWidget
+        self.set_status_message.setText("Select the data with your raw data")
 
         self.generate_button = QPushButton(self)
         self.generate_button.setText("Go!")
-        MakeButtonActive(self.generate_button)
-        self.grid.addWidget(self.generate_button, 3, 0)
+        MakeButtonInActive(self.generate_button)
+        self.grid.addWidget(self.generate_button, 3, 1,1,1)
         self.generate_button.clicked.connect(self.generate_func)
 
     def get_source(self):
         """Allow user to select a directory and store it in global var called source_path"""
 
         self.sourcepath = QFileDialog.getExistingDirectory(self, "Select Folder!")
-        self.sourcepath_label.setText(str(self.sourcepath))
-        self.sourcepath_button.setChecked(True)
+        if(self.sourcepath):
+            self.sourcepath_label.setText(str(self.sourcepath))
+            MakeButtonActive(self.targetpath_button)
+            self.set_status_message.setText("Now select where you want to put the copy")
+        self.sourcepath_button.setChecked(False)
+
     def get_target(self):
         """Allow user to select a directory and store it in global var called source_path"""
 
         self.targetpath = QFileDialog.getExistingDirectory(self, "Select Folder!")
-        self.targetpath_label.setText(str(self.targetpath))
-        self.targetpath_button.setChecked(True)
+        if(self.targetpath):
+            self.targetpath_label.setText(str(self.targetpath))
+            self.FolderName.setEnabled(True)
+            MakeButtonActive(self.generate_button)
+            self.set_status_message.setText("If you want a subfolder, give the name here")
+        self.targetpath_button.setChecked(False)
+
     def generate_func(self):
         """Generate the target directory, and deleting the directory if it already exists"""
         # try:
-        GFS.CreateCellDirs(self.sourcepath, self.targetpath, self.FolderName.text())
+        flag = GFS.CreateCellDirs(self.sourcepath, self.targetpath, self.FolderName.text())
         self.generate_button.setChecked(False)
-
-    class DeleteDirPopup(QDialog):
-        def __init__(self, dir_path, delete_function):
-            super().__init__()
-            self.dir_path = dir_path
-            self.setWindowTitle("Warning!")
-            self.setModal(True)
-
-            message = f"This file already exists! \n Do you want to delete {self.dir_path}? \n There might be files in it."
-            message_label = QLabel(message)
-
-            ok_button = QPushButton("OK")
-            ok_button.clicked.connect(self.ok_clicked)
-
-            cancel_button = QPushButton("Cancel")
-            cancel_button.clicked.connect(self.cancel_clicked)
-
-            layout = QVBoxLayout()
-            layout.addWidget(message_label)
-            layout.addWidget(ok_button)
-            layout.addWidget(cancel_button)
-            self.setLayout(layout)
-
-        def ok_clicked(self):
-            self.DeleteDir(self.dir_path)
-            self.accept()
-
-        def cancel_clicked(self):
-            self.reject()
-
-        def DeleteDir(self, root):
-            """It's done - the files will be deleted."""
-            if os.path.exists(self.root):
-                shutil.rmtree(self.root)
-                root.destroy()
-
+        if flag == 0: 
+            self.set_status_message.setText("Success: Your new folder exists")
+        else:
+            self.set_status_message.setText("Your source had no lsm or tif files")
     def get_path(self) -> None:
         """
         opens a dialog field where you can select the folder
@@ -2061,7 +2045,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.1</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.2</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
