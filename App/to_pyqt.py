@@ -67,7 +67,7 @@ def handle_exceptions(cls):
     return cls
 
 
-@handle_exceptions
+#@handle_exceptions
 class DataReadWindow(QWidget):
     """
     class that makes the Data Read Window
@@ -368,7 +368,7 @@ class DataReadWindow(QWidget):
         self.delete_old_result_button = QPushButton(self)
         self.delete_old_result_button.setText("Clear all")
         self.grid.addWidget(self.delete_old_result_button, 17, 0, 1, 1)
-        self.delete_old_result_button.clicked.connect(self.clear_stuff)
+        self.delete_old_result_button.clicked.connect(lambda: self.clear_stuff(True))
         MakeButtonInActive(self.delete_old_result_button)
 
         self.save_button = QPushButton(self)
@@ -399,7 +399,6 @@ class DataReadWindow(QWidget):
         self.thresh_slider = QSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.thresh_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.thresh_slider, 3, 2, 1, 6)
-        self.thresh_slider.singleStep()
         self.hide_stuff([self.thresh_slider,self.thresh_label])
 
         #============= dend width slider ==================
@@ -1252,7 +1251,7 @@ class DataReadWindow(QWidget):
 
         self.set_status_message.setText(self.status_msg["9"])
 
-    def clear_stuff(self):
+    def clear_stuff(self,RePlot):
         """Clear and reset various components and data.
 
         The method clears and resets various components and data used in the application. It deactivates
@@ -1289,12 +1288,18 @@ class DataReadWindow(QWidget):
         except:
             pass
         self.mpl.clear_plot()
-        try:
+        if(RePlot):
+            try:
+                self.update_plot_handle(
+                    self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+                )
+            except:
+                pass
+        else:
+            self.tiff_Arr = np.zeros(shape=(1024, 1024))
             self.update_plot_handle(
-                self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-            )
-        except:
-            pass
+                    self.tiff_Arr
+                )
         self.delete_old_result_button.setChecked(False)
 
     
@@ -1358,7 +1363,6 @@ class DataReadWindow(QWidget):
 
         if(indx==0):
 
-            self.clear_stuff()
             try:
                 self.neighbour_slider.disconnect()
                 self.thresh_slider.disconnect()
@@ -1367,13 +1371,17 @@ class DataReadWindow(QWidget):
                 self.tolerance_slider.disconnect()
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
-            except:
+            except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
             self.SimVars.model = self.NN_path
-            self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
+            try:
+                self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
                                                                     Channels=multwin)
-
+                self.clear_stuff(True)
+            except:
+                self.clear_stuff(False)
+                raise
             self.number_channels = self.tiff_Arr.shape[1]
             self.channel_slider.setMaximum(self.number_channels-1)
             self.channel_slider.setMinimum(0)
@@ -1390,6 +1398,8 @@ class DataReadWindow(QWidget):
             self.default_thresh = int(np.mean(self.tiff_Arr[0, 0, :, :]))
             self.thresh_slider.setMaximum(int(np.max(self.tiff_Arr[0, 0, :, :])))
             self.thresh_slider.setMinimum(int(np.mean(self.tiff_Arr[0, 0, :, :])))
+            step = (np.max(self.tiff_Arr[0, 0, :, :])-np.mean(self.tiff_Arr[0, 0, :, :]))//100
+            self.thresh_slider.setSingleStep(int(step))
             self.thresh_slider.setValue(self.default_thresh)
 
             self.update_plot_handle(self.tiff_Arr[0, 0])
@@ -1479,7 +1489,7 @@ class DataReadWindow(QWidget):
                 MakeButtonActive(self.medial_axis_path_button)
         if(indx==1):
             if(not CallTwice):
-                self.clear_stuff()
+                self.clear_stuff(True)
             self.SimVars.Unit = float(self.res.text())
             MakeButtonActive(self.medial_axis_path_button)
             self.CheckOldDend()
@@ -1746,7 +1756,7 @@ class DataReadWindow(QWidget):
         self.default_thresh = self.thresh_slider.value()
         if(hasattr(self,"DendMeasure")):
             self.DendMeasure.thresh = self.default_thresh
-            self.DendMeasure.DendClear()
+            self.DendMeasure.DendClear(self.tiff_Arr)
         else:
             self.mpl.clear_plot()
             self.mpl.update_plot((image>=self.default_thresh)*image)
@@ -2047,7 +2057,9 @@ class MainWindow(QWidget):
         self.grid = QGridLayout(self)
 
         # headline
-        self.headline = QLabel("The Dendritic Spine Tool", self)
+        self.headline = QLabel(self)
+        self.headline.setTextFormat(Qt.TextFormat.RichText)
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.1</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
@@ -2146,7 +2158,7 @@ class MainWindow(QWidget):
 
         """
         self.data_read = DataReadWindow()
-        self.data_read.show()
+        self.data_read.showMaximized()
         self.read_data_button.setChecked(False)
 
 def RunWindow():
