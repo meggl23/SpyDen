@@ -267,7 +267,7 @@ class DataReadWindow(QWidget):
         self.timestep_slider.setMaximum(self.number_timesteps - 1)
         self.timestep_slider.singleStep()
         self.timestep_slider.valueChanged.connect(self.change_channel)
-        self.timestep_counter = QLabel(str(self.channel_slider.value()))
+        self.timestep_counter = QLabel(str(self.timestep_slider.value()))
         self.grid.addWidget(self.timestep_counter, 2, 9, 1, 1)
         self.hide_stuff([self.timestep_slider,self.timestep_counter,self.timestep_label])
 
@@ -1432,9 +1432,10 @@ class DataReadWindow(QWidget):
                         boolean_value = value == "True"
                         self.multitime_check.setChecked(boolean_value)
                         self.SimVars.multitime_flag = boolean_value
-                        self.timestep_slider.setVisible(True)
-                        self.timestep_counter.setVisible(True)
-                        self.timestep_label.setVisible(True)
+                        if(self.SimVars.multitime_flag):
+                            self.timestep_slider.setVisible(True)
+                            self.timestep_counter.setVisible(True)
+                            self.timestep_label.setVisible(True)
                     elif(key=="resolution"):
                         scale = float(value)
                     else:
