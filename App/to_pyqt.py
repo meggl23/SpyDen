@@ -862,43 +862,43 @@ class DataReadWindow(QWidget):
             SaveFlag[0] = False
 
         if(len(self.SpineArr)>0):
-            #try:
-            Spine_Dir = self.SimVars.Dir + "Spine/"
-            if os.path.exists(Spine_Dir):
-                for file_name in os.listdir(Spine_Dir):
-                    file_path = os.path.join(Spine_Dir, file_name)
-                    
-                    # check if the file is the one to keep
-                    if ((file_name.startswith('Synapse_a') and self.SimVars.Mode=="Luminosity")
-                        or (file_name.startswith('Synapse_l') and self.SimVars.Mode=="Area")):
-                        continue  # skip the file if it's the one to keep
-                    # delete the file if it's not the one to keep
-                    os.remove(file_path)
-            else:
-                os.mkdir(path=Spine_Dir)
+            try:
+                Spine_Dir = self.SimVars.Dir + "Spine/"
+                if os.path.exists(Spine_Dir):
+                    for file_name in os.listdir(Spine_Dir):
+                        file_path = os.path.join(Spine_Dir, file_name)
+                        
+                        # check if the file is the one to keep
+                        if ((file_name.startswith('Synapse_a') and self.SimVars.Mode=="Luminosity")
+                            or (file_name.startswith('Synapse_l') and self.SimVars.Mode=="Area")):
+                            continue  # skip the file if it's the one to keep
+                        # delete the file if it's not the one to keep
+                        os.remove(file_path)
+                else:
+                    os.mkdir(path=Spine_Dir)
 
-            #save spine masks
-            for i,R in  enumerate(self.roi_interactor_list):
-                Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
-                xperts = R.getPolyXYs()
-                mask = np.zeros_like(self.tiff_Arr[0,0])
-                c = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2])
-                r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1])
-                rr, cc = polygon(r, c)
-                mask[cc, rr] = 255
-                cv.imwrite(Spine_Mask_Dir, mask)
-            nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
-            nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
-            if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                SaveSynDict(self.SpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
-                SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
-            else:
-                SaveSynDict(self.SpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
-                SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
-            #xcept Exception as e:
-            #   if DevMode: print(e)
-            #   SaveFlag[1] = False
-            #   pass
+                #save spine masks
+                for i,R in  enumerate(self.roi_interactor_list):
+                    Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
+                    xperts = R.getPolyXYs()
+                    mask = np.zeros_like(self.tiff_Arr[0,0])
+                    c = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2])
+                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1])
+                    rr, cc = polygon(r, c)
+                    mask[cc, rr] = 255
+                    cv.imwrite(Spine_Mask_Dir, mask)
+                nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
+                nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
+                if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
+                    SaveSynDict(self.SpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
+                else:
+                    SaveSynDict(self.SpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+            except Exception as e:
+               if DevMode: print(e)
+               SaveFlag[1] = False
+               pass
         else:
             SaveFlag[1] = False
         if(len(self.punctas)>0):
