@@ -67,7 +67,7 @@ def handle_exceptions(cls):
     return cls
 
 
-#@handle_exceptions
+@handle_exceptions
 class DataReadWindow(QWidget):
     """
     class that makes the Data Read Window
