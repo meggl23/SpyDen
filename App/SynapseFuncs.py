@@ -439,7 +439,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         None
     """   
     if(len(xLims[0])==0):
-        Lims = 0
+        Lims = np.array(0)
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
 

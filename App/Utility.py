@@ -295,7 +295,7 @@ class Simulation:
         self.Mode = Mode
 
         self.multitime_flag = False
-        self.multiwindow_flag = False
+        self.multiwindow_flag = True
 
         self.xLims = []
         self.yLims = []
