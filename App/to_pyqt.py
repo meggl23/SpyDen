@@ -1426,7 +1426,7 @@ class DataReadWindow(QWidget):
                     for line in lines:
                         # Split each line into key-value pairs
                         if("MLLocation" in line):
-                            value = line[11:]
+                            value = line[11:-1]
                             if(os.path.isfile(value)):
                                 self.NN_path = value
                                 self.NN = True
