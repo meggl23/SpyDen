@@ -1277,6 +1277,11 @@ class DataReadWindow(QWidget):
         self.SpineArr = []
         self.DendArr  = []
         self.punctas  = []
+        self.DendMeasure  = []
+        try:
+            del self.DendMeasure
+        except:
+            pass
         if(hasattr(self,"roi_interactor_list")):
             for R in self.roi_interactor_list:
                 R.clear()
