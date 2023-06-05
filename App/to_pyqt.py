@@ -971,6 +971,7 @@ class DataReadWindow(QWidget):
                  ("resolution",self.SimVars.Unit),
                 ("Image threshold",self.thresh_slider.value()),
                 ("Dendritic width",self.neighbour_slider.value()),
+                ("Dend. width multiplier",self.dend_width_mult_slider.value()),
                 ("ML Confidence",self.ml_confidence_slider.value()),
                 ("ROI Tolerance",self.tolerance_slider.value()),
                 ("ROI Sigma",self.sigma_slider.value()),
@@ -1466,26 +1467,30 @@ class DataReadWindow(QWidget):
                                 value = int(value)
                                 if(key=="Image threshold"):
                                     self.thresh_slider.setValue(value)
-                                if(key=="Dendritic width"):
+                                elif(key=="Dendritic width"):
                                     self.neighbour_slider.setValue(value)
                                     self.neighbour_counter.setText(str(value))
-                                if(key=="ML Confidence"):
+                                elif(key=="ML Confidence"):
                                     self.ml_confidence_slider.setValue(value)
                                     self.confidence_counter.setText(str(value))
-                                if(key=="ROI Tolerance"):
+                                elif(key=="ROI Tolerance"):
                                     self.tol_val = value
                                     self.tolerance_slider.setValue(value)
                                     self.tolerance_counter.setText(str(value))
-                                if(key=="ROI Sigma"):
+                                elif(key=="ROI Sigma"):
                                     self.sigma_val = value
                                     self.sigma_slider.setValue(value)
                                     self.sigma_counter.setText(str(value))
-                                if(key=="Dendritic puncta threshold"):
+                                elif(key=="Dendritic puncta threshold"):
                                     self.puncta_dend_slider.setValue(value)
                                     self.puncta_dend_counter.setText(str(value))
-                                if(key=="Dendritic puncta threshold"):
+                                elif(key=="Dendritic puncta threshold"):
                                     self.puncta_soma_slider.setValue(value)
                                     self.puncta_soma_counter.setText(str(value))
+                                elif(key=="Dend. width multiplier"):
+                                    self.dend_width_mult_slider.setValue(value)
+                                    dend_factor = 0.5 + 0.1*self.dend_width_mult_slider.value()
+                                    self.dend_width_mult_counter.setText(str(dend_factor))
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
                     if DevMode: print(e)
