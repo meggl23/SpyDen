@@ -1709,17 +1709,10 @@ class DataReadWindow(QWidget):
                 Dend.curvature_sampled = Dend.control_points
         self.add_commands(["Width_Desc"])
         self.show_stuff_coll(["DendWidth"])
-<<<<<<< HEAD
-        dend_factor = 0.5 + 0.1*self.dend_width_mult_slider.value()
+        dend_factor = 0.1 + 0.1*self.dend_width_mult_slider.value()
         dend_factor_str = "{:.1f}".format(dend_factor)
         self.dend_width_mult_counter.setText(dend_factor_str)
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))
-=======
-        dend_factor = 0.1+0.1*self.dend_width_mult_slider.value()
-        self.dend_width_mult_counter.setText(str(dend_factor))
-        self.neighbour_counter.setText(str(self.neighbour_slider.value()))
-
->>>>>>> 4afe522f302ef8ea3f38deefd823addf195980dd
         if(hasattr(self.DendArr[0],'lineinteract')):
             for D in self.DendArr:
                 D.lineinteract.clear()
