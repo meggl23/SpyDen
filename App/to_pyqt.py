@@ -1717,7 +1717,7 @@ class DataReadWindow(QWidget):
         dend_factor = 0.1 + 0.1*self.dend_width_mult_slider.value()
         self.dend_width_mult_counter.setText(str(dend_factor))
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))
-        self.dend_width_mult_slider
+
         if(hasattr(self.DendArr[0],'lineinteract')):
             for D in self.DendArr:
                 D.lineinteract.clear()
