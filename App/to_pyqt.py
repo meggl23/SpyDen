@@ -228,7 +228,7 @@ class DataReadWindow(QWidget):
         self.multiwindow_check = QCheckBox(self)
         self.multiwindow_check.setText("Multi Channel")
         self.multiwindow_check.setEnabled(False)
-        self.SimVars.multiwindow_flag  = False
+        self.SimVars.multiwindow_flag  = True
         self.grid.addWidget(self.multiwindow_check, 2, 0, 1, 1)
 
         #========= multiwindow checkbox ================
@@ -267,7 +267,7 @@ class DataReadWindow(QWidget):
         self.timestep_slider.setMaximum(self.number_timesteps - 1)
         self.timestep_slider.singleStep()
         self.timestep_slider.valueChanged.connect(self.change_channel)
-        self.timestep_counter = QLabel(str(self.channel_slider.value()))
+        self.timestep_counter = QLabel(str(self.timestep_slider.value()))
         self.grid.addWidget(self.timestep_counter, 2, 9, 1, 1)
         self.hide_stuff([self.timestep_slider,self.timestep_counter,self.timestep_label])
 
@@ -882,8 +882,8 @@ class DataReadWindow(QWidget):
                     Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
                     xperts = R.getPolyXYs()
                     mask = np.zeros_like(self.tiff_Arr[0,0])
-                    c = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2])
-                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1])
+                    c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-2]-1)
+                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1]-1)
                     rr, cc = polygon(r, c)
                     mask[cc, rr] = 255
                     cv.imwrite(Spine_Mask_Dir, mask)
@@ -1277,6 +1277,11 @@ class DataReadWindow(QWidget):
         self.SpineArr = []
         self.DendArr  = []
         self.punctas  = []
+        self.DendMeasure  = []
+        try:
+            del self.DendMeasure
+        except:
+            pass
         if(hasattr(self,"roi_interactor_list")):
             for R in self.roi_interactor_list:
                 R.clear()
@@ -1412,53 +1417,63 @@ class DataReadWindow(QWidget):
 
             Settings_File = self.SimVars.Dir + "Settings.txt"
             if os.path.exists(Settings_File):
-                with open(Settings_File, "r") as file:
-                    # Read the lines of the file
-                    lines = file.readlines()
+                try:
+                    with open(Settings_File, "r") as file:
+                        # Read the lines of the file
+                        lines = file.readlines()
 
-                # Process the lines
-                for line in lines:
-                    # Split each line into key-value pairs
-                    key, value = line.strip().split(":")
-                    if(key=="MLLocation"):
-                        if(os.path.isfile(value)):
-                            self.NN_path = value
-                            self.NN = True
-                            self.button_set_NN.setText("Set NN! (saved)")
-                    elif(key=="multi-time"):
-                        boolean_value = value == "True"
-                        self.multitime_check.setChecked(boolean_value)
-                        self.SimVars.multitime_flag = boolean_value
-                        self.timestep_slider.setVisible(True)
-                        self.timestep_counter.setVisible(True)
-                        self.timestep_label.setVisible(True)
-                    elif(key=="resolution"):
-                        scale = float(value)
-                    else:
-                        value = int(value)
-                        if(key=="Image threshold"):
-                            self.thresh_slider.setValue(value)
-                        if(key=="Dendritic width"):
-                            self.neighbour_slider.setValue(value)
-                            self.neighbour_counter.setText(str(value))
-                        if(key=="ML Confidence"):
-                            self.ml_confidence_slider.setValue(value)
-                            self.confidence_counter.setText(str(value))
-                        if(key=="ROI Tolerance"):
-                            self.tol_val = value
-                            self.tolerance_slider.setValue(value)
-                            self.tolerance_counter.setText(str(value))
-                        if(key=="ROI Sigma"):
-                            self.sigma_val = value
-                            self.sigma_slider.setValue(value)
-                            self.sigma_counter.setText(str(value))
-                        if(key=="Dendritic puncta threshold"):
-                            self.puncta_dend_slider.setValue(value)
-                            self.puncta_dend_counter.setText(str(value))
-                        if(key=="Dendritic puncta threshold"):
-                            self.puncta_soma_slider.setValue(value)
-                            self.puncta_soma_counter.setText(str(value))
-        
+                    # Process the lines
+                    for line in lines:
+                        # Split each line into key-value pairs
+                        if("MLLocation" in line):
+                            value = line[11:-1]
+                            if(os.path.isfile(value)):
+                                self.NN_path = value
+                                self.NN = True
+                                self.button_set_NN.setText("Set NN! (saved)")
+                            else:
+                                self.NN = False
+                                self.button_set_NN.setText("Set NN! (saved can't be found)")
+                        else:
+                            key, value = line.strip().split(":")
+                            if(key=="multi-time"):
+                                boolean_value = value == "True"
+                                self.multitime_check.setChecked(boolean_value)
+                                self.SimVars.multitime_flag = boolean_value
+                                if(self.SimVars.multitime_flag):
+                                    self.timestep_slider.setVisible(True)
+                                    self.timestep_counter.setVisible(True)
+                                    self.timestep_label.setVisible(True)
+                            elif(key=="resolution"):
+                                scale = float(value)
+                            else:
+                                value = int(value)
+                                if(key=="Image threshold"):
+                                    self.thresh_slider.setValue(value)
+                                if(key=="Dendritic width"):
+                                    self.neighbour_slider.setValue(value)
+                                    self.neighbour_counter.setText(str(value))
+                                if(key=="ML Confidence"):
+                                    self.ml_confidence_slider.setValue(value)
+                                    self.confidence_counter.setText(str(value))
+                                if(key=="ROI Tolerance"):
+                                    self.tol_val = value
+                                    self.tolerance_slider.setValue(value)
+                                    self.tolerance_counter.setText(str(value))
+                                if(key=="ROI Sigma"):
+                                    self.sigma_val = value
+                                    self.sigma_slider.setValue(value)
+                                    self.sigma_counter.setText(str(value))
+                                if(key=="Dendritic puncta threshold"):
+                                    self.puncta_dend_slider.setValue(value)
+                                    self.puncta_dend_counter.setText(str(value))
+                                if(key=="Dendritic puncta threshold"):
+                                    self.puncta_soma_slider.setValue(value)
+                                    self.puncta_soma_counter.setText(str(value))
+                except Exception as e:
+                    self.set_status_message.setText('There was a problem with the settings file')
+                    if DevMode: print(e)
+
             self.SimVars.model = self.NN_path
             self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
             self.thresh_slider.valueChanged.connect(self.dend_thresh)
@@ -1487,6 +1502,7 @@ class DataReadWindow(QWidget):
             self.projection.setEnabled(True)
             self.analyze.setEnabled(True)
             if(scale>0):
+                self.CheckOldDend()
                 self.res.setText("%.3f" % scale)
                 MakeButtonActive(self.medial_axis_path_button)
         if(indx==1):
@@ -2047,7 +2063,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.2</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.3</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

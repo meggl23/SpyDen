@@ -298,7 +298,7 @@ def save_puncta(puncta_Dir,punctas,xLims):
     """
     
     if(len(xLims[0])==0):
-        Lims = 0
+        Lims = np.array(0)
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
 

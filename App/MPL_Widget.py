@@ -60,7 +60,10 @@ class MyPaintWidget(QWidget):
         self.instance.grid.removeWidget(self.canvas)
         self.instance.grid.removeWidget(self.toolbox)
         self.toolbox.deleteLater()
-        del self.toolbox
+        try:
+            del self.toolbox
+        except:
+            pass
         self.figure.clear()
         plt.close()
 
