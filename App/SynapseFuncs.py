@@ -3,7 +3,7 @@ from skimage.feature import canny
 from skimage.registration import phase_cross_correlation
 
 import json
-
+import copy
 from .Spine import Synapse
 import csv
 
@@ -313,11 +313,14 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
     Function:
             Save list of spines as json file
     """
+
+    modifiedSynArr = copy.deepcopy(SynArr)
+
     if(len(xLims[0])==0):
         xLims = 0
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
-    for S in SynArr:
+    for S in modifiedSynArr:
         try:
             S.points   = S.points   - Lims
             S.location = S.location - Lims
@@ -336,13 +339,13 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
             pass
     if Mode == "Area":
         with open(Dir + "Synapse_a.json", "w") as fp:
-            json.dump([vars(S) for S in SynArr], fp, indent=4,cls=NumpyEncoder)
+            json.dump([vars(S) for S in modifiedSynArr], fp, indent=4,cls=NumpyEncoder)
     elif Mode == "Luminosity":
         with open(Dir + "Synapse_l.json", "w") as fp:
-            json.dump([vars(S) for S in SynArr], fp, indent=4,cls=NumpyEncoder)
+            json.dump([vars(S) for S in modifiedSynArr], fp, indent=4,cls=NumpyEncoder)
     else:
         with open(Dir + "Synapse.json", "w") as fp:
-            json.dump([vars(S) for S in SynArr], fp, indent=4,cls=NumpyEncoder)
+            json.dump([vars(S) for S in modifiedSynArr], fp, indent=4,cls=NumpyEncoder)
 
     return 0
 

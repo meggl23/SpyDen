@@ -1007,13 +1007,8 @@ class DataReadWindow(QWidget):
                         xy = np.array(S.points[i])
                         plt.plot(xy[:,0],xy[:,1],'-r')
 
-
-                        try:
-                            labelpt = np.array(S.bgloc)
-                            plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
-                        except:
-                            labelpt = np.max(xy,axis=0)
-                            plt.text(labelpt[0]+5 ,labelpt[1]+5, str(i), color='red')
+                        labelpt = np.array(S.location)
+                        plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
                 try:
                     for i,D in enumerate(self.DendArr):
                         plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
@@ -1027,20 +1022,14 @@ class DataReadWindow(QWidget):
 
         else:
             fig = plt.figure()
-
             plt.imshow(self.tiff_Arr[0,0])
             if(hasattr(self,'roi_interactor_list')):
                 for i,S in enumerate(self.SpineArr):
                     xy = np.array(S.points)
                     plt.plot(xy[:,0],xy[:,1],'-r')
 
-
-                    try:
-                        labelpt = np.array(S.bgloc)
-                        plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
-                    except:
-                        labelpt = np.max(xy,axis=0)
-                        plt.text(labelpt[0]+5 ,labelpt[1]+5, str(i), color='red')
+                    labelpt = np.array(S.location)
+                    plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
             try:
                 for i,D in enumerate(self.DendArr):
                     plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
