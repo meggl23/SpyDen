@@ -2,6 +2,8 @@ import os
 import shutil
 import glob
 
+import numpy as np
+
 from .MPL_Widget import *
 from .DataRead import *
 from matplotlib.widgets import Slider, Button
@@ -393,6 +395,20 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.command_box, 19, 0, 1, 2)
         self.command_box.setFixedWidth(550)
         self.command_box.setFixedHeight(100)
+
+        # ============= dend width change slider ==================
+        self.dend_width_mult_label = QLabel("Dendritic Width Multiplication Factor")
+        self.grid.addWidget(self.dend_width_mult_label, 4, 8, 1, 1)
+        self.dend_width_mult_slider = QSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.dend_width_mult_slider.setTickPosition(QSlider.TicksBelow)
+        self.grid.addWidget(self.dend_width_mult_slider, 4, 2, 1, 6)
+        self.dend_width_mult_slider.setMinimum(0)
+        self.dend_width_mult_slider.setMaximum(10)
+        self.dend_width_mult_slider.setValue(5)
+        self.dend_width_mult_slider.singleStep()
+        self.dend_width_mult_counter = QLabel(str(self.dend_width_mult_slider.value()))
+        self.grid.addWidget(self.dend_width_mult_counter, 4, 9, 1, 1)
+        self.hide_stuff([self.dend_width_mult_counter, self.dend_width_mult_slider, self.dend_width_mult_label])
 
 
 
@@ -1484,6 +1500,7 @@ class DataReadWindow(QWidget):
             self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
             self.multitime_check.stateChanged.connect(lambda state: self.check_changed(state,1))
             self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
+            self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_eval))
             self.SimVars.Unit = scale
             # Get shifting of snapshots
             if (self.SimVars.Snapshots > 1):
@@ -1697,8 +1714,10 @@ class DataReadWindow(QWidget):
                 Dend.curvature_sampled = Dend.control_points
         self.add_commands(["Width_Desc"])
         self.show_stuff_coll(["DendWidth"])
-
+        dend_factor = 0.5 + 0.1*self.dend_width_mult_slider.value()
+        self.dend_width_mult_counter.setText(str(dend_factor))
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))
+        self.dend_width_mult_slider
         if(hasattr(self.DendArr[0],'lineinteract')):
             for D in self.DendArr:
                 D.lineinteract.clear()
@@ -1713,7 +1732,7 @@ class DataReadWindow(QWidget):
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
             D.set_surface_contours(
-                max_neighbours=self.neighbour_slider.value(), sigma=10
+                max_neighbours=self.neighbour_slider.value(), sigma=10, width_factor=dend_factor
             )
             dend_surface = D.get_dendritic_surface_matrix()
             dend_cont = D.get_contours()
@@ -1871,6 +1890,8 @@ class DataReadWindow(QWidget):
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider,
             self.tolerance_label,self.tolerance_counter,self.tolerance_slider])
         self.hide_stuff([self.ml_confidence_label,self.ml_confidence_slider,self.confidence_counter ])
+        self.hide_stuff([self.dend_width_mult_label, self.dend_width_mult_slider, self.dend_width_mult_counter])
+
 
         for Name in Names:
             if(Name=="Puncta"):
@@ -1879,7 +1900,8 @@ class DataReadWindow(QWidget):
             if(Name=="MedAx"):
                 self.show_stuff([self.thresh_slider, self.thresh_label])
             if(Name=="DendWidth"):
-                self.show_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label])
+                self.show_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label,
+                                 self.dend_width_mult_label, self.dend_width_mult_slider, self.dend_width_mult_counter])
 
             if(Name=="NN"):
                 self.show_stuff([self.ml_confidence_label,self.ml_confidence_slider,self.confidence_counter ])
