@@ -403,7 +403,7 @@ class DataReadWindow(QWidget):
         self.dend_width_mult_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.dend_width_mult_slider, 4, 2, 1, 6)
         self.dend_width_mult_slider.setMinimum(0)
-        self.dend_width_mult_slider.setMaximum(10)
+        self.dend_width_mult_slider.setMaximum(19)
         self.dend_width_mult_slider.setValue(5)
         self.dend_width_mult_slider.singleStep()
         self.dend_width_mult_counter = QLabel(str(self.dend_width_mult_slider.value()))
@@ -1708,10 +1708,10 @@ class DataReadWindow(QWidget):
                 Dend.curvature_sampled = Dend.control_points
         self.add_commands(["Width_Desc"])
         self.show_stuff_coll(["DendWidth"])
-        dend_factor = 0.5 + 0.1*self.dend_width_mult_slider.value()
+        dend_factor = 0.1+0.1*self.dend_width_mult_slider.value()
         self.dend_width_mult_counter.setText(str(dend_factor))
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))
-        self.dend_width_mult_slider
+
         if(hasattr(self.DendArr[0],'lineinteract')):
             for D in self.DendArr:
                 D.lineinteract.clear()
