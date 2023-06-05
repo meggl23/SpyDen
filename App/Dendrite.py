@@ -315,7 +315,7 @@ class DendriteMeasurement:
                 self.sc.remove()
                 self.coords = []
         elif event.key == 'backspace':
-            self.DendClear()
+            self.DendClear(self.tiff_Arr)
 
     def DendClear(self,tiff_Arr):
         self.AtLeastOne=False
