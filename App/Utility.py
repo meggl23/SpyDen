@@ -224,7 +224,15 @@ def getWidthnew(img, all_ps, sigma, max_neighbours):
     for i in range(len(width_arr) - 1):
         if width_arr[i + 1] > width_arr[i] + max_neighbours:
             width_arr[i + 1] = width_arr[i]
+    print(width_arr)
+    width_arr[-1] = width_arr[-2]
     ##########################
+    reverted = np.flip(width_arr, axis=0)
+    for i in range(len(reverted) - 1):
+        if reverted[i + 1] > reverted[i] + max_neighbours:
+            reverted[i + 1] = reverted[i]
+    width_arr = np.flip(reverted, axis=0)
+    print(width_arr)
     return width_arr, degrees
 
 
