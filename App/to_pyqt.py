@@ -1385,6 +1385,7 @@ class DataReadWindow(QWidget):
                 self.tolerance_slider.disconnect()
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
+                self.dend_width_mult_slider.disconnect()
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
@@ -1478,8 +1479,8 @@ class DataReadWindow(QWidget):
                                     self.puncta_soma_counter.setText(str(value))
                                 elif(key=="Dend. width multiplier"):
                                     self.dend_width_mult_slider.setValue(value)
-                                    dend_factor = 0.5 + 0.1*self.dend_width_mult_slider.value()
-                                    self.dend_width_mult_counter.setText(str(dend_factor))
+                                    dend_factor = "{:.1f}".format(0.5 + 0.1*self.dend_width_mult_slider.value())
+                                    self.dend_width_mult_counter.setText(dend_factor)
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
                     if DevMode: print(e)
@@ -1709,9 +1710,9 @@ class DataReadWindow(QWidget):
         self.add_commands(["Width_Desc"])
         self.show_stuff_coll(["DendWidth"])
         dend_factor = 0.5 + 0.1*self.dend_width_mult_slider.value()
-        self.dend_width_mult_counter.setText(str(dend_factor))
+        dend_factor_str = "{:.1f}".format(dend_factor)
+        self.dend_width_mult_counter.setText(dend_factor_str)
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))
-        self.dend_width_mult_slider
         if(hasattr(self.DendArr[0],'lineinteract')):
             for D in self.DendArr:
                 D.lineinteract.clear()
@@ -1953,6 +1954,7 @@ class DataReadWindow(QWidget):
             elif(flag==1):
                 self.SimVars.multitime_flag = False
                 self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
+
 @handle_exceptions
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""

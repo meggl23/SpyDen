@@ -22,6 +22,8 @@ from typing import Callable
 
 import numpy as np
 
+import traceback
+
 
 class MyPaintWidget(QWidget):
     """
