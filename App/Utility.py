@@ -170,7 +170,7 @@ def RunNN(Simvars, DendArr, tiff_Arr):
     return pPoints, score
 
 
-def getWidthnew(img, all_ps, sigma, max_neighbours):
+def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
     """
     Calculates the width of the dendrite along the provided points.
 
@@ -224,8 +224,16 @@ def getWidthnew(img, all_ps, sigma, max_neighbours):
     for i in range(len(width_arr) - 1):
         if width_arr[i + 1] > width_arr[i] + max_neighbours:
             width_arr[i + 1] = width_arr[i]
+
+    width_arr[-1] = width_arr[-2]
     ##########################
-    return width_arr, degrees
+    reverted = np.flip(width_arr, axis=0)
+    for i in range(len(reverted) - 1):
+        if reverted[i + 1] > reverted[i] + max_neighbours:
+            reverted[i + 1] = reverted[i]
+    width_arr = np.flip(reverted, axis=0)
+
+    return width_arr*width_factor, degrees
 
 
 def SearchWidth(img, edges, p, degree, width, count, max_neighbours):

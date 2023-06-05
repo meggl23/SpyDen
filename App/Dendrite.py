@@ -108,7 +108,7 @@ class Dendrite:
         self.control_points = self.lineinteract.getPolyXYs()
         return self.control_points
 
-    def set_surface_contours(self, max_neighbours: int = 6, sigma: int = 10) -> None:
+    def set_surface_contours(self, max_neighbours: int = 6, sigma: int = 10, width_factor: int=1) -> None:
         """
 
         Args:
@@ -139,6 +139,7 @@ class Dendrite:
             smoothed_all_pts,
             sigma=sigma,
             max_neighbours=max_neighbours,
+            width_factor=width_factor
         )
         mask = np.zeros(shape=self.Morphologie.shape)
 
