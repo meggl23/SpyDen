@@ -43,6 +43,7 @@ def FindShape(
     sigma=1.5,
     CheckVec=[True, True, True, True],
     tol=3,
+    SpineShift_flag = True
 ):
 
     """
@@ -70,7 +71,7 @@ def FindShape(
     SpineMinDir = None
     if tiff_Arr_m.ndim > 2:
         tiff_Arr = tiff_Arr_m.max(axis=0)
-        if ErrorCorrect:
+        if(SpineShift_flag and ErrorCorrect):
             tiff_Arr_small = tiff_Arr_m[
                 :,
                 max(pt[1] - 20, 0) : min(pt[1] + 20, tiff_Arr_m.shape[-2]),
