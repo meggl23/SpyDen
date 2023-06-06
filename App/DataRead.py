@@ -452,6 +452,10 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
             SynL = np.array(SynA[i]) + S.shift[i][::-1]
         except:
             SynL = np.array(SynA[i])
+
+        SynL[:,0] = np.clip(SynL[:,0],0,tiff_Arr.shape[-1]-1)
+        SynL[:,1] = np.clip(SynL[:,1],0,tiff_Arr.shape[-2]-1)
+        
         if SynL.ndim == 2:
             mask = np.zeros(shape=tiff_Arr.shape[-2:], dtype=np.uint8)
             c = SynL[:, 1]
@@ -511,6 +515,8 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
 
         SynBg[:,0] = np.clip(SynBg[:,0],0,tiff_Arr.shape[-1]-1)
         SynBg[:,1] = np.clip(SynBg[:,1],0,tiff_Arr.shape[-2]-1)
+        SynL[:,0] = np.clip(SynL[:,0],0,tiff_Arr.shape[-1]-1)
+        SynL[:,1] = np.clip(SynL[:,1],0,tiff_Arr.shape[-2]-1)
 
         if SynL.ndim == 2:
             mask = np.zeros(shape=tiff_Arr.shape[-2:], dtype=np.uint8)

@@ -361,17 +361,19 @@ def DendSave_csv(Dir,Dend_Arr):
         max_sublists = max(len(var) for var in DendVar)
         max_length = max(max(len(sublist) for sublist in var) for var in DendVar)
 
+        for i,var in enumerate(DendVar):
+            if(len(var)<max_sublists):
+                num_empty_entries = max_sublists - len(var)
+                empty_rows = np.empty((num_empty_entries,max_length),dtype=var.dtype)
+                DendVar[i] = np.vstack((var,empty_rows))
         flattened_data = []
-
         # Iterate over the sublists
         for i in range(max_sublists):
             sublist_data = []
             for var in DendVar:
                 sublist = var[i] if i < len(var) else []
                 sublist_data.extend(sublist)
-                sublist_data.append('')  # Add an empty column after each sublist
             flattened_data.append(sublist_data)
-
         # Write data to CSV file
         with open(csv_file_path, 'w', newline='') as file:
             writer = csv.writer(file)

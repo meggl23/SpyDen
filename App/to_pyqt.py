@@ -479,8 +479,14 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.sigma_counter, 4, 9, 1, 1)
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider])
 
-
-
+        #============= spine sigma slider ==================
+        self.local_shift_check = QCheckBox(self)
+        self.local_shift_check.setText("Local shifting")
+        self.grid.addWidget(self.local_shift_check, 5, 2, 1, 1)
+        self.local_shift_check.setVisible(False)
+        self.local_shift = False
+        self.local_shift_check.stateChanged.connect(lambda state: self.check_changed(state,2))
+        
         # ============= Puncta dendritic threshold slider ==================
         self.puncta_dend_label = QLabel("Threshold dendrite")
         self.grid.addWidget(self.puncta_dend_label,3, 2, 1, 1)
@@ -577,6 +583,7 @@ class DataReadWindow(QWidget):
                 True,
                 sigma=self.sigma_val,
                 tol=self.tol_val,
+                SpineShift_flag = self.local_shift
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1100,8 +1107,10 @@ class DataReadWindow(QWidget):
                     mean,
                     True,
                     sigma=self.sigma_val,
-                    tol  = self.tol_val
+                    tol  = self.tol_val,
+                    SpineShift_flag = self.local_shift
                 )
+
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
@@ -1187,6 +1196,8 @@ class DataReadWindow(QWidget):
         for S in self.SpineArr:
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                 xpert = S.points
+                if(self.local_shift):
+                    S.shift = []
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
@@ -1215,7 +1226,8 @@ class DataReadWindow(QWidget):
                     mean,
                     True,
                     sigma=self.sigma_val,
-                    tol  = self.tol_val
+                    tol  = self.tol_val,
+                    SpineShift_flag=self.local_shift
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1886,7 +1898,7 @@ class DataReadWindow(QWidget):
             self.tolerance_label,self.tolerance_counter,self.tolerance_slider])
         self.hide_stuff([self.ml_confidence_label,self.ml_confidence_slider,self.confidence_counter ])
         self.hide_stuff([self.dend_width_mult_label, self.dend_width_mult_slider, self.dend_width_mult_counter])
-
+        self.hide_stuff([self.local_shift_check])
 
         for Name in Names:
             if(Name=="Puncta"):
@@ -1903,6 +1915,8 @@ class DataReadWindow(QWidget):
             if(Name=="SpineROI"):
                 self.show_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider,
                                 self.tolerance_label,self.tolerance_counter,self.tolerance_slider])
+                if(self.SimVars.multitime_flag):
+                    self.show_stuff([self.local_shift_check])
 
     def hide_stuff(self,stuff) -> None:
         """Hides the specified GUI elements.
@@ -1947,6 +1961,9 @@ class DataReadWindow(QWidget):
             elif(flag==1):
                 self.SimVars.multitime_flag = True
                 self.show_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
+            elif(flag==2):
+                self.local_shift = True
+                self.spine_ROI_eval()
         else:
             if(flag==0):
                 self.SimVars.multiwindow_flag = False
@@ -1954,6 +1971,9 @@ class DataReadWindow(QWidget):
             elif(flag==1):
                 self.SimVars.multitime_flag = False
                 self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
+            elif(flag==2):
+                self.local_shift = False
+                self.spine_ROI_eval()
 
 @handle_exceptions
 class DirStructWindow(QWidget):
@@ -2081,7 +2101,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.4.3</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.0-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
