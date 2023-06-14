@@ -297,7 +297,7 @@ class DataReadWindow(QWidget):
         self.channel_label = QLabel("Channel")
         self.grid.addWidget(self.channel_label, 1, 8, 1, 1)
         self.channel_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.channel_slider.setTickPosition(QSlider.TicksBelow)
+        #self.channel_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.channel_slider, 1, 2, 1, 6)
         self.channel_slider.setMinimum(0)
         self.channel_slider.setMaximum(self.number_channels - 1)
@@ -311,7 +311,7 @@ class DataReadWindow(QWidget):
         self.timestep_label = QLabel("Timestep")
         self.grid.addWidget(self.timestep_label,2, 8, 1, 1)
         self.timestep_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.timestep_slider.setTickPosition(QSlider.TicksBelow)
+        #self.timestep_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.timestep_slider, 2, 2, 1, 6)
         self.timestep_slider.setMinimum(0)
         self.timestep_slider.setMaximum(self.number_timesteps - 1)
@@ -1842,12 +1842,18 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
+
         image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
 
         self.default_thresh = self.thresh_slider.value()
         if(hasattr(self,"DendMeasure")):
             self.DendMeasure.thresh = self.default_thresh
             self.DendMeasure.DendClear(self.tiff_Arr)
+            MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
+            MakeButtonInActive(self.SimVars.frame.spine_button)
+            MakeButtonInActive(self.SimVars.frame.spine_button_NN)
+            MakeButtonInActive(self.SimVars.frame.delete_old_result_button)
+            MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
         else:
             self.mpl.clear_plot()
             self.mpl.update_plot((image>=self.default_thresh)*image)
@@ -2147,7 +2153,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.1-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.2-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
