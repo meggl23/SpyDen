@@ -272,9 +272,7 @@ class DendriteMeasurement:
 
                 MakeButtonActive(self.SimVars.frame.dendritic_width_button)
                 MakeButtonActive(self.SimVars.frame.spine_button)
-                if self.SimVars.frame.NN: MakeButtonActive(self.SimVars.frame.spine_button_NN)
-                MakeButtonActive(self.SimVars.frame.delete_old_result_button)
-
+                MakeButtonActive(self.SimVars.frame.spine_button_NN)
                 MakeButtonActive(self.SimVars.frame.measure_puncta_button)
     
                 self.AnotherDendFlag = True
@@ -319,6 +317,11 @@ class DendriteMeasurement:
             self.DendClear(self.tiff_Arr)
 
     def DendClear(self,tiff_Arr):
+
+        MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
+        MakeButtonInActive(self.SimVars.frame.spine_button)
+        MakeButtonInActive(self.SimVars.frame.spine_button_NN)
+        MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
         self.AtLeastOne=False
         self.AnotherDendFlag=True
         self.coords = ([])
