@@ -115,7 +115,7 @@ class ClickSlider(QSlider):
         else:
             return super().mouseReleaseEvent(self, e)
 
-#@handle_exceptions
+@handle_exceptions
 class DataReadWindow(QWidget):
     """
     class that makes the Data Read Window
@@ -1713,9 +1713,12 @@ class DataReadWindow(QWidget):
         val = self.ml_confidence_slider.value() / 10
         self.confidence_counter.setText(str(val))
 
+        if(hasattr(self,'spine_marker')):
+            ps = self.spine_marker.SimVars.points_NN
+            ss = self.spine_marker.SimVars.scores_NN
+            fs = self.spine_marker.SimVars.flags_NN
 
-        self.spine_marker = spine_eval(SimVars=self.SimVars, points=self.SimVars.points_NN[self.SimVars.scores_NN>val],
-            scores=self.SimVars.scores_NN[self.SimVars.scores_NN>val],flags=self.SimVars.flags_NN[self.SimVars.scores_NN>val])
+        self.spine_marker = spine_eval(SimVars=self.SimVars, points=ps[ss>val],scores=ss[ss>val],flags=fs[ss>val])
     
     def spine_eval_handle(self) -> None:
         """

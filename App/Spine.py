@@ -113,6 +113,9 @@ class Spine_Marker:
         """
         zoom_flag = self.SimVars.frame.mpl.toolbox.mode == "zoom rect"
         pan_flag = self.SimVars.frame.mpl.toolbox.mode == "pan/zoom"
+        nn_points = self.SimVars.points_NN
+        nn_scores = self.SimVars.scores_NN
+        nn_flags  = self.SimVars.flags_NN
         if zoom_flag or pan_flag:
             pass
         else:
@@ -140,11 +143,10 @@ class Spine_Marker:
                     self.scores = np.delete(self.scores,index)
                     self.flags = np.delete(self.flags,index)
                     if(hasattr(self.SimVars,'points_NN')):
-                        self.SimVars.points_NN = np.delete(
-                            self.SimVars.points_NN, [index * 2, index * 2 + 1]
-                        ).reshape(-1, 2)
-                        self.SimVars.scores_NN = np.delete(self.SimVars.scores_NN,index)
-                        self.SimVars.flags_NN = np.delete(self.SimVars.flags_NN,index)
+                        self.SimVars.points_NN = np.delete(nn_points[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10], 
+                                                [index * 2, index * 2 + 1]).reshape(-1, 2)
+                        self.SimVars.scores_NN = np.delete(nn_scores[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10],index)
+                        self.SimVars.flags_NN = np.delete(nn_flags[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10],index)
             if len(self.points) == 0:
                 self.scatter.set_visible(False)
             self.draw_points()
