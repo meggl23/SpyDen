@@ -1806,10 +1806,15 @@ class DataReadWindow(QWidget):
         self.show_stuff_coll(["MedAx"])
 
         self.add_commands(["MP_Desc","MP_line"])
+        if(hasattr(self,"DendMeasure")):
+            self.DendArr = self.DendMeasure.DendArr
         if(hasattr(self,"spine_marker")):
             self.spine_marker.disconnect()
         try:
-            self.dend_thresh()
+            self.mpl.clear_plot()
+            self.default_thresh = self.thresh_slider.value()
+            image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+            self.mpl.update_plot((image>=self.default_thresh)*image)
         except:
             pass
         self.DendMeasure= medial_axis_eval(self.SimVars,self.tiff_Arr,self.DendArr,self)
@@ -1844,20 +1849,14 @@ class DataReadWindow(QWidget):
         """
 
         image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-
+        MakeButtonInActive(self.dendritic_width_button)
         self.default_thresh = self.thresh_slider.value()
         if(hasattr(self,"DendMeasure")):
             self.DendMeasure.thresh = self.default_thresh
             self.DendMeasure.DendClear(self.tiff_Arr)
-            MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
-            MakeButtonInActive(self.SimVars.frame.spine_button)
-            MakeButtonInActive(self.SimVars.frame.spine_button_NN)
-            MakeButtonInActive(self.SimVars.frame.delete_old_result_button)
-            MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
         else:
             self.mpl.clear_plot()
             self.mpl.update_plot((image>=self.default_thresh)*image)
-
 
     def change_channel(self,value) -> None:
         """Handles the change of channel by updating relevant GUI elements and the plot.
