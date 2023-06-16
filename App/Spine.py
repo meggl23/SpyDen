@@ -182,7 +182,7 @@ class Spine_Marker:
         zoom_flag = self.SimVars.frame.mpl.toolbox.mode == "zoom rect"
         pan_flag = self.SimVars.frame.mpl.toolbox.mode == "pan/zoom"
 
-        if zoom_flag or pan_flag:
+        if zoom_flag or pan_flag or not event.inaxes:
             pass
         else:
             coords = np.array([event.xdata, event.ydata]).reshape(1, 2)

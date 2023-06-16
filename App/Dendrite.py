@@ -230,7 +230,7 @@ class DendriteMeasurement:
         #flags for zooming pan mode if true clicks are not painted
         zoom_flag = self.SimVars.frame.mpl.toolbox.mode == "zoom rect"
         pan_flag = self.SimVars.frame.mpl.toolbox.mode == "pan/zoom"
-        if zoom_flag or pan_flag or not self.AnotherDendFlag:
+        if zoom_flag or pan_flag or not self.AnotherDendFlag or not event.inaxes:
             pass
         else:
             x, y = int(event.xdata), int(event.ydata)
@@ -315,10 +315,10 @@ class DendriteMeasurement:
                 self.coords = []
         elif event.key == 'backspace':
             self.DendClear(self.tiff_Arr)
+            MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
 
     def DendClear(self,tiff_Arr):
 
-        MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
         MakeButtonInActive(self.SimVars.frame.spine_button)
         MakeButtonInActive(self.SimVars.frame.spine_button_NN)
         MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
