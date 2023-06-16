@@ -1892,6 +1892,8 @@ class DataReadWindow(QWidget):
             self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
         if(self.PunctaCalc):
             self.display_puncta()
+
+        self.mpl.canvas.setFocus()
     
     def update_plot_handle(self, image: np.ndarray) -> None:
         """

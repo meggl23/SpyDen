@@ -132,19 +132,19 @@ class Spine_Marker:
             if len(self.points) > 0:
 
                 dist_values = np.sqrt(np.sum((self.points - key_press_point) ** 2, axis=1))
-                for index, val in enumerate(dist_values):
-                    if val <= Spine_Marker.Epsilon and event.key == "d":
-                        self.points = np.delete(
-                            self.points, [index * 2, index * 2 + 1]
+                index,val = np.argmin(dist_values),np.min(dist_values)
+                if val <= Spine_Marker.Epsilon and event.key == "d":
+                    self.points = np.delete(
+                        self.points, [index * 2, index * 2 + 1]
+                    ).reshape(-1, 2)
+                    self.scores = np.delete(self.scores,index)
+                    self.flags = np.delete(self.flags,index)
+                    if(hasattr(self.SimVars,'points_NN')):
+                        self.SimVars.points_NN = np.delete(
+                            self.SimVars.points_NN, [index * 2, index * 2 + 1]
                         ).reshape(-1, 2)
-                        self.scores = np.delete(self.scores,index)
-                        self.flags = np.delete(self.flags,index)
-                        if(hasattr(self.SimVars,'points_NN')):
-                            self.SimVars.points_NN = np.delete(
-                                self.SimVars.points_NN, [index * 2, index * 2 + 1]
-                            ).reshape(-1, 2)
-                            self.SimVars.scores_NN = np.delete(self.SimVars.scores_NN,index)
-                            self.SimVars.flags_NN = np.delete(self.SimVars.flags_NN,index)
+                        self.SimVars.scores_NN = np.delete(self.SimVars.scores_NN,index)
+                        self.SimVars.flags_NN = np.delete(self.SimVars.flags_NN,index)
             if len(self.points) == 0:
                 self.scatter.set_visible(False)
             self.draw_points()
