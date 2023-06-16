@@ -115,7 +115,7 @@ class ClickSlider(QSlider):
         else:
             return super().mouseReleaseEvent(self, e)
 
-@handle_exceptions
+#@handle_exceptions
 class DataReadWindow(QWidget):
     """
     class that makes the Data Read Window
@@ -2154,7 +2154,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.3-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.4-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
