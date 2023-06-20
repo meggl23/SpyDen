@@ -113,11 +113,17 @@ class Spine_Marker:
         """
         zoom_flag = self.SimVars.frame.mpl.toolbox.mode == "zoom rect"
         pan_flag = self.SimVars.frame.mpl.toolbox.mode == "pan/zoom"
+<<<<<<< HEAD
 
         if(hasattr(self.SimVars,'points_NN')):
             nn_points = self.SimVars.points_NN
             nn_scores = self.SimVars.scores_NN
             nn_flags  = self.SimVars.flags_NN
+=======
+        nn_points = self.SimVars.points_NN
+        nn_scores = self.SimVars.scores_NN
+        nn_flags  = self.SimVars.flags_NN
+>>>>>>> ed60499fc4a650ff5b3d5f27d1e866de226753e6
         if zoom_flag or pan_flag:
             pass
         else:
