@@ -697,6 +697,7 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].RawIntDen = []
             self.SpineArr[i].IntDen = []
             self.SpineArr[i].area = []
+            self.SpineArr[i].local_bg = []
 
         self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
 
@@ -1446,6 +1447,8 @@ class DataReadWindow(QWidget):
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
+            self.SimVars.multitime_flag = self.multitime_check.isChecked()
+            self.SimVars.multiwindow_flag = self.multiwindow_check.isChecked()
             try:
                 self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
                                                                     Channels=multwin)
@@ -1713,9 +1716,12 @@ class DataReadWindow(QWidget):
         val = self.ml_confidence_slider.value() / 10
         self.confidence_counter.setText(str(val))
 
+        if(hasattr(self,'spine_marker')):
+            ps = self.spine_marker.SimVars.points_NN
+            ss = self.spine_marker.SimVars.scores_NN
+            fs = self.spine_marker.SimVars.flags_NN
 
-        self.spine_marker = spine_eval(SimVars=self.SimVars, points=self.SimVars.points_NN[self.SimVars.scores_NN>val],
-            scores=self.SimVars.scores_NN[self.SimVars.scores_NN>val],flags=self.SimVars.flags_NN[self.SimVars.scores_NN>val])
+        self.spine_marker = spine_eval(SimVars=self.SimVars, points=ps[ss>val],scores=ss[ss>val],flags=fs[ss>val])
     
     def spine_eval_handle(self) -> None:
         """
@@ -1806,10 +1812,15 @@ class DataReadWindow(QWidget):
         self.show_stuff_coll(["MedAx"])
 
         self.add_commands(["MP_Desc","MP_line"])
+        if(hasattr(self,"DendMeasure")):
+            self.DendArr = self.DendMeasure.DendArr
         if(hasattr(self,"spine_marker")):
             self.spine_marker.disconnect()
         try:
-            self.dend_thresh()
+            self.mpl.clear_plot()
+            self.default_thresh = self.thresh_slider.value()
+            image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+            self.mpl.update_plot((image>=self.default_thresh)*image)
         except:
             pass
         self.DendMeasure= medial_axis_eval(self.SimVars,self.tiff_Arr,self.DendArr,self)
@@ -1844,20 +1855,14 @@ class DataReadWindow(QWidget):
         """
 
         image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-
+        MakeButtonInActive(self.dendritic_width_button)
         self.default_thresh = self.thresh_slider.value()
         if(hasattr(self,"DendMeasure")):
             self.DendMeasure.thresh = self.default_thresh
             self.DendMeasure.DendClear(self.tiff_Arr)
-            MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
-            MakeButtonInActive(self.SimVars.frame.spine_button)
-            MakeButtonInActive(self.SimVars.frame.spine_button_NN)
-            MakeButtonInActive(self.SimVars.frame.delete_old_result_button)
-            MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
         else:
             self.mpl.clear_plot()
             self.mpl.update_plot((image>=self.default_thresh)*image)
-
 
     def change_channel(self,value) -> None:
         """Handles the change of channel by updating relevant GUI elements and the plot.
@@ -1892,6 +1897,8 @@ class DataReadWindow(QWidget):
             self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
         if(self.PunctaCalc):
             self.display_puncta()
+
+        self.mpl.canvas.setFocus()
     
     def update_plot_handle(self, image: np.ndarray) -> None:
         """
@@ -2153,7 +2160,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.3-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.4-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
