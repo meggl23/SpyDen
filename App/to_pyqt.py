@@ -98,7 +98,7 @@ class ClickSlider(QSlider):
         super().__init__(*args, **kwargs)
 
     def mousePressEvent(self, e):
-        if e.button() == Qt.LeftButton:
+        if e.button() == Qt.LeftButton or e.button() == Qt.RightButton:
             e.accept()
             x = e.pos().x()
             value = round((self.maximum() - self.minimum()) * x / self.width() + self.minimum())
@@ -107,7 +107,7 @@ class ClickSlider(QSlider):
             return super().mousePressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
-        if e.button() == Qt.LeftButton:
+        if e.button() == Qt.LeftButton or e.button() == Qt.RightButton:
             e.accept()
             x = e.pos().x()
             value = round((self.maximum() - self.minimum()) * x / self.width() + self.minimum())
