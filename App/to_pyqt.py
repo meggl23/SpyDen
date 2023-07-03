@@ -835,7 +835,6 @@ class DataReadWindow(QWidget):
         self.PunctaCalc = True
 
         MakeButtonActive(self.save_button)
-        self.set_status_message.setText("Punctas are available on all snaphshots/channels")
 
     def display_puncta(self):
         """Displays the puncta on the plot.

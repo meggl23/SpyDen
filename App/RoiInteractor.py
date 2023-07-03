@@ -92,6 +92,8 @@ class RoiInteractor:
         if no point is within ``self.epsilon`` to the event position.
         """
         # display coords
+        # I know this can lead to multiple ROIs being selected - possible fix: pass all centres and just select
+        # the closest centre
         xy = np.asarray(self.poly.xy)
         xyt = self.poly.get_transform().transform(xy)
         xt, yt = xyt[:, 0], xyt[:, 1]
@@ -100,7 +102,6 @@ class RoiInteractor:
         ind = indseq[0]
         if d[ind] >= self.epsilon:
             ind = None
-
         return ind
 
     def on_button_press(self, event):
