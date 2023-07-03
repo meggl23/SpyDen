@@ -20,7 +20,7 @@ import csv
 
 class Puncta:
 
-    def __init__(self,location,radius,stats,between_cp,distance,struct):
+    def __init__(self,location,radius,stats,between_cp,distance,struct,channel,snapshot):
         self.location  = location
         self.radius    = radius
         self.max       = stats[0]
@@ -31,8 +31,8 @@ class Puncta:
         self.between   = between_cp
         self.distance  = distance
         self.struct    = struct
-        self.channel   = 0
-        self.snapshot  = 0
+        self.channel   = channel
+        self.snapshot  = snapshot
 
 class PunctaDetection:
     """
@@ -138,10 +138,11 @@ class PunctaDetection:
                     length_from_origin += np.sqrt(
                         (y_int - a[1]) ** 2 + (x_int - a[0]) ** 2
                     )
-                    return True, length_from_origin / self.scale
+                    return True, length_from_origin * self.scale
             length_from_origin += np.sqrt((b[1] - a[1]) ** 2 + (b[0] - a[0]) ** 2)
 
         length_from_origin = self.GetClosestRoiPoint(dendrite, point)
+        print("for puncta {} , length from origin = {}".format(point,length_from_origin))
         return False, length_from_origin * self.scale
 
     # set somatic = False for dendritic punctas
@@ -182,21 +183,17 @@ class PunctaDetection:
 
                 orig_img = self.tiff_Arr[t, ch, :, :].astype(float)
                 if(Soma):
-                    somatic_puncta,anti_soma   = self.GetPunctasSoma(orig_img)
+                    somatic_puncta,anti_soma   = self.GetPunctasSoma(orig_img,ch,t)
                     all_c_somatic_puncta.append(somatic_puncta)
                 else:
                     anti_soma = np.ones(np.shape(orig_img), "uint8")
                 try:
-                    dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma)
+                    dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma,ch,t)
                 except:
                     NoDendrite = True
                     dendritic_puncta = []
-                for d in dendritic_puncta:
-                    d.snapshot = t
-                    d.channel  = ch
-                for s in somatic_puncta:
-                    s.snapshot = t
-                    s.channel  = ch
+                if ch == 0:
+                    print(somatic_puncta,dendritic_puncta)
                 all_c_dendritic_puncta.append(dendritic_puncta)
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
@@ -206,7 +203,7 @@ class PunctaDetection:
             self.SimVars.frame.set_status_message.setText("Punctas are available on all snaphshots/channels, but there was no dendrite, so no dendritic puncta")
         return all_c_t_somatic_puncta, all_c_t_dendritic_puncta
 
-    def GetPunctasSoma(self,orig_img):
+    def GetPunctasSoma(self,orig_img,ch,t_snape):
         """Detects and returns somatic puncta in the given image.
 
         Performs puncta detection on the soma regions of the image and returns the detected puncta.
@@ -237,18 +234,18 @@ class PunctaDetection:
 
             t = np.quantile(orig_img[rr, cc], self.soma_thresh)
             
-            blobs_log = blob_log(soma_img, threshold=t)
+            blobs_log = blob_log(soma_img, threshold=t,max_sigma=1)
             blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
 
             for blob in blobs_log:
                 y, x, r = blob
                 puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
-                sp = Puncta([x,y],r,puncta_stats,False,0,i)
+                sp = Puncta([x,y],r,puncta_stats,False,0,i,ch,t_snape)
                 somatic_puncta.append(sp)
 
         return somatic_puncta,anti_soma
 
-    def GetPunctasDend(self,orig_img,anti_soma):
+    def GetPunctasDend(self,orig_img,anti_soma,ch,t_snape):
 
         """Detects and returns dendritic puncta in the given image.
 
@@ -279,7 +276,7 @@ class PunctaDetection:
             dend_img = np.multiply(dilated, orig_img)
             filtered_dend_img = dend_img[np.nonzero(dend_img)]
             t = np.quantile(filtered_dend_img, self.dend_thresh)
-            dend_blobs_log = blob_log(dend_img, threshold=t)
+            dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=1)
             dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)
             dp = []
             for blob in dend_blobs_log:
@@ -288,7 +285,7 @@ class PunctaDetection:
                     [xs, ys], [x, y], dendrite_instance.dend_stat[:,2].max()
                 )
                 puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
-                dp = Puncta([x,y],r,puncta_stats,on_dendrite,distance_from_origin,i)
+                dp = Puncta([x,y],r,puncta_stats,on_dendrite,distance_from_origin,i,ch,t_snape)
                 dendritic_puncta.append(dp)
 
         return dendritic_puncta
