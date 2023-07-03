@@ -49,6 +49,7 @@ class PunctaDetection:
         self.scale = SimVars.Unit  
         self.dend_thresh = dend_thresh
         self.soma_thresh = soma_thresh
+        self.SimVars = SimVars
 
     def isBetween(self, a, b, c):
         """
@@ -171,6 +172,7 @@ class PunctaDetection:
             input: none, called by PunctaDetection class object
             output: two dictionaries that stores list of puncta stats for each puncta element wise (soma/dendrite)
         """
+        NoDendrite = False
         all_c_t_somatic_puncta = []
         all_c_t_dendritic_puncta = []
         for t in range(self.snaps):
@@ -184,18 +186,24 @@ class PunctaDetection:
                     all_c_somatic_puncta.append(somatic_puncta)
                 else:
                     anti_soma = np.ones(np.shape(orig_img), "uint8")
-                dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma)
-                all_c_dendritic_puncta.append(dendritic_puncta)
-            for dp in all_c_dendritic_puncta:
-                for d in dp:
+                try:
+                    dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma)
+                except:
+                    NoDendrite = True
+                    dendritic_puncta = []
+                for d in dendritic_puncta:
                     d.snapshot = t
                     d.channel  = ch
-            for sp in all_c_somatic_puncta:
-                for s in sp:
+                for s in somatic_puncta:
                     s.snapshot = t
                     s.channel  = ch
+                all_c_dendritic_puncta.append(dendritic_puncta)
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
+        if(not NoDendrite):
+            self.SimVars.frame.set_status_message.setText("Punctas are available on all snaphshots/channels")
+        else:
+            self.SimVars.frame.set_status_message.setText("Punctas are available on all snaphshots/channels, but there was no dendrite, so no dendritic puncta")
         return all_c_t_somatic_puncta, all_c_t_dendritic_puncta
 
     def GetPunctasSoma(self,orig_img):
@@ -261,7 +269,6 @@ class PunctaDetection:
         dilated = np.zeros(np.shape(orig_img), "uint8")
 
         for i,dendrite_instance in enumerate(self.dendrites):
-
             dilated = dendrite_instance.get_dendritic_surface_matrix()
             dilated = np.multiply(anti_soma, dilated)
             xy = GetAllpointsonPath(dendrite_instance.control_points)[:, :]

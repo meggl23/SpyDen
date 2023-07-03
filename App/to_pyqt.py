@@ -98,7 +98,7 @@ class ClickSlider(QSlider):
         super().__init__(*args, **kwargs)
 
     def mousePressEvent(self, e):
-        if e.button() == Qt.LeftButton:
+        if e.button() == Qt.LeftButton or e.button() == Qt.RightButton:
             e.accept()
             x = e.pos().x()
             value = round((self.maximum() - self.minimum()) * x / self.width() + self.minimum())
@@ -107,7 +107,7 @@ class ClickSlider(QSlider):
             return super().mousePressEvent(self, e)
 
     def mouseReleaseEvent(self, e):
-        if e.button() == Qt.LeftButton:
+        if e.button() == Qt.LeftButton or e.button() == Qt.RightButton:
             e.accept()
             x = e.pos().x()
             value = round((self.maximum() - self.minimum()) * x / self.width() + self.minimum())
@@ -835,7 +835,6 @@ class DataReadWindow(QWidget):
         self.PunctaCalc = True
 
         MakeButtonActive(self.save_button)
-        self.set_status_message.setText("Punctas are available on all snaphshots/channels")
 
     def display_puncta(self):
         """Displays the puncta on the plot.
@@ -2160,7 +2159,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.4-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.5-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
