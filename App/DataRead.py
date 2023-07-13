@@ -542,7 +542,7 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
                 Max.append(int(np.nanmax(roi)))
                 Min.append(int(np.nanmin(roi)))
                 RawIntDen.append(int(np.nansum(roi)))
-                IntDen.append(np.nansum(roi) * area_pix * SimVars.Unit**2)
+                IntDen.append(np.nansum(roi) * SimVars.Unit**2)
                 Mean.append(np.nanmean(roi))
                 local_bg.append(np.nanmean(roi2))
 
