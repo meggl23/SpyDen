@@ -449,8 +449,8 @@ class DataReadWindow(QWidget):
         self.dend_width_mult_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.dend_width_mult_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.dend_width_mult_slider, 4, 2, 1, 6)
-        self.dend_width_mult_slider.setMinimum(0)
-        self.dend_width_mult_slider.setMaximum(19)
+        self.dend_width_mult_slider.setMinimum(1)
+        self.dend_width_mult_slider.setMaximum(20)
         self.dend_width_mult_slider.setValue(5)
         self.dend_width_mult_slider.singleStep()
         self.dend_width_mult_counter = QLabel(str(self.dend_width_mult_slider.value()))
@@ -1538,7 +1538,7 @@ class DataReadWindow(QWidget):
                                     self.puncta_soma_counter.setText(str(value))
                                 elif(key=="Dend. width multiplier"):
                                     self.dend_width_mult_slider.setValue(value)
-                                    dend_factor = "{:.1f}".format(0.5 + 0.1*self.dend_width_mult_slider.value())
+                                    dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
                                     self.dend_width_mult_counter.setText(dend_factor)
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
@@ -1583,7 +1583,8 @@ class DataReadWindow(QWidget):
             MakeButtonActive(self.medial_axis_path_button)
             self.CheckOldDend()
         
-    
+    def get_actual_multiple_factor(self):
+        return 0.1 + 0.1*self.dend_width_mult_slider.value()
     def CheckOldDend(self):
         """Checks for the existence of old dendrite data and updates the corresponding buttons and plots.
 
@@ -1771,7 +1772,7 @@ class DataReadWindow(QWidget):
                 Dend.curvature_sampled = Dend.control_points
         self.add_commands(["Width_Desc"])
         self.show_stuff_coll(["DendWidth"])
-        dend_factor = 0.1 + 0.1*self.dend_width_mult_slider.value()
+        dend_factor = self.get_actual_multiple_factor()
         dend_factor_str = "{:.1f}".format(dend_factor)
         self.dend_width_mult_counter.setText(dend_factor_str)
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))

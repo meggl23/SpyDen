@@ -186,7 +186,7 @@ def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
     """
 
 
-    edges1 = feature.canny(img, sigma=3)
+    edges1 = feature.canny(img, sigma=sigma)
 
 
     i_img = np.zeros(img.shape)
