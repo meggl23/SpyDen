@@ -13,6 +13,8 @@ from . import GenFolderStruct as GFS
 from .SynapseFuncs import FindShape
 from .RoiInteractor import RoiInteractor,RoiInteractor_BG
 from .PunctaDetection import save_puncta,PunctaDetection,Puncta
+from .PathFinding import GetLength
+
 
 DevMode = False
 
@@ -714,7 +716,7 @@ class DataReadWindow(QWidget):
         """
 
         Dend_Struct_Dir = Dend_Dir + "Dend_Struct"+str(i)+".npy"
-        Dend_Stat_Dir = Dend_Dir + "Dend_Stats"+str(i)+".npy"
+        Dend_Stat_Dir = Dend_Dir + "Dend_Path_Lumin"+str(i)+".npy"
         Dend_Save_Dir = Dend_Dir + "Dendrite"+str(i)+".npy"
         Dend_Mask_Dir = Dend_Dir + "/Mask_dend"+str(i)+".png"
         if(len(self.SimVars.yLims)>0):
@@ -922,6 +924,7 @@ class DataReadWindow(QWidget):
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
                 DendSave_csv(Dend_Dir,self.DendArr)
+                DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit)
             except Exception as e:
                 if DevMode: print(e)
                 SaveFlag[0] = False
@@ -1613,6 +1616,7 @@ class DataReadWindow(QWidget):
                 Dend.control_points, fill=False, closed=False, animated=False
                 )
                 Dend.curvature_sampled = Dend.control_points
+                Dend.length            = GetLength(Dend.complete_medial_axis_path)*self.SimVars.Unit
                 self.DendArr.append(Dend)
                 self.mpl.axes.add_patch(pol)
 

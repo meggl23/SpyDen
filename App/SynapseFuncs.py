@@ -448,7 +448,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         Lims = np.array([xLims[0][0],xLims[1][0]])
 
     if(Mode=='Luminosity'):
-        custom_header =(['', 'type','location','bgloc','area','distance'] + 
+        custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend'] + 
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
@@ -462,7 +462,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 writer.writerow(custom_header) 
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
-                                     str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance]
+                                     str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend]
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
                     row.extend(s.max[c])
@@ -471,7 +471,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.local_bg[c])
                     writer.writerow(row)   
     else:
-        custom_header =(['', 'type','location','distance'] + 
+        custom_header =(['', 'type','location','distance','closest_Dend'] + 
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
@@ -485,7 +485,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 writer.writerow(custom_header) 
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
-                                     str(s.location-Lims),s.distance]
+                                     str(s.location-Lims),s.distance,s.closest_Dend]
                     row.extend(s.area[c])
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
