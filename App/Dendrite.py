@@ -17,7 +17,8 @@ from scipy.ndimage import gaussian_filter1d, gaussian_filter
 import cv2 as cv
 from skimage.draw import ellipse
 import csv
-
+import math
+import json
 
 class Dendrite:
     """this class holds all the params for the dendrite like tif_arr"""
@@ -57,7 +58,6 @@ class Dendrite:
             self.median_thresh = median >= self.thresh
         else:
             self.median_thresh = median >= np.mean(median)
-
 
         if self.len_y <= 512 and self.len_x <= 512:
 
@@ -383,3 +383,89 @@ def DendSave_csv(Dir,Dend_Arr):
             writer.writerow(flattened_list)
             for row in flattened_data:
                 writer.writerow(row)
+
+def DendSave_json(Dir,Dend_Arr,tf,Snapshots,Channels,Unit):
+    """
+    Saves dendrite data to multiple CSV files, each corresponding to a specific channel.
+
+    Args:
+        Dir (str): Directory path where the CSV files will be saved.
+        Dend_Arr (list): List of dendrite arrays.
+
+    Returns:
+        None
+    """
+
+    DDic = []
+    for D in Dend_Arr:
+        Start,End = D.control_points[0].tolist(),D.control_points[-1].tolist()
+        length = D.length
+        Mean = []
+        Area = []
+        Max  = []
+        Min  = []
+        RID  = []
+        ID   = []
+        for C in range(Channels):
+            me,ar,ma,mi,ri,ide = MeasureDend(D.dendritic_surface_matrix,tf[:,C,:,],Unit,Snapshots)
+
+            Mean.append(me)
+            Area.append(ar)
+            Max.append(ma)
+            Min.append(mi)
+            RID.append(ri)
+            ID.append(ide)
+        DDic.append({'Start':Start,'End':End,'Length':length,'Mean':Mean,
+                'Area':Area,'Max':Max,'Min':Min,'Raw Integrated Density':RID,
+                'Integrated Density':ID})
+    with open(Dir + "Dendrites.json", "w") as fp:
+        json.dump([D for D in DDic], fp, indent=4)
+
+
+
+def MeasureDend(mask, tiff_Arr, Unit,Snapshots):
+
+    """
+    Input:
+            S (Synapse)
+            tiff_Arr (np.array) : The pixel values of the of tiff files
+            SimVars  (class)    : The class holding all simulation parameters
+    Output:
+            None
+
+    Function:
+            Finds the relevant places in the tiff file and measures these for each Dendrite
+    """
+    Mean = []
+    area = []
+    Max  = []
+    Min  = []
+    RawIntDen = []
+    IntDen = []
+    for i in range(Snapshots):
+        try:
+            roi  = tiff_Arr[i].astype(np.float64)
+            roi[np.where(mask == 0)] = math.nan
+            area_pix = np.sum(mask)
+            area.append(int(area_pix) * Unit**2)
+            Max.append(int(np.nanmax(roi)))
+            Min.append(int(np.nanmin(roi)))
+            RawIntDen.append(int(np.nansum(roi)))
+            IntDen.append(np.nansum(roi) * Unit**2)
+            Mean.append(np.nanmean(roi))
+
+        except Exception as ex:
+            print(ex)
+            area.append(math.nan)
+            Mean.append(math.nan)
+            Max.append(math.nan)
+            Min.append(math.nan)
+            RawIntDen.append(math.nan)
+            IntDen.append(math.nan)
+
+    return Mean,area,Max,Min,RawIntDen,IntDen
+
+
+
+
+

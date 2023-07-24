@@ -314,16 +314,18 @@ def medial_axis_path(
         coords[:, 1] = gaussian_filter1d(coords[:, 1], mode="nearest", sigma=10)
 
         # calculate length of path in pixels
-
-        length = 0
-        for i in range(len(coords)):
-            diff = mt.sqrt(np.sum((coords[i] - coords[i - 1]) ** 2))
-            length += diff
-
+        length = GetLength(coords)
         return coords, length * scale
     else:
-        print("points were not on the dendrit, press again Go!")
+        print("points were not on the dendrit, press Go again!")
 
+def GetLength(coords):
+    length = 0
+    for i in range(1,len(coords)):
+        diff = np.linalg.norm(coords[i]-coords[i-1])
+        length += diff
+
+    return length
 
 def downsampling_max_pool(img: np.ndarray, kernel_size: int, stride: int) -> np.ndarray:
     """
