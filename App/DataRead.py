@@ -449,7 +449,7 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
     IntDen = []
     for i in range(Snapshots):
         try:
-            SynL = np.array(SynA[i]) + S.shift[i][::-1]
+            SynL = np.array(SynA[i]) + S.shift[i]
         except:
             SynL = np.array(SynA[i])
 
@@ -507,7 +507,7 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
     local_bg = []
     for i in range(Snapshots):
         try:
-            SynL = SynA + S.shift[i][::-1]
+            SynL = SynA + S.shift[i]
             SynBg = SynA-np.array(S.location)+np.array(S.bgloc)
         except:
             SynL = SynA

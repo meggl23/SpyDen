@@ -3,6 +3,7 @@ import numpy as np
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 from matplotlib.patches import Polygon
+from matplotlib.transforms import Bbox
 
 from .Utility import *
 
@@ -26,7 +27,7 @@ class RoiInteractor:
     showverts = True
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, canvas, poly,):
+    def __init__(self, ax, canvas, poly,loc=None,shift=[],Snapshot=0,nSnaps=1):
         if poly.figure is None:
             raise RuntimeError(
                 "You must first add the polygon to a figure "
@@ -35,7 +36,10 @@ class RoiInteractor:
         self.ax = ax
         self.ax.patch.set_alpha(0.5)
         self.poly = poly
+        self.loc  = loc
+        self.OgLoc = loc
         x, y = zip(*self.poly.xy)
+        self.Snapshot = Snapshot
         self.line = Line2D(
             x,
             y,
@@ -49,6 +53,29 @@ class RoiInteractor:
             antialiased=True,
             alpha=0.75,
         )
+        self.NoShift = True
+        if(loc is not None):
+            self.line_centre = Line2D(
+                [loc[0]],[loc[1]],
+                marker="o",
+                markerfacecolor="k",
+                markersize=1.2 * self.epsilon,
+                fillstyle="full",
+                linestyle=None,
+                linewidth=1.5,
+                color='r',
+                animated=True,
+                antialiased=True,
+                )
+            self.ax.add_line(self.line_centre)
+            if(shift is None or len(shift)==0):
+                self.shift = [[0,0]]*nSnaps
+            else:
+                self.shift = shift
+            self.points = np.array(self.poly.xy)-np.array(loc)
+            self.NoShift = False
+        else:
+            self.shift = [[0,0]]*nSnaps
         self.ax.add_line(self.line)
 
         self.cid = self.poly.add_callback(self.poly_changed)
@@ -61,8 +88,8 @@ class RoiInteractor:
         canvas.mpl_connect("motion_notify_event", self.on_mouse_move)
 
         self.canvas = canvas
-        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
         self.canvas.draw()
+        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
 
     def clear(self):
         self.line.set_visible(False)
@@ -77,6 +104,7 @@ class RoiInteractor:
         self.ax.draw_artist(self.poly)
         self.ax.set_alpha(0.1)
         self.ax.draw_artist(self.line)
+        if hasattr(self,"line_centre"): self.ax.draw_artist(self.line_centre)
 
     def poly_changed(self, poly):
         """This method is called whenever the pathpatch object is called."""
@@ -100,9 +128,18 @@ class RoiInteractor:
         d = np.hypot(xt - event.x, yt - event.y)
         (indseq,) = np.nonzero(d == d.min())
         ind = indseq[0]
-        if d[ind] >= self.epsilon:
-            ind = None
-        return ind
+        if(self.NoShift):
+            if d[ind] >= self.epsilon:
+                ind = None
+            return ind
+        else:
+            d1 = np.hypot(self.loc[0] - event.xdata, self.loc[1] - event.ydata)
+            if d[ind] >= self.epsilon and d1 > self.epsilon:
+                ind = None
+            elif d1 > d[ind]:
+                return ind
+            elif d1 < d[ind]:
+                return 'mid'
 
     def on_button_press(self, event):
         """Callback for mouse button presses."""
@@ -120,6 +157,9 @@ class RoiInteractor:
             return
         if event.button != 1:
             return
+
+        if(isinstance(self._ind,str)):
+            self.shift[self.Snapshot] = [round(self.loc[0]-self.OgLoc[0],0),round(self.loc[1]-self.OgLoc[1],0)]
         self._ind = None
 
     def on_key_press(self, event):
@@ -129,13 +169,15 @@ class RoiInteractor:
         if event.key == "t":
             self.showverts = not self.showverts
             self.line.set_visible(self.showverts)
+            if not self.NoShift: self.line_centre.set_visible(self.showverts)
             if not self.showverts:
                 self._ind = None
         elif event.key == "d":
             ind = self.get_ind_under_point(event)
-            if ind is not None:
+            if ind is not None and not isinstance(ind,str):
                 self.poly.xy = np.delete(self.poly.xy, ind, axis=0)
                 self.line.set_data(zip(*self.poly.xy))
+
         elif event.key == "i":
             xys = self.poly.get_transform().transform(self.poly.xy)
             p = event.x, event.y  # display coords
@@ -165,6 +207,24 @@ class RoiInteractor:
             return
         if event.button != 1:
             return
+        if isinstance(self._ind,str) and self.Snapshot>0:
+            x, y = event.xdata, event.ydata
+
+
+            self.canvas.restore_region(self.background)
+            self.line_centre.set_data([x], [y])
+            self.loc = [x,y]
+
+            self.line.set_data(zip(*self.points+np.array([x,y])))
+
+            self.poly.xy = self.points+np.array([x,y])
+            self.ax.draw_artist(self.line_centre)
+            self.ax.draw_artist(self.line)
+            self.canvas.draw_idle()
+            self.canvas.blit(self.ax.bbox)
+
+            return 
+
         x, y = event.xdata, event.ydata
 
         self.poly.xy[self._ind] = x, y
@@ -175,11 +235,13 @@ class RoiInteractor:
 
         self.canvas.restore_region(self.background)
         self.line.set_data(zip(*self.poly.xy))
-
+        self.points = np.array(self.poly.xy)-np.array(self.loc)
         for ix in self.ax.patches:
             self.ax.draw_artist(ix)
-        #self.ax.draw_artist(self.poly)
         self.ax.draw_artist(self.line)
+        if not self.NoShift: self.ax.draw_artist(self.line_centre)
+        self.canvas.draw_idle()
+
         self.canvas.blit(self.ax.bbox)
 
 class RoiInteractor_BG:
@@ -307,5 +369,6 @@ class RoiInteractor_BG:
             self.ax.draw_artist(self.poly)
             self.ax.set_alpha(0.1)
             self.ax.draw_artist(self.line)
+            self.canvas.draw_idle()
             self.canvas.blit(self.ax.bbox)
 
