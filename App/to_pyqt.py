@@ -1786,7 +1786,6 @@ class DataReadWindow(QWidget):
         self.show_stuff_coll([])
         self.add_commands(["Spine_Desc","Spine_Func"])
         self.spine_marker = spine_eval(SimVars=self.SimVars,points=old_points,scores=old_scores,flags=old_flags)
-        MakeButtonActive(self.spine_button_ROI)
         self.spine_button.setChecked(False)
         MakeButtonInActive(self.measure_spine_button)
         MakeButtonInActive(self.spine_bg_button)
@@ -1946,41 +1945,52 @@ class DataReadWindow(QWidget):
         Returns:
 
         """
-        #try:
-        if(self.SimVars.Mode=="Luminosity"):
-            for i,R in enumerate(self.roi_interactor_list):
-                R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
-                self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
-                self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
-                R.Snapshot = self.actual_timestep
-                R.poly.xy = R.poly.xy + R.shift[R.Snapshot]
-                R.line.set_data(zip(*R.poly.xy))
-                R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
-                R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
-        else:
-            for i,R in enumerate(self.roi_interactor_list):
-                if(self.local_shift):
+        try:
+            if(self.SimVars.Mode=="Luminosity"):
+                for i,R in enumerate(self.roi_interactor_list):
                     R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
-                    self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                    self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
                     self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
                     R.Snapshot = self.actual_timestep
-                    newDat = np.array(self.SpineArr[i].points[R.Snapshot])+np.array(R.shift[R.Snapshot])
-                    R.poly.xy = newDat
-                    R.line.set_data(newDat[:,0],newDat[:,1])
+                    R.poly.xy = R.poly.xy + R.shift[R.Snapshot]
+                    R.line.set_data(zip(*R.poly.xy))
                     R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
                     R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
-                    R.points =  np.array(R.poly.xy)-np.array(R.loc)
-                else:
-                    self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
-                    R.Snapshot = self.actual_timestep
-                    newDat = np.array(self.SpineArr[i].points[R.Snapshot])
-                    R.poly.xy = newDatt
-                    R.line.set_data(newDat[:,0],newDat[:,1])
+                    if(self.actual_timestep>0):
+                        R.line_centre.set_color('r')
+                        R.line_centre.set_markerfacecolor('k')
+                    else:
+                        R.line_centre.set_color('gray')
+                        R.line_centre.set_markerfacecolor('gray')
 
-        #except Exception as e:
-        #    print(e)
-            # Print the error message associated with the exception
-        #    pass
+            else:
+                for i,R in enumerate(self.roi_interactor_list):
+                    if(self.local_shift):
+                        R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                        self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
+                        R.Snapshot = self.actual_timestep
+                        newDat = np.array(self.SpineArr[i].points[R.Snapshot])+np.array(R.shift[R.Snapshot])
+                        R.poly.xy = newDat
+                        R.line.set_data(newDat[:,0],newDat[:,1])
+                        R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
+                        R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
+                        R.points =  np.array(R.poly.xy)-np.array(R.loc)
+                        if(self.actual_timestep>0):
+                            R.line_centre.set_color('r')
+                            R.line_centre.set_markerfacecolor('k')
+                        else:
+                            R.line_centre.set_color('gray')
+                            R.line_centre.set_markerfacecolor('gray')
+                    else:
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                        R.Snapshot = self.actual_timestep
+                        newDat = np.array(self.SpineArr[i].points[R.Snapshot])
+                        R.poly.xy = newDat
+                        R.line.set_data(newDat[:,0],newDat[:,1])
+        except Exception as e:
+           # Print the error message associated with the exception
+           pass
         self.mpl.update_plot(image)
         
     

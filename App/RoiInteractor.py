@@ -55,18 +55,32 @@ class RoiInteractor:
         )
         self.NoShift = True
         if(loc is not None):
-            self.line_centre = Line2D(
-                [loc[0]],[loc[1]],
-                marker="o",
-                markerfacecolor="k",
-                markersize=1.2 * self.epsilon,
-                fillstyle="full",
-                linestyle=None,
-                linewidth=1.5,
-                color='r',
-                animated=True,
-                antialiased=True,
-                )
+            if(Snapshot>0):
+                self.line_centre = Line2D(
+                    [loc[0]],[loc[1]],
+                    marker="o",
+                    markerfacecolor="k",
+                    markersize=1.2 * self.epsilon,
+                    fillstyle="full",
+                    linestyle=None,
+                    linewidth=1.5,
+                    color='r',
+                    animated=True,
+                    antialiased=True,
+                    )
+            else:
+                self.line_centre = Line2D(
+                    [loc[0]],[loc[1]],
+                    marker="o",
+                    markerfacecolor="gray",
+                    markersize=1.2 * self.epsilon,
+                    fillstyle="full",
+                    linestyle=None,
+                    linewidth=1.5,
+                    color='gray',
+                    animated=True,
+                    antialiased=True,
+                    )
             self.ax.add_line(self.line_centre)
             if(shift is None or len(shift)==0):
                 self.shift = [[0,0]]*nSnaps
@@ -207,21 +221,21 @@ class RoiInteractor:
             return
         if event.button != 1:
             return
-        if isinstance(self._ind,str) and self.Snapshot>0:
-            x, y = event.xdata, event.ydata
+        if isinstance(self._ind,str): 
+            if self.Snapshot>0:
+                x, y = event.xdata, event.ydata
 
+                self.canvas.restore_region(self.background)
+                self.line_centre.set_data([x], [y])
+                self.loc = [x,y]
 
-            self.canvas.restore_region(self.background)
-            self.line_centre.set_data([x], [y])
-            self.loc = [x,y]
+                self.line.set_data(zip(*self.points+np.array([x,y])))
 
-            self.line.set_data(zip(*self.points+np.array([x,y])))
-
-            self.poly.xy = self.points+np.array([x,y])
-            self.ax.draw_artist(self.line_centre)
-            self.ax.draw_artist(self.line)
-            self.canvas.draw_idle()
-            self.canvas.blit(self.ax.bbox)
+                self.poly.xy = self.points+np.array([x,y])
+                self.ax.draw_artist(self.line_centre)
+                self.ax.draw_artist(self.line)
+                self.canvas.draw_idle()
+                self.canvas.blit(self.ax.bbox)
 
             return 
 
@@ -235,7 +249,7 @@ class RoiInteractor:
 
         self.canvas.restore_region(self.background)
         self.line.set_data(zip(*self.poly.xy))
-        self.points = np.array(self.poly.xy)-np.array(self.loc)
+        if self.loc is not None: self.points = np.array(self.poly.xy)-np.array(self.loc)
         for ix in self.ax.patches:
             self.ax.draw_artist(ix)
         self.ax.draw_artist(self.line)
