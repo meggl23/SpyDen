@@ -3,6 +3,8 @@ import matplotlib.colors as mcolors
 import matplotlib as mpl
 mpl.rcParams['figure.dpi'] = 100
 
+from .Utility import MakeButtonInActive,MakeButtonActive
+
 class Synapse(object):
     """Class that holds the parameters associated with the chosen synapse"""
     def __init__(self,loc,bgloc,pts=[],dist=None,Syntype=None,shift=[],channel=0,local_bg=0,closest_Dend=0):
@@ -69,12 +71,15 @@ class Spine_Marker:
         """
         if len(self.points) == 0:
             self.canvas.draw()
+            MakeButtonInActive(self.SimVars.frame.spine_button_ROI)
         elif len(self.points) > 0 and self.scatter is None:
+            MakeButtonActive(self.SimVars.frame.spine_button_ROI)
             self.scatter = self.axes.scatter(
                 self.points[:, 0], self.points[:, 1], marker="x", c=[self.colors[self.flag] for self.flag in self.flags]
             )
             self.canvas.draw()
         else:
+            MakeButtonActive(self.SimVars.frame.spine_button_ROI)
             self.scatter.set_visible(False)
             self.canvas.draw()
             self.scatter = self.axes.scatter(

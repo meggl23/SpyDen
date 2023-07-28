@@ -690,9 +690,17 @@ class DataReadWindow(QWidget):
         medial_axis_Arr = [Dend.medial_axis.astype(int) for Dend in self.DendArr]
         for i,R in enumerate(self.roi_interactor_list):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                self.SpineArr[i].points = R.poly.xy.tolist()[:-1]
+                self.SpineArr[i].points = (R.poly.xy - R.shift[R.Snapshot]).tolist()[:-1]
+                try:
+                    self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
+                except:
+                    pass
             else:
-                self.SpineArr[i].points[self.actual_timestep] = R.poly.xy.tolist()[:-1]
+                self.SpineArr[i].points[self.actual_timestep] = (R.poly.xy - R.shift[R.Snapshot]).tolist()[:-1]
+                try:
+                    self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
+                except:
+                    pass
             self.SpineArr[i].mean = []
             self.SpineArr[i].min = []
             self.SpineArr[i].max = []
@@ -1162,7 +1170,11 @@ class DataReadWindow(QWidget):
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol))
+                if(not self.local_shift):
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                else:
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
+                        pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend))
             else:
@@ -1174,7 +1186,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, radloc,closest_Dend = FindShape(
+                    xpert, shift, radloc,closest_Dend = FindShape(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1182,14 +1194,19 @@ class DataReadWindow(QWidget):
                         mean,
                         True,
                         sigma=self.sigma_val,
-                        tol  = self.tol_val
+                        tol  = self.tol_val,
+                        SpineShift_flag = self.local_shift
                     )
                     self.SpineArr[-1].points.append(xpert)
                     self.SpineArr[-1].closest_Dend = closest_Dend
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol))
+                if(not self.local_shift):
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                else:
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
+                        pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
 
             self.set_status_message.setText(self.set_status_message.text()+'.')
             QCoreApplication.processEvents()
@@ -1244,17 +1261,32 @@ class DataReadWindow(QWidget):
         for S in self.SpineArr:
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                 xpert = S.points
-                if(self.local_shift):
-                    S.shift = []
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol))
+                if(S.shift is None):
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                else:
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
+                        pol,S.location,S.shift,self.actual_timestep,self.SimVars.Snapshots))
+                    self.local_shift = True
+                    self.local_shift_check.blockSignals(True)
+                    self.local_shift_check.setChecked(True)
+                    self.local_shift_check.blockSignals(False)
+
             else:
                 polygon = np.array(S.points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol))
+                if(S.shift is None):
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                else:
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
+                        pol,S.location,S.shift,self.actual_timestep,self.SimVars.Snapshots))
+                    self.local_shift = True
+                    self.local_shift_check.blockSignals(True)
+                    self.local_shift_check.setChecked(True)
+                    self.local_shift_check.blockSignals(False)
  
         points = self.spine_marker.points.astype(int)[[list(sp) not in [S.location for S in self.SpineArr] for sp in self.spine_marker.points]]
         flags  = self.spine_marker.flags.astype(int)[[list(sp) not in [S.location for S in self.SpineArr] for sp in self.spine_marker.points]]
@@ -1280,7 +1312,7 @@ class DataReadWindow(QWidget):
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol))
+                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift))
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend))
             else:
@@ -1307,7 +1339,7 @@ class DataReadWindow(QWidget):
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol))
+                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,[[0,0]*self.SimVars.Snapshots]))
 
             self.set_status_message.setText(self.set_status_message.text()+'.')
             QCoreApplication.processEvents()
@@ -1588,6 +1620,7 @@ class DataReadWindow(QWidget):
         
     def get_actual_multiple_factor(self):
         return 0.1 + 0.1*self.dend_width_mult_slider.value()
+
     def CheckOldDend(self):
         """Checks for the existence of old dendrite data and updates the corresponding buttons and plots.
 
@@ -1753,7 +1786,6 @@ class DataReadWindow(QWidget):
         self.show_stuff_coll([])
         self.add_commands(["Spine_Desc","Spine_Func"])
         self.spine_marker = spine_eval(SimVars=self.SimVars,points=old_points,scores=old_scores,flags=old_flags)
-        MakeButtonActive(self.spine_button_ROI)
         self.spine_button.setChecked(False)
         MakeButtonInActive(self.measure_spine_button)
         MakeButtonInActive(self.spine_bg_button)
@@ -1916,21 +1948,49 @@ class DataReadWindow(QWidget):
         try:
             if(self.SimVars.Mode=="Luminosity"):
                 for i,R in enumerate(self.roi_interactor_list):
-                    newDat = (R.poly.xy+np.array(self.SpineArr[i].shift[self.actual_timestep])
-                            -np.array(self.SpineArr[i].shift[self.previous_timestep]))
-                    R.poly.xy = newDat
-                    R.line.set_data(newDat[:,0],newDat[:,1])
-                    self.SpineArr[i].points = (newDat-np.array(self.SpineArr[i].shift[self.actual_timestep]))[:-1].tolist()
+                    R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
+                    self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
+                    self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
+                    R.Snapshot = self.actual_timestep
+                    R.poly.xy = R.poly.xy + R.shift[R.Snapshot]
+                    R.line.set_data(zip(*R.poly.xy))
+                    R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
+                    R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
+                    if(self.actual_timestep>0):
+                        R.line_centre.set_color('r')
+                        R.line_centre.set_markerfacecolor('k')
+                    else:
+                        R.line_centre.set_color('gray')
+                        R.line_centre.set_markerfacecolor('gray')
+
             else:
                 for i,R in enumerate(self.roi_interactor_list):
-                    oldDat = (R.poly.xy-np.array(self.SpineArr[i].shift[self.previous_timestep]))
-                    self.SpineArr[i].points[self.previous_timestep] = oldDat.tolist()
-                    newDat = self.SpineArr[i].points[self.actual_timestep]+np.array(self.SpineArr[i].shift[self.actual_timestep])
-                    R.poly.xy = newDat
-                    R.line.set_data(newDat[:,0],newDat[:,1])
+                    if(self.local_shift):
+                        R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                        self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
+                        R.Snapshot = self.actual_timestep
+                        newDat = np.array(self.SpineArr[i].points[R.Snapshot])+np.array(R.shift[R.Snapshot])
+                        R.poly.xy = newDat
+                        R.line.set_data(newDat[:,0],newDat[:,1])
+                        R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
+                        R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
+                        R.points =  np.array(R.poly.xy)-np.array(R.loc)
+                        if(self.actual_timestep>0):
+                            R.line_centre.set_color('r')
+                            R.line_centre.set_markerfacecolor('k')
+                        else:
+                            R.line_centre.set_color('gray')
+                            R.line_centre.set_markerfacecolor('gray')
+                    else:
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                        R.Snapshot = self.actual_timestep
+                        newDat = np.array(self.SpineArr[i].points[R.Snapshot])
+                        R.poly.xy = newDat
+                        R.line.set_data(newDat[:,0],newDat[:,1])
         except Exception as e:
-            # Print the error message associated with the exception
-            pass
+           # Print the error message associated with the exception
+           pass
         self.mpl.update_plot(image)
         
     
@@ -2164,7 +2224,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.5.6-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.0-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

@@ -74,8 +74,8 @@ def FindShape(
         if(SpineShift_flag and ErrorCorrect):
             tiff_Arr_small = tiff_Arr_m[
                 :,
-                max(pt[1] - 20, 0) : min(pt[1] + 20, tiff_Arr_m.shape[-2]),
-                max(pt[0] - 20, 0) : min(pt[0] + 20, tiff_Arr_m.shape[-1]),
+                max(pt[0] - 70, 0) : min(pt[1] + 70, tiff_Arr_m.shape[-2]),
+                max(pt[1] - 70, 0) : min(pt[0] + 70, tiff_Arr_m.shape[-1]),
             ]
             SpineMinDir = SpineShift(tiff_Arr_small).T.astype(int).tolist()
             tiff_Arr = np.array(
