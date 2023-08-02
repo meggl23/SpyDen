@@ -39,7 +39,7 @@ class PunctaDetection:
     class that holds meta data for puncta detection and methods for puncta stats calculations
     """
 
-    def __init__(self, SimVars, tiff_Arr, somas, dendrites, channels, dend_thresh=0.75,soma_thresh=0.5):
+    def __init__(self, SimVars, tiff_Arr, somas, dendrites, dend_thresh=0.75,soma_thresh=0.5):
         self.Dir = SimVars.Dir
         self.tiff_Arr = tiff_Arr
         self.somas = somas  
@@ -142,7 +142,6 @@ class PunctaDetection:
             length_from_origin += np.sqrt((b[1] - a[1]) ** 2 + (b[0] - a[0]) ** 2)
 
         length_from_origin = self.GetClosestRoiPoint(dendrite, point)
-        print("for puncta {} , length from origin = {}".format(point,length_from_origin))
         return False, length_from_origin * self.scale
 
     # set somatic = False for dendritic punctas
@@ -192,8 +191,7 @@ class PunctaDetection:
                 except:
                     NoDendrite = True
                     dendritic_puncta = []
-                if ch == 0:
-                    print(somatic_puncta,dendritic_puncta)
+
                 all_c_dendritic_puncta.append(dendritic_puncta)
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
@@ -231,9 +229,7 @@ class PunctaDetection:
 
             anti_soma = np.multiply(anti_soma, 1 - lsm_img)
             soma_img = np.multiply(orig_img, lsm_img)
-
-            t = np.quantile(orig_img[rr, cc], self.soma_thresh)
-            
+            t = np.max(orig_img[rr,cc])*self.soma_thresh
             blobs_log = blob_log(soma_img, threshold=t,max_sigma=1)
             blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
 

@@ -452,7 +452,7 @@ class DataReadWindow(QWidget):
         self.dend_width_mult_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.dend_width_mult_slider, 4, 2, 1, 6)
         self.dend_width_mult_slider.setMinimum(1)
-        self.dend_width_mult_slider.setMaximum(20)
+        self.dend_width_mult_slider.setMaximum(40)
         self.dend_width_mult_slider.setValue(5)
         self.dend_width_mult_slider.singleStep()
         self.dend_width_mult_counter = QLabel(str(self.dend_width_mult_slider.value()))
@@ -834,7 +834,7 @@ class DataReadWindow(QWidget):
         somas = self.get_soma_polygons()
 
 
-        soma_thresh = self.puncta_dend_slider.value()/100.0
+        soma_thresh = self.puncta_soma_slider.value()/100.0
         dend_thresh = self.puncta_dend_slider.value()/100.0
 
         PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,self.DendArr,dend_thresh,soma_thresh)
@@ -1619,7 +1619,7 @@ class DataReadWindow(QWidget):
             self.CheckOldDend()
         
     def get_actual_multiple_factor(self):
-        return 0.1 + 0.1*self.dend_width_mult_slider.value()
+        return 0.05*self.dend_width_mult_slider.value()
 
     def CheckOldDend(self):
         """Checks for the existence of old dendrite data and updates the corresponding buttons and plots.
@@ -1809,7 +1809,7 @@ class DataReadWindow(QWidget):
         self.add_commands(["Width_Desc"])
         self.show_stuff_coll(["DendWidth"])
         dend_factor = self.get_actual_multiple_factor()
-        dend_factor_str = "{:.1f}".format(dend_factor)
+        dend_factor_str = "{:.2f}".format(dend_factor)
         self.dend_width_mult_counter.setText(dend_factor_str)
         self.neighbour_counter.setText(str(self.neighbour_slider.value()))
         if(hasattr(self.DendArr[0],'lineinteract')):
@@ -2224,7 +2224,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.0-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.1-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
