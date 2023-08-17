@@ -956,24 +956,28 @@ class DataReadWindow(QWidget):
                 else:
                     os.mkdir(path=Spine_Dir)
 
+                T = np.argsort([s.distance for s in self.SpineArr])
+
+                orderedSpineArr = [self.SpineArr[t] for t in T]
                 #save spine masks
-                for i,R in  enumerate(self.roi_interactor_list):
+                for i,t in  enumerate(T):
+                    R = self.roi_interactor_list[t]
                     Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
                     xperts = R.getPolyXYs()
                     mask = np.zeros_like(self.tiff_Arr[0,0])
                     c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-2]-1)
                     r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1]-1)
                     rr, cc = polygon(r, c)
-                    mask[cc, rr] = 255
+                    mask[rr, cc] = 255
                     cv.imwrite(Spine_Mask_Dir, mask)
                 nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
                 if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                    SaveSynDict(self.SpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
+                    SaveSynDict(orderedSpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
                 else:
-                    SaveSynDict(self.SpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_csv(Spine_Dir,self.SpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                    SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
             except Exception as e:
                if DevMode: print(e)
                SaveFlag[1] = False
@@ -1066,12 +1070,14 @@ class DataReadWindow(QWidget):
 
                 plt.imshow(self.tiff_Arr[0,0])
                 if(hasattr(self,'roi_interactor_list')):
-                    for i,S in enumerate(self.SpineArr):
+                    T = np.argsort([s.distance for s in self.SpineArr])
+                    for i,t in enumerate(T):
+                        S = self.SpineArr[t]
                         xy = np.array(S.points[i])
                         plt.plot(xy[:,0],xy[:,1],'-r')
 
                         labelpt = np.array(S.location)
-                        plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
+                        plt.text(labelpt[0] ,labelpt[1], str(i), color='y')
                 try:
                     for i,D in enumerate(self.DendArr):
                         plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
@@ -1087,12 +1093,14 @@ class DataReadWindow(QWidget):
             fig = plt.figure()
             plt.imshow(self.tiff_Arr[0,0])
             if(hasattr(self,'roi_interactor_list')):
-                for i,S in enumerate(self.SpineArr):
+                T = np.argsort([s.distance for s in self.SpineArr])
+                for i,t in enumerate(T):
+                    S = self.SpineArr[t]
                     xy = np.array(S.points)
                     plt.plot(xy[:,0],xy[:,1],'-r')
 
                     labelpt = np.array(S.location)
-                    plt.text(labelpt[0] ,labelpt[1], str(i), color='red')
+                    plt.text(labelpt[0] ,labelpt[1], str(i), color='y')
             try:
                 for i,D in enumerate(self.DendArr):
                     plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
@@ -1103,6 +1111,7 @@ class DataReadWindow(QWidget):
             plt.tight_layout()
 
             fig.savefig(self.SimVars.Dir+'ROIs.png')
+
     def spine_ROI_eval(self):
 
         """Evaluate and calculate ROIs for spines.
@@ -1233,8 +1242,7 @@ class DataReadWindow(QWidget):
         """
         self.PunctaCalc = False
         self.spine_marker.disconnect()
-
-        self.SpineArr = np.array(self.SpineArr)[[sp.location in self.spine_marker.points.tolist() for sp in self.SpineArr]].tolist()
+        self.SpineArr = np.array(self.SpineArr)[[sp.location in self.spine_marker.points.astype(int).tolist() for sp in self.SpineArr]].tolist()
         self.show_stuff_coll(["SpineROI"])
         if(hasattr(self,"roi_interactor_list")):
             for R in self.roi_interactor_list:
@@ -1251,8 +1259,6 @@ class DataReadWindow(QWidget):
             )
         except:
             pass
-        points = self.spine_marker.points.astype(int)
-        flags  = self.spine_marker.flags.astype(int)
         mean = self.SimVars.bgmean[0][0]
 
         medial_axis_Arr = [Dend.medial_axis.astype(int) for Dend in self.DendArr]
@@ -1687,7 +1693,7 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
-
+        self.SaveROIstoSpine()
         MakeButtonInActive(self.measure_puncta_button)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
@@ -1766,6 +1772,8 @@ class DataReadWindow(QWidget):
         Returns: None
 
         """
+
+        self.SaveROIstoSpine()
         MakeButtonInActive(self.measure_puncta_button)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
@@ -1936,6 +1944,24 @@ class DataReadWindow(QWidget):
 
         self.mpl.canvas.setFocus()
     
+    def SaveROIstoSpine(self):
+        try:
+            if(self.SimVars.Mode=="Luminosity"):
+                for i,R in enumerate(self.roi_interactor_list):
+                    R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
+                    self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
+            else:
+                for i,R in enumerate(self.roi_interactor_list):
+                    if(self.local_shift):
+                        R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                    else:
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+        except Exception as e:
+            print(e)
+            pass
+
+
     def update_plot_handle(self, image: np.ndarray) -> None:
         """
         updates the plot without destroying the Figure
@@ -2224,7 +2250,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.1-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.2-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

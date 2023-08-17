@@ -137,7 +137,6 @@ def GetTiffData(File_Names, scale, z_type=np.sum, Dir=None, Channels=False):
         if not Channels:
             temp_mod = z_type(temp_mod, axis=1, keepdims=True)
         tiff_Arr.append(z_type(temp_mod, axis=0))
-        # print(tiff_Arr)
 
     md[0] = len(tiff_Arr)
     if not z_type == None:
@@ -179,9 +178,6 @@ def getScale(filename):
         return tf_file.lsm_metadata["ScanInformation"]["SampleSpacing"]
     else:
         print("Unsupported file format found. contact admin")
-        # TODO: Format print as pop-up/In the main window
-        exit()
-
 
 def getTifDimenstions(filename):
 
