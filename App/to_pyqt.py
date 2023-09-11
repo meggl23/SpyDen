@@ -724,8 +724,6 @@ class DataReadWindow(QWidget):
         Returns: None
         """
 
-        Dend_Struct_Dir = Dend_Dir + "Dend_Struct"+str(i)+".npy"
-        Dend_Stat_Dir = Dend_Dir + "Dend_Path_Lumin"+str(i)+".npy"
         Dend_Save_Dir = Dend_Dir + "Dendrite"+str(i)+".npy"
         Dend_Mask_Dir = Dend_Dir + "/Mask_dend"+str(i)+".png"
         if(len(self.SimVars.yLims)>0):
@@ -736,12 +734,6 @@ class DataReadWindow(QWidget):
         try:
             dend_mask = Dend.get_dendritic_surface_matrix() * 255
             cv.imwrite(Dend_Mask_Dir, dend_mask)
-            if(len(self.SimVars.yLims)>0):
-                Dend.dend_stat[:,:2]  = Dend.dend_stat[:,:2] + np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
-            np.save(Dend_Struct_Dir, Dend.dend_stat)
-            if(len(self.SimVars.yLims)>0):
-                Dend.dend_stat[:,:2]  = Dend.dend_stat[:,:2] - np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
-            np.save(Dend_Stat_Dir, Dend.dend_lumin)
         except Exception as e:
             raise
             return e
@@ -2241,6 +2233,8 @@ class TutorialWindow(QWidget):
 
         self.foldurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
 
+        self.genurl = 'https://www.youtube.com/watch?v=dYi8-B6OIv4'
+
         self.dendurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
 
         self.spineurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
@@ -2262,6 +2256,12 @@ class TutorialWindow(QWidget):
         self.FolderTutorial_button.clicked.connect((lambda: self.LoadURL(self.foldurl)))
         self.grid.addWidget(self.FolderTutorial_button, 0, 0, 1, 1)
 
+        self.GenInfoTut_button = QPushButton(self)
+        self.GenInfoTut_button.setText("General info")
+        MakeButtonActive(self.GenInfoTut_button)
+        self.GenInfoTut_button.clicked.connect((lambda: self.LoadURL(self.genurl)))
+        self.grid.addWidget(self.GenInfoTut_button, 0, 1, 1, 1)
+
         self.DendriteTutorial_button = QPushButton(self)
         self.DendriteTutorial_button.setText("Analysing a dendrite")
         MakeButtonActive(self.DendriteTutorial_button)
@@ -2272,19 +2272,19 @@ class TutorialWindow(QWidget):
         self.SpineTutorial_button.setText("Analysing spines")
         MakeButtonActive(self.SpineTutorial_button)
         self.SpineTutorial_button.clicked.connect((lambda: self.LoadURL(self.spineurl)))
-        self.grid.addWidget(self.SpineTutorial_button, 2, 0, 1, 1)
+        self.grid.addWidget(self.SpineTutorial_button, 1, 1, 1, 1)
 
         self.PunctaTutorial_button = QPushButton(self)
         self.PunctaTutorial_button.setText("Analysing puncta")
         MakeButtonActive(self.PunctaTutorial_button)
         self.PunctaTutorial_button.clicked.connect((lambda: self.LoadURL(self.punctaurl)))
-        self.grid.addWidget(self.PunctaTutorial_button, 3, 0, 1, 1)
+        self.grid.addWidget(self.PunctaTutorial_button, 2, 0, 1, 1)
 
         self.FileTutorial_button = QPushButton(self)
         self.FileTutorial_button.setText("The file structure")
         MakeButtonActive(self.FileTutorial_button)
         self.FileTutorial_button.clicked.connect((lambda: self.LoadURL(self.fileurl)))
-        self.grid.addWidget(self.FileTutorial_button, 4, 0, 1, 1)
+        self.grid.addWidget(self.FileTutorial_button, 2, 1, 1, 1)
 
     def LoadURL(self,url):
 
@@ -2295,6 +2295,7 @@ class TutorialWindow(QWidget):
         self.SpineTutorial_button.setChecked(False)
         self.PunctaTutorial_button.setChecked(False)
         self.FileTutorial_button.setChecked(False)
+        self.GenInfoTut_button.setChecked(False)
 
 
 class MainWindow(QWidget):
@@ -2322,7 +2323,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.2-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.5-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

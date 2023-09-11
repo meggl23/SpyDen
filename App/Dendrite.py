@@ -153,7 +153,9 @@ class Dendrite:
         else:
             Chans = 1
         self.dend_lumin = np.zeros(shape= (len(smoothed_all_pts), Snaps,Chans))
+        self.dend_lumin_ell = np.zeros(shape= (len(smoothed_all_pts), Snaps,Chans))
         for pdx, p in enumerate(smoothed_all_pts):
+            temp_mask = np.zeros_like(mask)
             self.dend_stat[pdx, 0] = p[1]
             self.dend_stat[pdx, 1] = p[0]
             self.dend_stat[pdx, 2] = width_arr[pdx]
@@ -170,11 +172,13 @@ class Dendrite:
                 shape=self.Morphologie.shape,
             )
             mask[rr, cc] = 1
+            temp_mask[rr, cc] = 1
             for i in range(Snaps):
                 for j in range(Chans):
                     self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
+                    self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
 
-        gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
+        gaussian_mask = (gaussian_filter(input=mask, sigma=2) >= np.mean(mask)).astype(np.uint8)
         self.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
         self.dendritic_surface_matrix= gaussian_mask
 
@@ -352,14 +356,17 @@ def DendSave_csv(Dir,Dend_Arr):
     nChans = Dend_Arr[0].dend_lumin.shape[-1]
     nSnaps = Dend_Arr[0].dend_lumin.shape[-2]
     customhead = ['Dendrite']
-    oglist = [['Dendrite: '+str(i)]+ ['Timestep '+ str(i) + ' (Luminosity)' for i in range(1,nSnaps+1)] for i in range(len(Dend_Arr))]
+
+    oglist = [['Dendrite: '+str(i)]+['Width'] +['Timestep '+ str(i) + ' (Luminosity (mid.))' for i in range(1,nSnaps+1)]
+     +['Timestep '+ str(i) + ' (Luminosity (ell.))' for i in range(1,nSnaps+1)] for i in range(len(Dend_Arr))]
     flattened_list = [item for sublist in oglist for item in sublist]
     for c in range(nChans):
         csv_file_path = Dir+'Dendrite_Channel_'+str(c)+'.csv'
         DendVar = []
         for D in Dend_Arr:
-            loc = np.array([str([x,y]) for x,y in D.dend_stat[:,:2]])
-            x =  np.hstack([loc.reshape(-1,1),D.dend_lumin[:,:,c]])
+            loc   = np.array([str([x,y]) for x,y in D.dend_stat[:,:2]])
+            width = np.array([str(t) for t in D.dend_stat[:,2]])
+            x =  np.hstack([loc.reshape(-1,1),width.reshape(-1,1),D.dend_lumin[:,:,c],D.dend_lumin_ell[:,:,c]])
             DendVar.append(x)
         max_sublists = max(len(var) for var in DendVar)
         max_length = max(max(len(sublist) for sublist in var) for var in DendVar)
