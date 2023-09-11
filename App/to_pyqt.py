@@ -15,6 +15,7 @@ from .RoiInteractor import RoiInteractor,RoiInteractor_BG
 from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
 
+import webbrowser as wb
 
 DevMode = False
 
@@ -2131,7 +2132,7 @@ class DirStructWindow(QWidget):
     def __init__(self):
         super().__init__()
 
-        self.title = "Data Read Window"
+        self.title = "Folder generation Window"
         self.left = 100
         self.top = 100
         self.width = 600
@@ -2224,6 +2225,77 @@ class DirStructWindow(QWidget):
         self.folderpath_label.setText(str(self.folderpath))
         self.set_status_message.setText(self.status_msg["1"])
 
+@handle_exceptions
+class TutorialWindow(QWidget):
+    """Class that defines the directory structure window"""
+
+    def __init__(self):
+        super().__init__()
+
+        self.title = "Tutorial Window"
+        self.left = 100
+        self.top = 100
+        self.width = 200
+        self.height = 400
+        self.initUI()
+
+        self.foldurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+
+        self.dendurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+
+        self.spineurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+
+        self.punctaurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+
+        self.filesurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+
+    def initUI(self):
+
+
+        self.setWindowTitle(self.title)
+        self.setGeometry(self.left, self.top, self.width, self.height)
+        self.grid = QGridLayout()
+        self.setLayout(self.grid)  # Set the grid layout for DataReadWindow
+        self.FolderTutorial_button = QPushButton(self)
+        self.FolderTutorial_button.setText("How to generate folders")
+        MakeButtonActive(self.FolderTutorial_button)
+        self.FolderTutorial_button.clicked.connect((lambda: self.LoadURL(self.foldurl)))
+        self.grid.addWidget(self.FolderTutorial_button, 0, 0, 1, 1)
+
+        self.DendriteTutorial_button = QPushButton(self)
+        self.DendriteTutorial_button.setText("Analysing a dendrite")
+        MakeButtonActive(self.DendriteTutorial_button)
+        self.DendriteTutorial_button.clicked.connect((lambda: self.LoadURL(self.dendurl)))
+        self.grid.addWidget(self.DendriteTutorial_button, 1, 0, 1, 1)
+
+        self.SpineTutorial_button = QPushButton(self)
+        self.SpineTutorial_button.setText("Analysing spines")
+        MakeButtonActive(self.SpineTutorial_button)
+        self.SpineTutorial_button.clicked.connect((lambda: self.LoadURL(self.spineurl)))
+        self.grid.addWidget(self.SpineTutorial_button, 2, 0, 1, 1)
+
+        self.PunctaTutorial_button = QPushButton(self)
+        self.PunctaTutorial_button.setText("Analysing puncta")
+        MakeButtonActive(self.PunctaTutorial_button)
+        self.PunctaTutorial_button.clicked.connect((lambda: self.LoadURL(self.punctaurl)))
+        self.grid.addWidget(self.PunctaTutorial_button, 3, 0, 1, 1)
+
+        self.FileTutorial_button = QPushButton(self)
+        self.FileTutorial_button.setText("The file structure")
+        MakeButtonActive(self.FileTutorial_button)
+        self.FileTutorial_button.clicked.connect((lambda: self.LoadURL(self.fileurl)))
+        self.grid.addWidget(self.FileTutorial_button, 4, 0, 1, 1)
+
+    def LoadURL(self,url):
+
+        wb.open(url)
+
+        self.FolderTutorial_button.setChecked(False)
+        self.DendriteTutorial_button.setChecked(False)
+        self.SpineTutorial_button.setChecked(False)
+        self.PunctaTutorial_button.setChecked(False)
+        self.FileTutorial_button.setChecked(False)
+
 
 class MainWindow(QWidget):
     """
@@ -2288,11 +2360,11 @@ class MainWindow(QWidget):
         self.grid.addWidget(self.read_data_button, 8, 1, 2, 2)
 
         # Tutorial button
-        self.tuorial_button = QPushButton(self)
-        self.tuorial_button.setText("Tutorials")
-        MakeButtonActive(self.tuorial_button,1)
-        self.tuorial_button.clicked.connect(self.tutorial)
-        self.grid.addWidget(self.tuorial_button, 8, 3, 2, 2)
+        self.tutorial_button = QPushButton(self)
+        self.tutorial_button.setText("Tutorials")
+        MakeButtonActive(self.tutorial_button,1)
+        self.tutorial_button.clicked.connect(self.tutorial)
+        self.grid.addWidget(self.tutorial_button, 8, 3, 2, 2)
 
         # Analyze button
         self.generate_button = QPushButton(self)
@@ -2337,6 +2409,11 @@ class MainWindow(QWidget):
         Returns: None
 
         """
+
+        self.tut_window = TutorialWindow()
+        self.tut_window.show()
+        self.tutorial_button.setChecked(False)
+
         pass
 
     def read_data(self) -> None:
