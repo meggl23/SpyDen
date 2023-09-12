@@ -1064,18 +1064,18 @@ class DataReadWindow(QWidget):
                 plt.imshow(self.tiff_Arr[0,0])
                 if(hasattr(self,'roi_interactor_list')):
                     T = np.argsort([s.distance for s in self.SpineArr])
-                    for i,t in enumerate(T):
+                    for j,t in enumerate(T):
                         S = self.SpineArr[t]
                         xy = np.array(S.points[i])
                         plt.plot(xy[:,0],xy[:,1],'-r')
 
                         labelpt = np.array(S.location)
-                        plt.text(labelpt[0] ,labelpt[1], str(i), color='y')
+                        plt.text(labelpt[0] ,labelpt[1], str(j), color='y')
                 try:
-                    for i,D in enumerate(self.DendArr):
+                    for j,D in enumerate(self.DendArr):
                         plt.plot(D.control_points[:,0],D.control_points[:,1],'-k')
                         labelpt = D.control_points[1,:]
-                        plt.text(labelpt[0] ,labelpt[1], str(i), color='k')
+                        plt.text(labelpt[0] ,labelpt[1], str(j), color='k')
                 except Exception as e:
                     print(e)
                 plt.tight_layout()
@@ -2235,13 +2235,13 @@ class TutorialWindow(QWidget):
 
         self.genurl = 'https://www.youtube.com/watch?v=dYi8-B6OIv4'
 
-        self.dendurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+        self.dendurl = 'https://www.youtube.com/watch?v=wxRVMRkTVoY'
 
-        self.spineurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+        self.spineurl = 'https://www.youtube.com/watch?v=i6YGx5wq2VY'
 
-        self.punctaurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+        self.punctaurl = 'https://www.youtube.com/watch?v=TXSsa4Zr4Ao'
 
-        self.filesurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+        self.filesurl = 'https://www.youtube.com/watch?v=k4r61ijv_ek'
 
     def initUI(self):
 
@@ -2283,7 +2283,7 @@ class TutorialWindow(QWidget):
         self.FileTutorial_button = QPushButton(self)
         self.FileTutorial_button.setText("The file structure")
         MakeButtonActive(self.FileTutorial_button)
-        self.FileTutorial_button.clicked.connect((lambda: self.LoadURL(self.fileurl)))
+        self.FileTutorial_button.clicked.connect((lambda: self.LoadURL(self.filesurl)))
         self.grid.addWidget(self.FileTutorial_button, 2, 1, 1, 1)
 
     def LoadURL(self,url):
