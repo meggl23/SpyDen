@@ -170,9 +170,9 @@ class DataReadWindow(QWidget):
         
         "MP_Desc":"Generate and edit the medial axis paths of dendrites. After every two clicks a path is generated \n"
         ,
-        "MP_line": "Move to the start and end of the dendrite and press: \n"+
+        "MP_line": "Dendrite medial axis calculation: \n"+
         "  - t                  - toggle between dragable vertices and lines \n" +
-        "  - Left click    - mark the start and the dnd \n" + 
+        "  - Left click    - mark the start and the end of the dendrite \n" + 
         "  - d                 - delete the first marker \n" +
         "  - backspace - clear the image \n" + 
         "The slider can be used to set the threshold of the image"
@@ -1827,7 +1827,7 @@ class DataReadWindow(QWidget):
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
             D.set_surface_contours(
-                max_neighbours=self.neighbour_slider.value(), sigma=10, width_factor=dend_factor
+                max_neighbours=5, sigma=self.neighbour_slider.value(), width_factor=dend_factor
             )
             dend_surface = D.get_dendritic_surface_matrix()
             dend_cont = D.get_contours()
