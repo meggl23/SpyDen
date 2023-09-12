@@ -178,7 +178,7 @@ class Dendrite:
                     self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
                     self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
 
-        gaussian_mask = (gaussian_filter(input=mask, sigma=2) >= np.mean(mask)).astype(np.uint8)
+        gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
         self.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
         self.dendritic_surface_matrix= gaussian_mask
 
