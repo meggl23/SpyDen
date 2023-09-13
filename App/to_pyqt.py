@@ -474,7 +474,7 @@ class DataReadWindow(QWidget):
         self.neighbour_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.neighbour_slider.setTickPosition(QSlider.TicksBelow)
         self.grid.addWidget(self.neighbour_slider, 3, 2, 1, 6)
-        self.neighbour_slider.setMinimum(0)
+        self.neighbour_slider.setMinimum(1)
         self.neighbour_slider.setMaximum(10)
         self.neighbour_slider.setValue(6)
         self.neighbour_slider.singleStep()
