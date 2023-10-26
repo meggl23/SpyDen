@@ -1921,14 +1921,23 @@ class DataReadWindow(QWidget):
         self.timestep_slider.setMaximum(self.tiff_Arr.shape[0] - 1)
         self.actual_timestep = self.timestep_slider.value()
         self.timestep_counter.setText(str(self.actual_timestep))
-
-        mean = np.mean(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
-        max = np.max(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
-        self.thresh_slider.blockSignals(True)
-        self.thresh_slider.setMinimum(int(mean))
-        self.thresh_slider.setMaximum(int(max))
-        self.thresh_slider.setValue(int(mean))
-        self.thresh_slider.blockSignals(False)
+        if(hasattr(self,"DendMeasure")):
+            if(len(self.DendMeasure.DendArr)==0):
+                mean = np.mean(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
+                max = np.max(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
+                self.thresh_slider.blockSignals(True)
+                self.thresh_slider.setMinimum(int(mean))
+                self.thresh_slider.setMaximum(int(max))
+                self.thresh_slider.setValue(int(mean))
+                self.thresh_slider.blockSignals(False)
+        else:
+            mean = np.mean(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
+            max = np.max(self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
+            self.thresh_slider.blockSignals(True)
+            self.thresh_slider.setMinimum(int(mean))
+            self.thresh_slider.setMaximum(int(max))
+            self.thresh_slider.setValue(int(mean))
+            self.thresh_slider.blockSignals(False)
 
         self.update_plot_handle(
             self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
