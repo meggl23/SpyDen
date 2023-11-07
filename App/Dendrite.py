@@ -43,6 +43,7 @@ class Dendrite:
         self.contours = None
         self.actual_channel = self.SimVars.frame.actual_channel
         self.actual_timestep = self.SimVars.frame.actual_timestep
+        self.WidthFactor = None
 
     def calc_medial_axis_path(self) -> None:
         """
@@ -126,7 +127,7 @@ class Dendrite:
         gaussian_y = gaussian_filter1d(
             input=all_points[:, 0], mode="nearest", sigma=sigma
         ).astype(int)
-        smoothed_all_pts = np.stack((gaussian_y, gaussian_x), axis=1)
+        self.smoothed_all_pts = np.stack((gaussian_y, gaussian_x), axis=1)
         actual_image = self.tiff_arr[self.actual_timestep, self.actual_channel, :, :]
         median = medfilt2d(actual_image, kernel_size=5)
         if self.thresh is not False:
@@ -136,14 +137,14 @@ class Dendrite:
             median_thresh = median >= np.mean(median)
         width_arr, degrees = getWidthnew(
             median_thresh,
-            smoothed_all_pts,
+            self.smoothed_all_pts,
             sigma=sigma,
             max_neighbours=max_neighbours,
             width_factor=width_factor
         )
         mask = np.zeros(shape=self.Morphologie.shape)
 
-        self.dend_stat = np.zeros(shape= (len(smoothed_all_pts), 5))
+        self.dend_stat = np.zeros(shape= (len(self.smoothed_all_pts), 5))
         if(self.SimVars.multitime_flag):
             Snaps = self.SimVars.Snapshots
         else:
@@ -152,35 +153,37 @@ class Dendrite:
             Chans = self.SimVars.Channels
         else:
             Chans = 1
-        self.dend_lumin = np.zeros(shape= (len(smoothed_all_pts), Snaps,Chans))
-        self.dend_lumin_ell = np.zeros(shape= (len(smoothed_all_pts), Snaps,Chans))
-        for pdx, p in enumerate(smoothed_all_pts):
-            temp_mask = np.zeros_like(mask)
+        self.dend_lumin = np.zeros(shape= (len(self.smoothed_all_pts), Snaps,Chans))
+        self.dend_lumin_ell = np.zeros(shape= (len(self.smoothed_all_pts), Snaps,Chans))
+        for pdx, p in enumerate(self.smoothed_all_pts):
             self.dend_stat[pdx, 0] = p[1]
             self.dend_stat[pdx, 1] = p[0]
-            self.dend_stat[pdx, 2] = width_arr[pdx]
+            self.dend_stat[pdx, 2] = width_arr[pdx]/width_factor
             self.dend_stat[pdx, 3] = 2
             self.dend_stat[pdx, 4] = degrees[pdx]
 
-
-            rr, cc = ellipse(
-                p[1],
-                p[0],
-                width_arr[pdx],
-                2,
-                rotation=degrees[pdx],
-                shape=self.Morphologie.shape,
-            )
-            mask[rr, cc] = 1
-            temp_mask[rr, cc] = 1
-            for i in range(Snaps):
-                for j in range(Chans):
-                    self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
-                    self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
+            mask = self.GenEllipse(mask,p,pdx,degrees,width_arr,Snaps,Chans)
 
         gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
         self.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
         self.dendritic_surface_matrix= gaussian_mask
+
+    def GenEllipse(self,mask,p,pdx,degrees,width_arr,Snaps,Chans):
+        rr, cc = ellipse(
+            p[1],
+            p[0],
+            width_arr[pdx],
+            2,
+            rotation=degrees[pdx],
+            shape=self.Morphologie.shape,
+        )
+        mask[rr, cc] = 1
+        for i in range(Snaps):
+            for j in range(Chans):
+                self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
+                self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
+
+        return mask
 
     def get_contours(self) -> tuple:
         return self.contours
@@ -366,7 +369,7 @@ def DendSave_csv(Dir,Dend_Arr):
         DendVar = []
         for D in Dend_Arr:
             loc   = np.array([str([x,y]) for x,y in D.dend_stat[:,:2]])
-            width = np.array([str(t) for t in D.dend_stat[:,2]])
+            width = np.array([str(t*D.WidthFactor) for t in D.dend_stat[:,2]])
             x =  np.hstack([loc.reshape(-1,1),width.reshape(-1,1),D.dend_lumin[:,:,c],D.dend_lumin_ell[:,:,c]])
             DendVar.append(x)
         max_sublists = max(len(var) for var in DendVar)

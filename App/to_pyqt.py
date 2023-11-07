@@ -1588,7 +1588,7 @@ class DataReadWindow(QWidget):
             self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
             self.multitime_check.stateChanged.connect(lambda state: self.check_changed(state,1))
             self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
-            self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_eval))
+            self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
             self.SimVars.Unit = scale
             # Get shifting of snapshots
             if (self.SimVars.Snapshots > 1):
@@ -1824,8 +1824,9 @@ class DataReadWindow(QWidget):
         except:
             pass
         for i,D in enumerate(self.DendArr): 
-            D.actual_channel = self.actual_channel
-            D.actual_timestep= self.actual_timestep
+            D.actual_channel  = self.actual_channel
+            D.actual_timestep = self.actual_timestep
+            D.WidthFactor     = dend_factor
             D.set_surface_contours(
                 max_neighbours=5, sigma=self.neighbour_slider.value(), width_factor=dend_factor
             )
@@ -1839,6 +1840,47 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.save_button)
         MakeButtonActive(self.measure_puncta_button)
         self.dendritic_width_button.setChecked(False)
+
+    def dendritic_width_changer(self) -> None:
+        """
+        function that multiplies the calculated dendrite segmentation by the correct
+        Returns: None
+
+        """
+        dend_factor = self.get_actual_multiple_factor()
+        dend_factor_str = "{:.2f}".format(dend_factor)
+
+        self.dend_width_mult_counter.setText(dend_factor_str)
+        self.neighbour_counter.setText(str(self.neighbour_slider.value()))
+
+        if(hasattr(self.DendArr[0],'lineinteract')):
+            for D in self.DendArr:
+                D.lineinteract.clear()
+        self.mpl.clear_plot()
+
+        try:
+            self.update_plot_handle(
+                self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+            )
+        except:
+            pass
+        for i,D in enumerate(self.DendArr): 
+
+            D.actual_channel = self.actual_channel
+            D.actual_timestep= self.actual_timestep
+            D.WidthFactor     = dend_factor
+            mask = np.zeros(shape=D.Morphologie.shape)
+            for pdx, p in enumerate(D.smoothed_all_pts):
+                mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor,self.actual_timestep,self.actual_channel)
+
+            gaussian_mask = (gaussian_filter(input=mask, sigma=self.neighbour_slider.value()) >= np.mean(mask)).astype(np.uint8)
+            D.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+            D.dendritic_surface_matrix= gaussian_mask
+
+            polygon = np.array(D.contours[0][:, 0, :])
+            pol = Polygon(D.contours[0][:, 0, :], fill=False, closed=True,color='r')
+            self.mpl.axes.add_patch(pol)
+            self.mpl.canvas.draw()
     
     def medial_axis_eval_handle(self) -> None:
         """
@@ -2332,7 +2374,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.5-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.6-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
