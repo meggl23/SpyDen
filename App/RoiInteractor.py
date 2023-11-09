@@ -228,7 +228,6 @@ class RoiInteractor:
                 self.canvas.restore_region(self.background)
                 self.line_centre.set_data([x], [y])
                 self.loc = [x,y]
-
                 self.line.set_data(zip(*self.points+np.array([x,y])))
 
                 self.poly.xy = self.points+np.array([x,y])
