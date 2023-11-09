@@ -1000,6 +1000,8 @@ class DataReadWindow(QWidget):
         self.SaveSettings()
         if(SaveFlag.all()):
             self.set_status_message.setText(self.status_msg["7"])
+        elif(not SaveFlag.any()):
+            Text = "Something went wrong! You haven't saved anything - please retry."
         else:
             Text = ""
             if(SaveFlag[0]):

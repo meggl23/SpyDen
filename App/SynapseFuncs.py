@@ -145,7 +145,7 @@ def FindShape(
 
                 # Sanity check
                 if (
-                    xpert[j] > [tiff_Arr.shape[1] - 1, tiff_Arr.shape[0] - 1]
+                    xpert[j] > [tiff_Arr.shape[1] - 2, tiff_Arr.shape[0] - 2]
                 ).any() or (xpert[j] < 1).any():
                     Directions[keys][-2] += 3
                     Directions[keys][2] = False
