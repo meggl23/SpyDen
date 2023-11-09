@@ -16,8 +16,11 @@ from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
 
 import webbrowser as wb
+import faulthandler
+sys.settrace
 
 DevMode = False
+faulthandler.enable()
 
 def catch_exceptions(func):
 
@@ -1369,7 +1372,7 @@ class DataReadWindow(QWidget):
                         self.spine_button_ROI,self.delete_old_result_button,self.measure_spine_button,
                         self.spine_bg_button,self.old_ROI_button,self.measure_puncta_button,self.save_button]:
             MakeButtonInActive(button)
-
+        
         self.show_stuff_coll([])
         self.SpineArr = []
         self.DendArr  = []
@@ -1406,7 +1409,6 @@ class DataReadWindow(QWidget):
                     self.tiff_Arr
                 )
         self.delete_old_result_button.setChecked(False)
-
     
     def on_projection_changed(self):
 
@@ -1607,15 +1609,15 @@ class DataReadWindow(QWidget):
             self.projection.setEnabled(True)
             self.analyze.setEnabled(True)
             if(scale>0):
-                self.CheckOldDend()
+                self.res.setFocus()
                 self.res.setText("%.3f" % scale)
-                MakeButtonActive(self.medial_axis_path_button)
         if(indx==1):
             if(not CallTwice):
                 self.clear_stuff(True)
             self.SimVars.Unit = float(self.res.text())
             MakeButtonActive(self.medial_axis_path_button)
             self.CheckOldDend()
+        self.mpl.canvas.setFocus()
         
     def get_actual_multiple_factor(self):
         return 0.05*self.dend_width_mult_slider.value()

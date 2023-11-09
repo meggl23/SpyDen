@@ -59,12 +59,8 @@ class MyPaintWidget(QWidget):
         Returns:
 
         """
-        self.instance.grid.removeWidget(self.canvas)
-        self.instance.grid.removeWidget(self.toolbox)
-        self.toolbox.deleteLater()
         self.axes.clear()
         self.figure.clear()
-        self.canvas.draw()
         plt.close()
 
     def clear_plot(self) -> None:
