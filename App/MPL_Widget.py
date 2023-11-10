@@ -61,6 +61,7 @@ class MyPaintWidget(QWidget):
         """
         self.axes.clear()
         self.figure.clear()
+        self.canvas.draw()
         plt.close()
 
     def clear_plot(self) -> None:
