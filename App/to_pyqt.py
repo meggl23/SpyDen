@@ -640,7 +640,8 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 self.roi_interactor_list[index].poly = pol
-                self.roi_interactor_list[index].points = np.array(pol.xy)-np.array(self.roi_interactor_list[index].loc)
+                if(self.roi_interactor_list[index].loc is not None):
+                    self.roi_interactor_list[index].points = np.array(pol.xy)-np.array(self.roi_interactor_list[index].loc)
                 self.roi_interactor_list[index].line.set_data(pol.xy[:, 0], pol.xy[:, 1])
                 self.SpineArr[index] = Synapse(list(point),list(bgloc),pts=xpert,shift=shift,
                     channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend)
