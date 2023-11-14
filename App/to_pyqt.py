@@ -16,11 +16,8 @@ from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
 
 import webbrowser as wb
-import faulthandler
-sys.settrace
 
 DevMode = False
-faulthandler.enable()
 
 def catch_exceptions(func):
 
@@ -144,9 +141,8 @@ class DataReadWindow(QWidget):
         self.PunctaCalc = False
 
         code_dir = os.path.dirname(os.path.abspath(__file__))
-        relative_address = "../MLModel/SynapseMLModel"
-        self.NN_path = os.path.join(code_dir, relative_address)
-
+        self.NN_path = os.path.join(code_dir, '../MLModel/SynapseMLModel')
+        self.default_ML_address = os.path.join(code_dir, '../MLModel/')
 
         if(os.path.exists(self.NN_path)):
             self.NN = True
@@ -352,7 +348,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(label, 9, 0, 1, 2)
         #============= manual spine button ==================
         self.spine_button = QPushButton(self)
-        self.spine_button.setText("Spine Localization Manually!")
+        self.spine_button.setText("Spine Localization Manually")
         MakeButtonInActive(self.spine_button)
         self.grid.addWidget(self.spine_button, 10, 0, 1, 2)
         self.spine_button.clicked.connect(self.spine_eval_handle)
@@ -360,16 +356,18 @@ class DataReadWindow(QWidget):
         #============= NN spine button ==================
         self.button_set_NN = QPushButton(self)
         if(self.NN):
-            self.button_set_NN.setText("Set NN! (default)")
+            self.button_set_NN.setText("Set NN (default)")
+            self.button_set_NN.clicked.connect(self.set_NN)
         else:
-            self.button_set_NN.setText("Set NN! (default not found)")
+            self.button_set_NN.setText("Download NN")
+            self.button_set_NN.clicked.connect(self.download_NN)
         MakeButtonActive(self.button_set_NN)
         self.grid.addWidget(self.button_set_NN, 11, 0, 1, 1)
-        self.button_set_NN.clicked.connect(self.set_NN)
+
 
         #============= NN spine button ==================
         self.spine_button_NN = QPushButton(self)
-        self.spine_button_NN.setText("Spine Localization via NN!")
+        self.spine_button_NN.setText("Spine Localization via NN")
         MakeButtonInActive(self.spine_button_NN)
         self.grid.addWidget(self.spine_button_NN, 11, 1, 1, 1)
         self.spine_button_NN.clicked.connect(self.spine_NN)
@@ -590,6 +588,43 @@ class DataReadWindow(QWidget):
                 MakeButtonActive(self.spine_button_NN)
 
         self.button_set_NN.setChecked(False)
+
+    def download_NN(self):
+
+        self.button_set_NN.setChecked(True)
+        self.set_status_message.setText('Downloading NN from web')
+        QCoreApplication.processEvents()
+        self.set_status_message.repaint()
+        try:
+            load_model(self.SimVars)
+            os.mkdir(self.default_ML_address)
+            torch.save(self.SimVars.model,self.default_ML_address+'SynapseMLModel')
+
+            self.SimVars.model = self.default_ML_address+'SynapseMLModel'
+            self.button_set_NN.setText("Set NN! (default)")
+
+            self.NN = True
+            if(self.spine_button.isEnabled()):
+                MakeButtonActive(self.spine_button_NN)
+
+            self.set_status_message.setText('Downloaded and saved in default location')
+            QCoreApplication.processEvents()
+            self.set_status_message.repaint()
+            self.button_set_NN.setChecked(False)
+            self.button_set_NN.disconnect()
+            self.button_set_NN.clicked.connect(self.set_NN)
+        except Exception as e:
+            print(e)
+            try:
+                os.remove('model.pth')
+            except:
+                pass
+            self.set_status_message.setText('Link was broken - select from computer or cancel')
+            self.button_set_NN.disconnect()
+            self.button_set_NN.clicked.connect(self.set_NN)
+            self.set_NN()
+
+
 
     def spine_tolerance_sigma(self) -> None:
         """
@@ -1537,9 +1572,15 @@ class DataReadWindow(QWidget):
                                 self.NN_path = value
                                 self.NN = True
                                 self.button_set_NN.setText("Set NN! (saved)")
+                            elif(os.path.isfile(self.default_ML_address+'SynapseMLModel')):
+                                self.NN_path = self.default_ML_address+'SynapseMLModel'
+                                self.NN = True
+                                self.button_set_NN.setText("Set NN! (default)")
                             else:
                                 self.NN = False
-                                self.button_set_NN.setText("Set NN! (saved can't be found)")
+                                self.button_set_NN.setText("Download NN")
+                                self.button_set_NN.disconnect()
+                                self.button_set_NN.clicked.connect(self.download_NN)
                         else:
                             key, value = line.strip().split(":")
                             if(key=="multi-time"):
@@ -2380,7 +2421,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.6.7-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.3-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

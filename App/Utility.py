@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torchvision.transforms as transforms
 import os
+import requests
 
 import torch
 import torchvision.transforms as transforms
@@ -116,6 +117,23 @@ def MakeButtonInActive(button):
     button.setEnabled(False)
     
 
+def download_model(model_url, save_path='model.pth'):
+    response = requests.get(model_url)
+    with open(save_path, 'wb') as f:
+        f.write(response.content)
+
+def load_model(Simvars,model_path='model.pth'):
+    if not os.path.exists(model_path):
+        download_model(Simvars.ML_URL)
+    model = torch.load(model_path, map_location=torch.device('cpu'))
+    # Additional model setup, if needed
+    try:
+        os.remove('model.pth')
+    except:
+        pass
+    Simvars.model = model
+
+
 def RunNN(Simvars, DendArr, tiff_Arr):
     """
     Runs a neural network model on the provided data and returns predicted points and scores.
@@ -139,12 +157,18 @@ def RunNN(Simvars, DendArr, tiff_Arr):
     d = DendArr
     len_x = len(tiff_Arr[0, :])
     len_y = len(tiff_Arr[ :, 0])
+
     tiff_Arr = tiff_Arr.reshape(1, len_y, len_x)
     xmin, xmax = max(min(d[:, 1]) - 50, 0), min(max(d[:, 1]) + 50, tiff_Arr.shape[-2])
     ymin, ymax = max(min(d[:, 0]) - 50, 0), min(max(d[:, 0]) + 50, tiff_Arr.shape[-1])
     im = tiff_Arr[None, 0, int(xmin) : int(xmax), int(ymin) : int(ymax)]
     im = np.repeat(im, 3, axis=0)
-    im = data_transforms["val"](np.moveaxis(im, 0, -1).astype(np.uint8))[None, :, :, :]
+
+    im = im/np.max(im)
+    im = data_transforms["val"](np.moveaxis(im, 0, -1).astype(np.single))[None, :, :, :]
+
+
+    
 
     testOut = model(im)
     sBoxsList = testOut[0]["boxes"].detach().numpy()
@@ -278,6 +302,7 @@ class Simulation:
         self.Snapshots = Snapshots
         self.MinDirCum = []
 
+        self.ML_URL = os.environ.get('MODEL_URL', 'https://www.dropbox.com/scl/fi/qqq8t0e9p7ka7jm7a7aze/SynapseMLModel?rlkey=34w7uduh1mbpnp99c7fe02h8u&dl=1')
         self.model = "SynapseMLModel"
 
         self.Times = []
