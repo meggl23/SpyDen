@@ -1215,7 +1215,7 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 if(not self.local_shift):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -1353,7 +1353,7 @@ class DataReadWindow(QWidget):
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift))
+                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift=shift))
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend))
             else:
@@ -1380,7 +1380,7 @@ class DataReadWindow(QWidget):
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,[[0,0]*self.SimVars.Snapshots]))
+                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift=[[0,0]*self.SimVars.Snapshots]))
 
             self.set_status_message.setText(self.set_status_message.text()+'.')
             QCoreApplication.processEvents()
@@ -2421,7 +2421,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.3-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.0-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
