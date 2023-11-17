@@ -1,5 +1,6 @@
 from skimage.registration import phase_cross_correlation
 from skimage.draw import polygon
+import imageio.v2 as imageio
 import tifffile as tf
 import math
 import re
@@ -122,8 +123,6 @@ def GetTiffData(File_Names, scale, z_type=np.sum, Dir=None, Channels=False):
     if File_Names == None:
         File_Names, Times = CheckFiles(Dir)
 
-    md = getMetadata(Dir + "/" + File_Names[0])
-
     if File_Names[0].endswith(".lsm"):
         scale = getScale(Dir + "/" + File_Names[0])
     else:
@@ -131,8 +130,7 @@ def GetTiffData(File_Names, scale, z_type=np.sum, Dir=None, Channels=False):
 
     tiff_Arr = []
     for i, x in enumerate(File_Names):
-        md = getMetadata(Dir + "/" + x)
-        temp = tf.imread(Dir + x)
+        md,temp = getMetadata(Dir + "/" + x)
         temp_mod = temp.reshape(md[1:])
         if not Channels:
             temp_mod = z_type(temp_mod, axis=1, keepdims=True)
@@ -160,9 +158,18 @@ def getMetadata(filename, frame=None):
     """
 
     if filename.endswith(".tif"):
-        return getTifDimenstions(filename)
+        return getTifDimenstions(filename),tf.imread(filename)
     elif filename.endswith(".lsm"):
-        return getLSMDimensions(filename)
+        return getLSMDimensions(filename),tf.imread(filename)
+    elif(filename.endswith('.png') or filename.endswith('.jpg')):
+        temp = imageio.imread(filename)
+        meta_data = np.ones((5))
+        meta_data[1] = 1
+        meta_data[2] = 1
+        meta_data[0] = 1
+        meta_data[3] = temp.shape[-2]
+        meta_data[4] = temp.shape[-1]
+        return meta_data.astype(int),temp
     else:
         if frame is None:
             print("Unsupported file format found. contact admin")
@@ -257,11 +264,15 @@ def CheckFiles(Dir):
 
     File_Names = []
     for x in os.listdir(Dir):
-        if ".lsm" in x or ".tif" in x:
+        if ".lsm" in x or ".tif" in x or ".png" in x or ".jpg" in x:
             File_Names.append(x)
 
-    regex = re.compile(".\d+")
-    File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
+    try:
+        regex = re.compile(".\d+")
+        File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
+    except:
+        regex = re.compile("\d+")
+        File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
 
     try:
         try:
