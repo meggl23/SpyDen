@@ -262,11 +262,14 @@ def CheckFiles(Dir):
             the list of files with necessary ones
     """
 
+
     File_Names = []
     for x in os.listdir(Dir):
         if ".lsm" in x or ".tif" in x or ".png" in x or ".jpg" in x:
             File_Names.append(x)
-
+    if any(entry.endswith(('lsm', 'tif')) for entry in File_Names):
+        File_Names = [entry for entry in File_Names if not entry.endswith(('png', 'jpg'))]
+        
     try:
         regex = re.compile(".\d+")
         File_Names_int = [re.findall(regex, f)[0] for f in File_Names]

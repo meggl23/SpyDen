@@ -1157,7 +1157,7 @@ class DataReadWindow(QWidget):
                 print(e)
             plt.tight_layout()
 
-            fig.savefig(self.SimVars.Dir+'ROIs.png')
+            fig.savefig(self.SimVars.Dir+'Spine/ROIs.png')
 
     def spine_ROI_eval(self):
 
