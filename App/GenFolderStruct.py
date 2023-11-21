@@ -21,12 +21,12 @@ def CreateCellDirs(SourceDir, TargetDir, Name):
     for fold in sorted(os.listdir(SourceDir)):
         if (os.path.isdir(SourceDir + fold) and len(os.listdir(SourceDir + fold))>0):
             tDir = os.listdir(SourceDir + fold)
-            if ((np.char.find(tDir,'lsm')>-1).any() or (np.char.find(tDir,'tif')>-1).any()):
+            if ((np.char.find(tDir,'lsm')>-1).any() or (np.char.find(tDir,'tif')>-1).any() or (np.char.find(tDir,'jpg')>-1).any() or (np.char.find(tDir,'png')>-1).any()):
                 AtLeastOne = 0
                 os.mkdir(TargetDir + Name + "cell_" + str(i))
                 f.write("cell_" + str(i) + ":" + fold + "\n")
                 for x in os.listdir(SourceDir + fold):
-                    if ("lsm" in x or "tif" in x) and re.findall(regex, x):
+                    if ("lsm" in x or "tif" in x or "png" in x or "jpg" in x) and re.findall(regex, x):
                         path1 = SourceDir + fold + "/" + x
                         path2 = TargetDir + Name + "cell_" + str(i) + "/" + x
                         shutil.copyfile(path1, path2)

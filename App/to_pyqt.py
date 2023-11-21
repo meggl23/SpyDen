@@ -8,6 +8,10 @@ from .MPL_Widget import *
 from .DataRead import *
 from matplotlib.widgets import Slider, Button
 
+from PyQt5.QtPrintSupport import QPrinter
+from PyQt5.QtGui import QPainter
+from PyQt5 import QtWidgets,QtPrintSupport
+
 from . import GenFolderStruct as GFS
 
 from .SynapseFuncs import FindShape
@@ -785,6 +789,10 @@ class DataReadWindow(QWidget):
             np.save(Dend_Save_Dir, Dend.control_points)
         try:
             dend_mask = Dend.get_dendritic_surface_matrix() * 255
+            try:
+                dend_mask = np.pad(dend_mask,((-self.SimVars.xLims[0],self.SimVars.xLims[1]),(-self.SimVars.yLims[0],self.SimVars.Lims[1])),'constant', constant_values=(0,0))
+            except:
+                pass
             cv.imwrite(Dend_Mask_Dir, dend_mask)
         except Exception as e:
             raise
@@ -1014,6 +1022,10 @@ class DataReadWindow(QWidget):
                     r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1]-1)
                     rr, cc = polygon(r, c)
                     mask[rr, cc] = 255
+                    try:
+                        mask = np.pad(mask,((-self.SimVars.xLims[0],self.SimVars.xLims[1]),(-self.SimVars.yLims[0],self.SimVars.yLims[1])),'constant', constant_values=(0,0))
+                    except:
+                        pass
                     cv.imwrite(Spine_Mask_Dir, mask)
                 nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
@@ -2433,7 +2445,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.1-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.2-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
@@ -2539,6 +2551,37 @@ class MainWindow(QWidget):
         self.data_read = DataReadWindow()
         self.data_read.showMaximized()
         self.read_data_button.setChecked(False)
+
+def save_window_pdf(Qw,name='temp',scale=10):
+
+    """
+    Function to save widget as PDF: 
+    for intro:         save_window_pdf(self,'IntroWindow',10)
+    for analysis:      save_window_pdf(self,'DataAnalWindow',5)
+    """
+
+    file_path = '/Users/maximilianeggl/Dropbox/PostDoc/ToolFigs/Figures/'+name+'.pdf'
+    pixmap = QPixmap(Qw.size())  # Use the size of the widget as the size of the pixmap
+    pixmap.fill(Qt.white)  # Fill the pixmap with a white background
+    painter = QPainter(pixmap)
+
+    # Render the widget onto the QPixmap
+    Qw.render(painter)
+    painter.end()
+
+    scaled_pixmap = pixmap.scaledToWidth(pixmap.width() * scale)
+
+    # Save the QPixmap to a PDF file using QPrinter
+    printer = QPrinter(QPrinter.HighResolution)
+    printer.setOutputFormat(QPrinter.PdfFormat)
+    printer.setOutputFileName(file_path)
+    printer.setOrientation(QPrinter.Landscape)
+
+    pdf_painter = QPainter(printer)
+    pdf_painter.drawPixmap(0, 0, scaled_pixmap)
+    pdf_painter.end()
+
+    sys.exit()
 
 def RunWindow():
     app = QApplication(sys.argv)
