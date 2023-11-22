@@ -985,6 +985,7 @@ class DataReadWindow(QWidget):
                     self.dend_measure(Dend,i,Dend_Dir)
                 DendSave_csv(Dend_Dir,self.DendArr)
                 DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit)
+                DendSave_imj(Dend_Dir,self.DendArr)
             except Exception as e:
                 if DevMode: print(e)
                 SaveFlag[0] = False
@@ -1004,7 +1005,10 @@ class DataReadWindow(QWidget):
                             or (file_name.startswith('Synapse_l') and self.SimVars.Mode=="Area")):
                             continue  # skip the file if it's the one to keep
                         # delete the file if it's not the one to keep
-                        os.remove(file_path)
+                        try:
+                            os.remove(file_path)
+                        except:
+                            shutil.rmtree(file_path)
                 else:
                     os.mkdir(path=Spine_Dir)
 
@@ -1031,9 +1035,11 @@ class DataReadWindow(QWidget):
                 if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                     SaveSynDict(orderedSpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
                     SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_imj(Spine_Dir,orderedSpineArr)
                 else:
                     SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
                     SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_imj(Spine_Dir,orderedSpineArr)
             except Exception as e:
                if DevMode: print(e)
                SaveFlag[1] = False
@@ -2444,7 +2450,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.2-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.3-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

@@ -9,6 +9,8 @@ import csv
 
 import traceback
 
+import roifile as rf
+
 def SpineShift(tiff_Arr_small):
 
     """
@@ -493,3 +495,13 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.RawIntDen[c])
                     row.extend(s.IntDen[c])
                     writer.writerow(row)   
+
+def SpineSave_imj(Dir,Spine_Arr):
+    os.mkdir(path=Dir+'ImageJ/')
+    Dir2 = Dir+'ImageJ/'
+    for i,S in enumerate(Spine_Arr):
+        pts = S.points
+
+        roi = rf.ImagejRoi.frompoints(pts)
+    
+        roi.tofile(Dir2+'Spine_'+str(i)+'.roi')

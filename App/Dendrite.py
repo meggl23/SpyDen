@@ -20,6 +20,8 @@ import csv
 import math
 import json
 
+import roifile as rf
+
 class Dendrite:
     """this class holds all the params for the dendrite like tif_arr"""
 
@@ -432,6 +434,21 @@ def DendSave_json(Dir,Dend_Arr,tf,Snapshots,Channels,Unit):
     with open(Dir + "Dendrites.json", "w") as fp:
         json.dump([D for D in DDic], fp, indent=4)
 
+def DendSave_imj(Dir,Dend_Arr):
+    os.mkdir(path=Dir+'ImageJ/')
+    Dir2 = Dir+'ImageJ/'
+    for i,D in enumerate(Dend_Arr):
+        pts = np.flip(D.dend_stat[:,:2],axis=1)
+
+        roi = rf.ImagejRoi.frompoints(pts)
+    
+        roi.tofile(Dir2+'DendMed_'+str(i)+'.roi')
+
+        pts = D.contours[0].squeeze()
+
+        roi = rf.ImagejRoi.frompoints(pts)
+    
+        roi.tofile(Dir2+'DendSeg_'+str(i)+'.roi')
 
 
 def MeasureDend(mask, tiff_Arr, Unit,Snapshots):
@@ -475,8 +492,4 @@ def MeasureDend(mask, tiff_Arr, Unit,Snapshots):
             IntDen.append(math.nan)
 
     return Mean,area,Max,Min,RawIntDen,IntDen
-
-
-
-
 
