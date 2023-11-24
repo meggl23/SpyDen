@@ -33,6 +33,7 @@ class Puncta:
         self.struct    = struct
         self.channel   = channel
         self.snapshot  = snapshot
+        self.RoiID     = 0
 
 class PunctaDetection:
     """
@@ -237,6 +238,7 @@ class PunctaDetection:
                 y, x, r = blob
                 puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
                 sp = Puncta([x,y],r,puncta_stats,False,0,i,ch,t_snape)
+                sp.RoiID = i
                 somatic_puncta.append(sp)
 
         return somatic_puncta,anti_soma
@@ -282,6 +284,7 @@ class PunctaDetection:
                 )
                 puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
                 dp = Puncta([x,y],r,puncta_stats,on_dendrite,distance_from_origin,i,ch,t_snape)
+                dp.RoiID = i
                 dendritic_puncta.append(dp)
 
         return dendritic_puncta
@@ -296,7 +299,6 @@ def save_puncta(puncta_Dir,punctas,xLims):
     The dendritic punctas are saved to a JSON file under the 'dend_puncta.json' filename.
     Both files are stored in the corresponding subdirectory of the puncta directory.
     """
-    
     if(len(xLims[0])==0):
         Lims = np.array(0)
     else:
@@ -307,12 +309,14 @@ def save_puncta(puncta_Dir,punctas,xLims):
     dendritic_punctas_flat =  [item for sublist in dendritic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
     try:
         for sp in somatic_punctas_flat:
-            sp.location = (location - Lims).tolist()
+            sp.location = (sp.location - Lims).tolist()
+            sp.RoiID = sp.RoiID.tolist()
     except:
         pass
     try:
         for dp in dendritic_punctas_flat:
-            dp.location = (location - Lims).tolist()
+            dp.location = (dp.location - Lims).tolist()
+            dp.RoiID = dp.RoiID.tolist()
     except:
         pass
 
@@ -341,14 +345,14 @@ def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat):
     Returns:
         None
     """
-    custom_header = ['','channel','snapshot','location','radius','max','min','mean','std','median','distance']
+    custom_header = ['','channel','RoiID','snapshot','location','radius','max','min','mean','std','median','distance']
 
     csv_file_path = Dir+'soma_puncta.csv'
     with open(csv_file_path, 'w', newline='') as file:
         writer = csv.writer(file)
         writer.writerow(custom_header) 
         for i,p in enumerate(somatic_punctas_flat):
-            row = ['Puncta: '+str(i),p.channel,p.snapshot,str(p.location),
+            row = ['Puncta: '+str(i),p.channel,p.RoiID,p.snapshot,str(p.location),
                    p.radius,p.max,p.min,p.mean,p.std,p.median,p.distance]
             writer.writerow(row)
 
@@ -357,6 +361,6 @@ def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat):
         writer = csv.writer(file)
         writer.writerow(custom_header) 
         for i,p in enumerate(dendritic_punctas_flat):
-            row = ['Puncta: '+str(i),p.channel,p.snapshot,str(p.location),
+            row = ['Puncta: '+str(i),p.channel,p.RoiID,p.snapshot,str(p.location),
                    p.radius,p.max,p.min,p.mean,p.std,p.median,p.distance]
             writer.writerow(row)

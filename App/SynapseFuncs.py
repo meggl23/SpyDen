@@ -243,9 +243,7 @@ def SynDistance(SynArr, DendArr_m, Unit):
             SynArr  (list of synapses)
 
     Function:
-            Find the distance of either the soma or the closest stimulated spine.
-            Also, depending on whether the spine is inside or outside the cluster
-            the distance will be negative or positive, respectively
+            Find the distance to the start of the dendrite
     """
     for S in SynArr:
         DendArr = DendArr_m[S.closest_Dend]
@@ -263,7 +261,7 @@ def SynDendDistance(loc, DendArr, loc0):
             Distance (real)
 
     Function:
-            Find the distance of closest stim and chosen spines
+            Find the distance of spine along the dendrite
     """
 
     DoneDist = [np.linalg.norm(d1 - d2) for d1, d2 in zip(DendArr[:-1], DendArr[1:])]
