@@ -1036,8 +1036,7 @@ class DataReadWindow(QWidget):
                     SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
                     SpineSave_imj(Spine_Dir,orderedSpineArr)
             except Exception as e:
-                print('here 1')
-                print(e)
+                if DevMode: print(e)
                 SaveFlag[1] = False
                 pass
         else:
@@ -1057,10 +1056,9 @@ class DataReadWindow(QWidget):
                 os.makedirs(puncta_Dir,exist_ok=True)
                 save_puncta(puncta_Dir,self.punctas,[self.SimVars.yLims,self.SimVars.xLims])
             except Exception as e:
-                print('here 2')
-                print(e)
+                if DevMode: print(e)
                 SaveFlag[2] = False
-                sys.exit()
+                pass
         else:
             SaveFlag[2] = False
 
