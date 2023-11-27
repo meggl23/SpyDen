@@ -2472,15 +2472,15 @@ class MainWindow(QWidget):
         code_dir = os.path.dirname(os.path.abspath(__file__))
 
         # Relative path of the image file within the package structure
-        relative_address = "dend.jpg"
+        relative_address = "dend.png"
         # Construct the absolute path of the image file within the package structure
         image_path_in_package = os.path.join(code_dir, relative_address)
 
         pixmap = QPixmap(image_path_in_package)
-        pixmap = pixmap.scaled(900, 600)
+        pixmap = pixmap.scaled(1050, 410)
         self.image = QLabel(self)
         self.image.setPixmap(pixmap)
-        self.grid.addWidget(self.image, 2, 1, 6, 6)
+        self.grid.addWidget(self.image, 2, 1, 7, 6)
 
         # read data button
         self.read_data_button = QPushButton(self)
