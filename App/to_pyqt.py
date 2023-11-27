@@ -918,9 +918,6 @@ class DataReadWindow(QWidget):
         for i,D in enumerate(self.DendArr):
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
-            # D.set_surface_contours(
-            #     max_neighbours=5, sigma=self.neighbour_slider.value(), width_factor=dend_factor
-            # )
             dend_surface = D.get_dendritic_surface_matrix()
             dend_cont = D.get_contours()
             polygon = np.array(dend_cont[0][:, 0, :])

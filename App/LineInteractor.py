@@ -2,7 +2,6 @@ from .Utility import *
 from matplotlib.lines import Line2D
 from matplotlib.artist import Artist
 
-# colors = ["r","g","b"]
 class LineInteractor:
     """
     A polygon editor.

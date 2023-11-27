@@ -233,7 +233,7 @@ class PunctaDetection:
             t = np.max(orig_img[rr,cc])*self.soma_thresh
             blobs_log = blob_log(soma_img, threshold=t,max_sigma=1)
             blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
-            # breakpoint()
+
 
             for blob in blobs_log:
                 y, x, r = blob
@@ -274,7 +274,7 @@ class PunctaDetection:
             # anti_soma = np.multiply(anti_soma,1 - dilated)
             dend_img = np.multiply(dilated, orig_img)
             filtered_dend_img = dend_img[np.nonzero(dend_img)]
-            t = np.max(filtered_dend_img)*self.dend_thresh#np.quantile(filtered_dend_img, self.dend_thresh)
+            t = np.max(filtered_dend_img)*self.dend_thresh
             dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=1)
             dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)
             dp = []
