@@ -47,6 +47,10 @@ To find information on how to operate, we suggest that users watch the following
 The links to these tutorials can also be found in the *Tutorials* section of SpyDen.
 
 ***
+## Image attribution:
+App icon was designed by
+<a href="https://www.vectorstock.com/royalty-free-vector/stylish-black-and-white-icon-human-brain-vector-13973264">Vector image by VectorStock / freepik</a>
+***
 ## Dependencies
 ```
 matplotlib
