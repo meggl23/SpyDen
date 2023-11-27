@@ -143,9 +143,18 @@ class DataReadWindow(QWidget):
         self.punctas = []
         self.PunctaCalc = False
 
-        code_dir = os.path.dirname(os.path.abspath(__file__))
-        self.NN_path = os.path.join(code_dir, '../MLModel/SynapseMLModel')
-        self.default_ML_address = os.path.join(code_dir, '../MLModel/')
+        home_dir = os.path.expanduser("~")
+
+        # Specify the folders
+        folder_name = 'SpydenML'
+        subfolder_name = 'SynapseMLModel'
+
+
+        # Create the full path
+        folder_path = os.path.expanduser("~")
+        self.NN_path = os.path.join(home_dir, folder_name, subfolder_name)
+        self.default_ML_address = os.path.join(home_dir, folder_name)
+
 
         if(os.path.exists(self.NN_path)):
             self.NN = True
@@ -612,10 +621,11 @@ class DataReadWindow(QWidget):
         self.set_status_message.repaint()
         try:
             load_model(self.SimVars)
-            os.mkdir(self.default_ML_address)
-            torch.save(self.SimVars.model,self.default_ML_address+'SynapseMLModel')
+            if not os.path.exists(self.default_ML_address):
+                os.makedirs(self.default_ML_address)
+            torch.save(self.SimVars.model,self.NN_path)
 
-            self.SimVars.model = self.default_ML_address+'SynapseMLModel'
+            self.SimVars.model = self.NN_path
             self.button_set_NN.setText("Set NN! (default)")
 
             self.NN = True
@@ -629,12 +639,12 @@ class DataReadWindow(QWidget):
             self.button_set_NN.disconnect()
             self.button_set_NN.clicked.connect(self.set_NN)
         except Exception as e:
-            print(e)
+            self.set_status_message.setText(e)
             try:
                 os.remove('model.pth')
             except:
                 pass
-            self.set_status_message.setText('Link was broken - select from computer or cancel')
+            #self.set_status_message.setText('Link was broken - select from computer or cancel')
             self.button_set_NN.disconnect()
             self.button_set_NN.clicked.connect(self.set_NN)
             self.set_NN()
@@ -1603,8 +1613,8 @@ class DataReadWindow(QWidget):
                                 self.NN_path = value
                                 self.NN = True
                                 self.button_set_NN.setText("Set NN! (saved)")
-                            elif(os.path.isfile(self.default_ML_address+'SynapseMLModel')):
-                                self.NN_path = self.default_ML_address+'SynapseMLModel'
+                            elif(os.path.isfile(self.NN_path)):
+                                self.NN_path = self.NN_path
                                 self.NN = True
                                 self.button_set_NN.setText("Set NN! (default)")
                             else:
@@ -2452,7 +2462,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.4-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.5-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
