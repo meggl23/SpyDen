@@ -117,14 +117,22 @@ def MakeButtonInActive(button):
     button.setEnabled(False)
     
 
-def download_model(model_url, save_path='model.pth'):
+def download_model(model_url,save_path):
+
+
     response = requests.get(model_url)
     with open(save_path, 'wb') as f:
         f.write(response.content)
 
-def load_model(Simvars,model_path='model.pth'):
+def load_model(Simvars):
+
+    # Create the full path
+    folder_path = os.path.expanduser("~")
+    file_name = 'model.pth'
+    model_path = os.path.join(folder_path, file_name)
+
     if not os.path.exists(model_path):
-        download_model(Simvars.ML_URL)
+        download_model(Simvars.ML_URL,model_path)
     model = torch.load(model_path, map_location=torch.device('cpu'))
     # Additional model setup, if needed
     try:
