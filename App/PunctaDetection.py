@@ -196,6 +196,7 @@ class PunctaDetection:
                 all_c_dendritic_puncta.append(dendritic_puncta)
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
+
         if(not NoDendrite):
             self.SimVars.frame.set_status_message.setText("Punctas are available on all snaphshots/channels")
         else:
@@ -218,7 +219,6 @@ class PunctaDetection:
 
         soma_img = np.zeros(np.shape(orig_img), "uint8")
         anti_soma = np.ones(np.shape(orig_img), "uint8")
-
         for i,soma_instance in enumerate(self.somas):
             lsm_img = np.zeros(np.shape(orig_img), "uint8")
 
@@ -233,6 +233,7 @@ class PunctaDetection:
             t = np.max(orig_img[rr,cc])*self.soma_thresh
             blobs_log = blob_log(soma_img, threshold=t,max_sigma=1)
             blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
+            # breakpoint()
 
             for blob in blobs_log:
                 y, x, r = blob
@@ -273,7 +274,7 @@ class PunctaDetection:
             # anti_soma = np.multiply(anti_soma,1 - dilated)
             dend_img = np.multiply(dilated, orig_img)
             filtered_dend_img = dend_img[np.nonzero(dend_img)]
-            t = np.quantile(filtered_dend_img, self.dend_thresh)
+            t = np.max(filtered_dend_img)*self.dend_thresh#np.quantile(filtered_dend_img, self.dend_thresh)
             dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=1)
             dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)
             dp = []

@@ -883,7 +883,6 @@ class DataReadWindow(QWidget):
         self.set_status_message.repaint()
         somas = self.get_soma_polygons()
 
-
         soma_thresh = self.puncta_soma_slider.value()/100.0
         dend_thresh = self.puncta_dend_slider.value()/100.0
 
@@ -906,6 +905,18 @@ class DataReadWindow(QWidget):
         The plot is refreshed to reflect the changes.
         """
         self.mpl.clear_plot()
+        for i,D in enumerate(self.DendArr):
+            D.actual_channel = self.actual_channel
+            D.actual_timestep= self.actual_timestep
+            # D.set_surface_contours(
+            #     max_neighbours=5, sigma=self.neighbour_slider.value(), width_factor=dend_factor
+            # )
+            dend_surface = D.get_dendritic_surface_matrix()
+            dend_cont = D.get_contours()
+            polygon = np.array(dend_cont[0][:, 0, :])
+            pol = Polygon(dend_cont[0][:, 0, :], fill=False, closed=True,color='r')
+            self.mpl.axes.add_patch(pol)
+            self.mpl.canvas.draw()
         try:
             self.update_plot_handle(
                 self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
@@ -929,7 +940,7 @@ class DataReadWindow(QWidget):
             puncta_x,puncta_y = p.location
             puncta_r          = p.radius
             if(flag=='dendrite'):
-                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="r", linewidth=0.5, fill=False)
+                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="g", linewidth=0.5, fill=False)
             else:
                 c = plt.Circle((puncta_x, puncta_y), puncta_r, color="y", linewidth=0.5, fill=False)
             self.mpl.axes.add_patch(c)
