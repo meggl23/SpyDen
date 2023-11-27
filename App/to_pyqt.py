@@ -919,11 +919,12 @@ class DataReadWindow(QWidget):
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
             dend_surface = D.get_dendritic_surface_matrix()
-            dend_cont = D.get_contours()
-            polygon = np.array(dend_cont[0][:, 0, :])
-            pol = Polygon(dend_cont[0][:, 0, :], fill=False, closed=True,color='r')
-            self.mpl.axes.add_patch(pol)
-            self.mpl.canvas.draw()
+            if(dend_surface is not None):
+                dend_cont = D.get_contours()
+                polygon = np.array(dend_cont[0][:, 0, :])
+                pol = Polygon(dend_cont[0][:, 0, :], fill=False, closed=True,color='r')
+                self.mpl.axes.add_patch(pol)
+        self.mpl.canvas.draw()
         try:
             self.update_plot_handle(
                 self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
