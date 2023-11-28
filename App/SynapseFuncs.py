@@ -247,7 +247,10 @@ def SynDistance(SynArr, DendArr_m, Unit):
     """
     for S in SynArr:
         DendArr = DendArr_m[S.closest_Dend]
-        S.distance = SynDendDistance(S.location, DendArr, DendArr[0]) * Unit
+        if(S.type==2):
+            S.distance = 0
+        else:
+            S.distance = SynDendDistance(S.location, DendArr, DendArr[0]) * Unit
     return SynArr
 
 def SynDendDistance(loc, DendArr, loc0):
