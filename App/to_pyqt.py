@@ -254,7 +254,7 @@ class DataReadWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         if(platform.system()=='Windows'):
-            self.setWindowIcon(QIcon('Brain.ico'))
+            self.setWindowIcon(QIcon('App\\Brain.ico'))
         else:
             self.setWindowIcon(QIcon(QPixmap("brain.png")))
         self.grid = QGridLayout()
@@ -2472,8 +2472,9 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         self.setStyleSheet("background-color: rgb(0, 0, 0);")
+        debug_trace()
         if(platform.system()=='Windows'):
-            self.setWindowIcon(QIcon('Brain.ico'))
+            self.setWindowIcon(QIcon('App\\Brain.ico'))
         else:
             self.setWindowIcon(QIcon(QPixmap("brain.png")))
         self.grid = QGridLayout(self)
