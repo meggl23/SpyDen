@@ -19,6 +19,7 @@ from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
 
 import webbrowser as wb
+import platform
 
 DevMode = False
 
@@ -252,7 +253,10 @@ class DataReadWindow(QWidget):
    
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
-        self.setWindowIcon(QIcon(QPixmap("brain.png")))
+        if(platform.system()=='Windows'):
+            self.setWindowIcon(QIcon('Brain.ico'))
+        else:
+            self.setWindowIcon(QIcon(QPixmap("brain.png")))
         self.grid = QGridLayout()
         self.setLayout(self.grid)  # Set the grid layout for DataReadWindow
 
@@ -734,8 +738,11 @@ class DataReadWindow(QWidget):
             self.set_status_message.setText(self.set_status_message.text()+'.')
             QCoreApplication.processEvents()
             self.set_status_message.repaint()
-            
+        
+        
+        self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
         self.mpl.canvas.draw()
+
 
     def spine_measure(self):
         """
@@ -2465,7 +2472,10 @@ class MainWindow(QWidget):
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
         self.setStyleSheet("background-color: rgb(0, 0, 0);")
-        self.setWindowIcon(QIcon(QPixmap("brain.png")))
+        if(platform.system()=='Windows'):
+            self.setWindowIcon(QIcon('Brain.ico'))
+        else:
+            self.setWindowIcon(QIcon(QPixmap("brain.png")))
         self.grid = QGridLayout(self)
 
         # headline
