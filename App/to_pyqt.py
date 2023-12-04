@@ -10,6 +10,7 @@ from matplotlib.widgets import Slider, Button
 
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtGui import QPainter
+from PyQt5.QtSvg import QSvgGenerator
 
 from . import GenFolderStruct as GFS
 
@@ -955,7 +956,7 @@ class DataReadWindow(QWidget):
             puncta_x,puncta_y = p.location
             puncta_r          = p.radius
             if(flag=='dendrite'):
-                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="g", linewidth=0.5, fill=False)
+                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="red", linewidth=0.5, fill=False)
             else:
                 c = plt.Circle((puncta_x, puncta_y), puncta_r, color="y", linewidth=0.5, fill=False)
             self.mpl.axes.add_patch(c)
@@ -1993,6 +1994,7 @@ class DataReadWindow(QWidget):
         performs the medial axis calcultation
         Returns: None
         """
+
         self.PunctaCalc = False
         self.show_stuff_coll(["MedAx"])
 
@@ -2601,7 +2603,7 @@ def save_window_pdf(Qw,name='temp',scale=10):
 
     file_path = '/Users/maximilianeggl/Dropbox/PostDoc/ToolFigs/Figures/'+name+'.pdf'
 
-    pixmap = QPixmap(Qw.size())  # Use the size of the widget as the size of the pixmap
+    pixmap = QPixmap(1600, 1500)  # Use the size of the widget as the size of the pixmap
     pixmap.fill(Qt.white)  # Fill the pixmap with a white background
     painter = QPainter(pixmap)
 
@@ -2609,14 +2611,14 @@ def save_window_pdf(Qw,name='temp',scale=10):
     Qw.render(painter)
     painter.end()
 
-    scaled_pixmap = pixmap.scaledToWidth(pixmap.width()*scale)
+    scaled_pixmap = pixmap.scaledToWidth(pixmap.width()*scale,Qt.SmoothTransformation)
 
     # Save the QPixmap to a PDF file using QPrinter
     printer = QPrinter(QPrinter.HighResolution)
+    printer.setResolution(2400)
     printer.setOrientation(QPrinter.Landscape)
     printer.setOutputFormat(QPrinter.PdfFormat)
     printer.setOutputFileName(file_path)
-
 
     pdf_painter = QPainter(printer)
     pdf_painter.drawPixmap(0, 0, scaled_pixmap)

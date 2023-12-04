@@ -36,6 +36,7 @@ class RoiInteractor:
         self.ax = ax
         self.ax.patch.set_alpha(0.5)
         self.poly = poly
+        self.poly.set_edgecolor('white')
         self.loc  = loc
         self.OgLoc = loc
         x, y = zip(*self.poly.xy)
