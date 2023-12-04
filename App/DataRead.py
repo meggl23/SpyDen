@@ -269,13 +269,16 @@ def CheckFiles(Dir):
             File_Names.append(x)
     if any(entry.endswith(('lsm', 'tif')) for entry in File_Names):
         File_Names = [entry for entry in File_Names if not entry.endswith(('png', 'jpg'))]
-        
+    
     try:
-        regex = re.compile(".\d+")
-        File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
+        try:
+            regex = re.compile(".\d+")
+            File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
+        except:
+            regex = re.compile("\d+")
+            File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
     except:
-        regex = re.compile("\d+")
-        File_Names_int = [re.findall(regex, f)[0] for f in File_Names]
+        File_Names_int = np.arange(0,len(File_Names))
 
     try:
         try:
@@ -286,6 +289,7 @@ def CheckFiles(Dir):
 
     except:
         pass
+
     File_Names_int.sort()
 
     return File_Names, File_Names_int

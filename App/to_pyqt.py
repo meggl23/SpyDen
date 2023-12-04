@@ -10,7 +10,6 @@ from matplotlib.widgets import Slider, Button
 
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtGui import QPainter
-from PyQt5.QtSvg import QSvgGenerator
 
 from . import GenFolderStruct as GFS
 
