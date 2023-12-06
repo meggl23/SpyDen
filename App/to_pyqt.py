@@ -1142,7 +1142,8 @@ class DataReadWindow(QWidget):
                 ("ROI Sigma",self.sigma_slider.value()),
                 ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
                 ("Somatic puncta threshold",self.puncta_soma_slider.value()),
-                ("MLLocation",self.NN_path)
+                ("MLLocation",self.NN_path),
+                ("Dend. shift",self.Dend_shift_check.isChecked())
                 ]
 
         for value in values:
@@ -1585,6 +1586,7 @@ class DataReadWindow(QWidget):
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
                 self.dend_width_mult_slider.disconnect()
+                self.Dend_shift_check.disconnect()
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
@@ -1659,6 +1661,9 @@ class DataReadWindow(QWidget):
                                     self.timestep_slider.setVisible(True)
                                     self.timestep_counter.setVisible(True)
                                     self.timestep_label.setVisible(True)
+                            elif(key=="Dend. shift"):
+                                boolean_value = value == "True"
+                                self.Dend_shift_check.setChecked(boolean_value)
                             elif(key=="resolution"):
                                 scale = float(value)
                             else:
@@ -1689,6 +1694,10 @@ class DataReadWindow(QWidget):
                                     self.dend_width_mult_slider.setValue(value)
                                     dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
                                     self.dend_width_mult_counter.setText(dend_factor)
+                                elif(key=="Dendritic shifting"):
+                                    self.dend_width_mult_slider.setValue(value)
+                                    dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
+                                    self.dend_width_mult_counter.setText(dend_factor)
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
                     if DevMode: print(e)
@@ -1703,6 +1712,7 @@ class DataReadWindow(QWidget):
             self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
             self.multitime_check.stateChanged.connect(lambda state: self.check_changed(state,1))
             self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
+            self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
             self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
             self.SimVars.Unit = scale
             # Get shifting of snapshots
@@ -1711,8 +1721,6 @@ class DataReadWindow(QWidget):
                 self.tiff_Arr_glob = np.copy(self.tiff_Arr)
                 self.SimVars.xLims = self.SimVars.xLimsG
                 self.SimVars.yLims = self.SimVars.yLimsG
-                if(self.SimVars.multitime_flag):
-                    self.show_stuff([self.Dend_shift_check])
             else:
                 self.tiff_Arr = self.tiff_Arr_Raw
 
@@ -1761,6 +1769,21 @@ class DataReadWindow(QWidget):
             for D in DList:
                 Dend = Dendrite(self.tiff_Arr,self.SimVars)
                 Dend.control_points = np.load(D) 
+                self.DendArr.append(Dend)
+
+            if (self.SimVars.Snapshots > 1):
+                dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
+                dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
+                self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
+                if(self.Dend_shift_check.isChecked()):
+                    self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
+                    self.SimVars.xLims = self.SimVars.xLimsD
+                    self.SimVars.yLims = self.SimVars.yLimsD
+                self.show_stuff([self.Dend_shift_check])
+
+            for Dend in self.DendArr:
                 if(len(self.SimVars.xLims)>0):
                     Dend.control_points = Dend.control_points+np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
                 Dend.complete_medial_axis_path = GetAllpointsonPath(Dend.control_points)[:, :]
@@ -1771,18 +1794,9 @@ class DataReadWindow(QWidget):
                 )
                 Dend.curvature_sampled = Dend.control_points
                 Dend.length            = GetLength(Dend.complete_medial_axis_path)*self.SimVars.Unit
-                self.DendArr.append(Dend)
                 self.mpl.axes.add_patch(pol)
 
-            if (self.SimVars.Snapshots > 1):
-                dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
-                dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
-                dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
-                dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
-                self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
-                self.SimVars.xLims = self.SimVars.xLimsD
-                self.SimVars.yLims = self.SimVars.yLimsD
-                self.show_stuff([self.Dend_shift_check])
+            
             MakeButtonActive(self.dendritic_width_button)
 
             MakeButtonActive(self.spine_button)
@@ -1790,7 +1804,6 @@ class DataReadWindow(QWidget):
             if self.NN: MakeButtonActive(self.spine_button_NN)
 
             MakeButtonActive(self.delete_old_result_button)
-
             SpineDir = self.SimVars.Dir+'Spine/'
             if os.path.isfile(SpineDir+'Synapse_l.json') or os.path.isfile(SpineDir+'Synapse_a.json'):
                 self.SpineArr = ReadSynDict(SpineDir, self.SimVars)
@@ -1802,7 +1815,7 @@ class DataReadWindow(QWidget):
                 (os.path.isfile(SpineDir+'Synapse_a.json') and self.SimVars.Mode=="Area" and self.SimVars.multitime_flag)):
                 MakeButtonActive(self.old_ROI_button)
             self.set_status_message.setText(self.status_msg["10"])
-            self.mpl.canvas.draw()
+            self.mpl.update_plot(self.tiff_Arr[self.actual_timestep, self.actual_channel])
 
 
     def spine_NN(self):
