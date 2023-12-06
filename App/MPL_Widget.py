@@ -81,6 +81,7 @@ class MyPaintWidget(QWidget):
         Returns:None
 
         """
+        self.image = image
         self.axes.imshow(image)
         self.canvas.draw()
 

@@ -556,10 +556,18 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.sigma_counter, 4, 9, 1, 1)
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider])
 
-        #============= spine sigma slider ==================
+        #============= Dendrite shifting button ==================
+        self.Dend_shift_check = QCheckBox(self)
+        self.Dend_shift_check.setText("Dendrite shifting")
+        self.grid.addWidget(self.Dend_shift_check, 5, 2, 1, 1)
+        self.Dend_shift_check.setVisible(False)
+        self.Dend_shift = False
+        self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
+
+        #============= Local shifting button ==================
         self.local_shift_check = QCheckBox(self)
         self.local_shift_check.setText("Local shifting")
-        self.grid.addWidget(self.local_shift_check, 5, 2, 1, 1)
+        self.grid.addWidget(self.local_shift_check, 5, 3, 1, 1)
         self.local_shift_check.setVisible(False)
         self.local_shift = False
         self.local_shift_check.stateChanged.connect(lambda state: self.check_changed(state,2))
@@ -1470,8 +1478,8 @@ class DataReadWindow(QWidget):
                         self.spine_button_ROI,self.delete_old_result_button,self.measure_spine_button,
                         self.spine_bg_button,self.old_ROI_button,self.measure_puncta_button,self.save_button]:
             MakeButtonInActive(button)
-        
-        self.show_stuff_coll([])
+        self.hide_stuff([self.Dend_shift_check])
+            
         self.SpineArr = []
         self.DendArr  = []
         self.punctas  = []
@@ -1583,8 +1591,9 @@ class DataReadWindow(QWidget):
             self.SimVars.multitime_flag = self.multitime_check.isChecked()
             self.SimVars.multiwindow_flag = self.multiwindow_check.isChecked()
             try:
-                self.tiff_Arr, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
+                self.tiff_Arr_Raw, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
                                                                     Channels=multwin)
+                self.tiff_Arr = np.copy(self.tiff_Arr_Raw)
                 self.clear_stuff(True)
             except:
                 self.clear_stuff(False)
@@ -1697,8 +1706,15 @@ class DataReadWindow(QWidget):
             self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
             self.SimVars.Unit = scale
             # Get shifting of snapshots
-            if (self.SimVars.Snapshots > 1):
-                self.tiff_Arr = GetTiffShift(self.tiff_Arr, self.SimVars)
+            if (self.SimVars.Snapshots>1):
+                self.tiff_Arr = GetTiffShift(self.tiff_Arr_Raw, self.SimVars)
+                self.tiff_Arr_glob = np.copy(self.tiff_Arr)
+                self.SimVars.xLims = self.SimVars.xLimsG
+                self.SimVars.yLims = self.SimVars.yLimsG
+                if(self.SimVars.multitime_flag):
+                    self.show_stuff([self.Dend_shift_check])
+            else:
+                self.tiff_Arr = self.tiff_Arr_Raw
 
                 # Get Background values
             cArr_m = np.zeros_like(self.tiff_Arr[0, :, :, :])
@@ -1758,7 +1774,15 @@ class DataReadWindow(QWidget):
                 self.DendArr.append(Dend)
                 self.mpl.axes.add_patch(pol)
 
-
+            if (self.SimVars.Snapshots > 1):
+                dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
+                dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
+                self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
+                self.SimVars.xLims = self.SimVars.xLimsD
+                self.SimVars.yLims = self.SimVars.yLimsD
+                self.show_stuff([self.Dend_shift_check])
             MakeButtonActive(self.dendritic_width_button)
 
             MakeButtonActive(self.spine_button)
@@ -1779,6 +1803,7 @@ class DataReadWindow(QWidget):
                 MakeButtonActive(self.old_ROI_button)
             self.set_status_message.setText(self.status_msg["10"])
             self.mpl.canvas.draw()
+
 
     def spine_NN(self):
         """Performs spine detection using neural network.
@@ -1975,7 +2000,7 @@ class DataReadWindow(QWidget):
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
             D.WidthFactor     = dend_factor
-            mask = np.zeros(shape=D.Morphologie.shape)
+            mask = np.zeros(shape=self.tiff_Arr[0,0].shape)
             for pdx, p in enumerate(D.smoothed_all_pts):
                 mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor,self.actual_timestep,self.actual_channel)
 
@@ -2009,9 +2034,10 @@ class DataReadWindow(QWidget):
             self.mpl.update_plot((image>=self.default_thresh)*image)
         except:
             pass
-        self.DendMeasure= medial_axis_eval(self.SimVars,self.tiff_Arr,self.DendArr,self)
+
+        self.DendMeasure= medial_axis_eval(self.SimVars,self.DendArr,self)
         self.medial_axis_path_button.setChecked(False)
-        
+
     def get_path(self) -> None:
         """
         opens a dialog field where you can select the folder
@@ -2261,20 +2287,55 @@ class DataReadWindow(QWidget):
             elif(flag==1):
                 self.SimVars.multitime_flag = True
                 self.show_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
+                if(len(self.DendArr)>0):
+                    self.show_stuff([self.Dend_shift_check])
             elif(flag==2):
                 self.local_shift = True
                 self.spine_ROI_eval()
+            elif(flag==3):
+                if(hasattr(self,"tiff_Arr_Dend")):
+                    self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
+                    self.SimVars.xLims = self.SimVars.xLimsD
+                    self.SimVars.yLims = self.SimVars.yLimsD
+                elif(len(self.DendArr)>0):
+                    dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                    dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                    dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
+                    dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
+                    self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
+                    self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
+                    self.SimVars.xLims = self.SimVars.xLimsD
+                    self.SimVars.yLims = self.SimVars.yLimsD
+                if(len(self.DendArr)>0):
+                    for D in self.DendArr:
+                        D.UpdateParams(self.tiff_Arr)
+                image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+                self.mpl.update_plot(image)
         else:
             if(flag==0):
                 self.SimVars.multiwindow_flag = False
                 self.hide_stuff([self.channel_label,self.channel_slider,self.channel_counter])
             elif(flag==1):
                 self.SimVars.multitime_flag = False
-                self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter])
+                self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter,self.local_shift_check,self.Dend_shift_check])
             elif(flag==2):
                 self.local_shift = False
                 self.spine_ROI_eval()
-
+            elif(flag==3):
+                if(hasattr(self,"tiff_Arr_glob")):
+                    self.tiff_Arr = np.copy(self.tiff_Arr_glob)
+                    self.SimVars.xLims = self.SimVars.xLimsG
+                    self.SimVars.yLims = self.SimVars.yLimsG
+                else:
+                    self.tiff_Arr_glob = GetTiffShift(self.tiff_Arr, self.SimVars)
+                    self.tiff_Arr = np.copy(self.tiff_Arr_glob)
+                    self.SimVars.xLims = self.SimVars.xLimsG
+                    self.SimVars.yLims = self.SimVars.yLimsG
+                if(len(self.DendArr)>0):
+                    for D in self.DendArr:
+                        D.UpdateParams(self.tiff_Arr)
+                image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+                self.mpl.update_plot(image)
 @handle_exceptions
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""
@@ -2485,7 +2546,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.7.6-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.0-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

@@ -47,6 +47,18 @@ class Dendrite:
         self.actual_timestep = self.SimVars.frame.actual_timestep
         self.WidthFactor = None
 
+
+    def UpdateParams(self,tiffstack):
+        self.tiff_arr = tiffstack
+        self.Morphologie = tiffstack[0,0,:,:]
+        self.median_filtered = medfilt2d(
+                                            input=self.Morphologie, kernel_size=5
+                                            )
+        self.len_y = len(self.Morphologie[:, 0])
+        self.len_x = len(self.Morphologie[0, :])
+        self.mean = np.mean(self.Morphologie)
+        self.median_thresh = self.median_filtered >= self.mean
+
     def calc_medial_axis_path(self) -> None:
         """
         calculates the control points of the medial axis path
@@ -198,13 +210,9 @@ class DendriteMeasurement:
     """this class handles the communication between the gui and the data calculation classes
     this class is furthermore used to add functionality to the gui classes"""
 
-    def __init__(self, SimVars, tiff_Arr,DendArr=None):
-
+    def __init__(self, SimVars, DendArr=None):
         self.coords = []
         self.SimVars = SimVars
-        self.canvas = SimVars.frame.mpl.canvas
-        self.axis = self.SimVars.frame.mpl.axes
-        self.tiff_Arr   = tiff_Arr
         self.click_conn = self.SimVars.frame.mpl.canvas.mpl_connect("button_press_event", self.on_left_click)
         self.press_conn = self.SimVars.frame.mpl.canvas.mpl_connect("key_press_event", self.on_key_press)
         self.AnotherDendFlag = True
@@ -246,13 +254,12 @@ class DendriteMeasurement:
             coords = np.array([y, x])
             self.coords.append(coords)
 
-            self.sc = self.axis.scatter(x, y, marker="x", color="red")
-            self.canvas.draw()
-
+            self.sc = self.SimVars.frame.mpl.axes.scatter(x, y, marker="x", color="red")
+            self.SimVars.frame.mpl.canvas.draw()
             if len(self.coords) == 2:
 
                 self.SimVars.frame.set_status_message.setText(self.SimVars.frame.status_msg["8"])
-                self.DendArr.append(Dendrite(self.tiff_Arr, SimVars=self.SimVars))
+                self.DendArr.append(Dendrite(self.SimVars.frame.tiff_Arr, SimVars=self.SimVars))
                 for Dend in self.DendArr:
                     Dend.thresh = int(self.SimVars.frame.thresh_slider.value())
                 self.AtLeastOne=True
@@ -264,7 +271,7 @@ class DendriteMeasurement:
                     self.DendArr[-1].calc_medial_axis_path()
                 except:
                     self.SimVars.frame.set_status_message.setText("A path couldn't be found! Try a different threshold")
-                    for artist in self.axis.get_children():
+                    for artist in self.SimVars.frame.mpl.axes.get_children():
                         if isinstance(artist, mpl.collections.PathCollection):
                             markers = artist.get_offsets()
 
@@ -273,7 +280,7 @@ class DendriteMeasurement:
 
                             # Update the marker data
                             artist.set_offsets(updated_markers)
-                            self.canvas.draw()
+                            self.SimVars.frame.mpl.canvas.draw()
                     self.DendArr.pop()
                 self.medial_axis_path_changer(self.DendArr[-1])
 
@@ -283,6 +290,8 @@ class DendriteMeasurement:
                 MakeButtonActive(self.SimVars.frame.spine_button)
                 MakeButtonActive(self.SimVars.frame.spine_button_NN)
                 MakeButtonActive(self.SimVars.frame.measure_puncta_button)
+                if(self.SimVars.multitime_flag):
+                    self.SimVars.frame.show_stuff([self.SimVars.frame.Dend_shift_check])
     
                 self.AnotherDendFlag = True
                 self.sc = []
@@ -322,9 +331,9 @@ class DendriteMeasurement:
             if(self.AnotherDendFlag):
                 self.sc.remove()
                 self.coords = []
-                self.canvas.draw()
+                self.SimVars.frame.canvas.draw()
         elif event.key == 'backspace':
-            self.DendClear(self.tiff_Arr)
+            self.DendClear(self.SimVars.frame.tiff_Arr)
             MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
 
     def DendClear(self,tiff_Arr):
@@ -336,11 +345,8 @@ class DendriteMeasurement:
         self.AnotherDendFlag=True
         self.coords = ([])
         self.SimVars.frame.mpl.clear_plot()
-        self.tiff_Arr = tiff_Arr
-        image = tiff_Arr[self.SimVars.frame.actual_timestep, self.SimVars.frame.actual_channel, :, :]
+        image = self.SimVars.frame.tiff_Arr[self.SimVars.frame.actual_timestep, self.SimVars.frame.actual_channel, :, :]
         self.SimVars.frame.mpl.update_plot((image>=self.thresh)*image)
-        self.canvas = self.SimVars.frame.mpl.canvas
-        self.axis = self.SimVars.frame.mpl.axes
         self.click_conn = self.SimVars.frame.mpl.canvas.mpl_connect("button_press_event", self.on_left_click)
         self.press_conn = self.SimVars.frame.mpl.canvas.mpl_connect("key_press_event", self.on_key_press)
         self.DendArr = []

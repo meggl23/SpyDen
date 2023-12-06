@@ -333,8 +333,49 @@ def GetTiffShift(tiff_Arr, SimVars):
         np.save(Dir + "MinDir.npy", MinDirCum)
 
     MinDirCum = MinDirCum.astype(int)
+    tf,SimVars.xLimsG,SimVars.yLimsG = ShiftArr(tiff_Arr, MinDirCum)
+    return tf
 
-    tf,SimVars.xLims,SimVars.yLims = ShiftArr(tiff_Arr, MinDirCum)
+def GetTiffShiftDend(tiff_Arr, SimVars,dX,dY):
+
+    """
+    Input:
+            tiff_Arr (np.array) : The pixel values of the of tiff files
+            SimVars  (class)    : The class holding all simulation parameters
+
+    Output:
+            tiff_arr (np.array) : The shift tiff_arr so that all snapshots overlap
+
+    Function:
+            Does an exhaustive search to find the best fitting shift and then applies
+            the shift to the tiff_arr
+    """
+
+    Dir = SimVars.Dir
+
+    nSnaps = SimVars.Snapshots
+    if os.path.isfile(Dir + "MinDirD.npy") == True:
+        MinDirCum = np.load(Dir + "MinDirD.npy")
+    else:
+        MinDir = np.zeros([2, nSnaps - 1])
+        if not (SimVars.frame == None):
+            SimVars.frame.set_status_message.setText('Computing overlap vector')
+        for t in range(nSnaps - 1):
+            shift, _, _ = phase_cross_correlation(
+                tiff_Arr[t, 0, dY[0]:dY[1], dX[0]:dX[1]], tiff_Arr[t + 1, 0, dY[0]:dY[1], dX[0]:dX[1]]
+            )
+            MinDir[:, t] = -shift
+            SimVars.frame.set_status_message.setText(SimVars.frame.set_status_message.text()+'.')
+            QCoreApplication.processEvents()
+            SimVars.frame.set_status_message.repaint()
+
+        MinDirCum = np.cumsum(MinDir, 1)
+        MinDirCum = np.insert(MinDirCum, 0, 0, 1)
+        np.save(Dir + "MinDirD.npy", MinDirCum)
+
+    MinDirCum = MinDirCum.astype(int)
+    tf,SimVars.xLimsD,SimVars.yLimsD = ShiftArr(tiff_Arr, MinDirCum)
+
     return tf
 
 
@@ -572,7 +613,7 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
     return Mean,area,Max,Min,RawIntDen,IntDen,local_bg
 
                 
-def medial_axis_eval(SimVars,tiff_Arr,DendArr=None, window_instance:object=None) -> None:
+def medial_axis_eval(SimVars,DendArr=None, window_instance:object=None) -> None:
 
     """
     function to do the full evaluation for medial axis path for the dendrite
@@ -588,7 +629,7 @@ def medial_axis_eval(SimVars,tiff_Arr,DendArr=None, window_instance:object=None)
 
     """
     window_instance.set_status_message.setText(window_instance.status_msg["2"])
-    DendMeasure = DendriteMeasurement(SimVars= SimVars, tiff_Arr=tiff_Arr,DendArr=DendArr)
+    DendMeasure = DendriteMeasurement(SimVars= SimVars, DendArr=DendArr)
 
     return DendMeasure
 
