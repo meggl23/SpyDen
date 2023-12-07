@@ -1069,6 +1069,7 @@ class DataReadWindow(QWidget):
                     SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
                     SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
                     SpineSave_imj(Spine_Dir,orderedSpineArr)
+                self.PlotSyn()
             except Exception as e:
                 if DevMode: print(e)
                 SaveFlag[1] = False
@@ -1110,7 +1111,6 @@ class DataReadWindow(QWidget):
             if(SaveFlag[2]):
                 Text += "Punctas saved properly"
             self.set_status_message.setText(Text)
-        self.PlotSyn()
         self.save_button.setChecked(False)
         self.mpl.canvas.draw()
 
