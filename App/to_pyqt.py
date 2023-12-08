@@ -143,6 +143,7 @@ class DataReadWindow(QWidget):
         self.actual_timestep = 0
         self.punctas = []
         self.PunctaCalc = False
+        self.SpinesMeasured = False
 
         home_dir = os.path.expanduser("~")
 
@@ -225,7 +226,10 @@ class DataReadWindow(QWidget):
         "The tolerance slider makes the ROIs bigger or smaller \n"
         "The sigma slider refers to the variance of the smoothing filter: smaller is for small sharp lines, larger for larger blurred lines",
         "SpineBG_Desc":"Edit the locations of the spine ROIs by dragging the red points for the local background calculation\n",
-        "Puncta":"Use the sliders to calculate different puncta (surbhit - i will need your input on this). Puncta are automatically calculated on all channels and snapshots. It is possible that no puncta are found"
+        "Puncta":"Use the sliders to determine the detection threshold for dendritic and synaptic puncta. Puncta are automatically calculated on all channels and snapshots. It is possible that no puncta are found. \n"+
+        "  - p                  - toggle pan \n" +
+        "  - o                  - toggle rectangle to zoom \n" +
+        "  - h                  - reset view \n" 
         }
 
         self.folderpath = "None"
@@ -266,6 +270,7 @@ class DataReadWindow(QWidget):
         #============= path button ==================
         self.folderpath_button = QPushButton(self)
         self.folderpath_button.setText("Select Path!")
+
         MakeButtonActive(self.folderpath_button)
         self.folderpath_button.clicked.connect(self.get_path)
         self.grid.addWidget(self.folderpath_button, 0, 0, 1, 2)
@@ -273,6 +278,7 @@ class DataReadWindow(QWidget):
         self.folderpath_label.setReadOnly(True)
         self.folderpath_label.setText(str(self.folderpath))
         self.grid.addWidget(self.folderpath_label, 0, 2, 1, 10)
+        self.folderpath_button.setToolTip('Provide the path to the folder holding the cell_* folders')
 
         #============= path input ==================
         self.cell = QLineEdit(self)
@@ -280,6 +286,7 @@ class DataReadWindow(QWidget):
         self.cell.editingFinished.connect(lambda: self.handle_editing_finished(0))
         self.grid.addWidget(self.cell, 1, 1, 1, 1)
         self.grid.addWidget(QLabel("Filename:"), 1, 0, 1, 1)
+        self.cell.setToolTip('Select the number of the cell you want to study (e.g. if you want to study cell_2 type <b> 2 </b>)')
 
         #========= projection dropdown ===============
         self.projection = QComboBox(self)
@@ -290,6 +297,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(QLabel("Projection"), 3, 0, 1, 1)
         self.projection.setEnabled(False)
         self.projection.currentTextChanged.connect(self.on_projection_changed)
+        self.projection.setToolTip('z-stack projection')
 
         #========= analyze dropdown ================
         self.analyze = QComboBox(self)
@@ -301,6 +309,7 @@ class DataReadWindow(QWidget):
         self.anal = self.projection.currentText()  # str variable what u want to analyze
         self.analyze.setEnabled(False)
         self.analyze.currentTextChanged.connect(self.on_analyze_changed)
+        self.analyze.setToolTip('Synapse temporal analysis mode')
 
         #========= multiwindow checkbox ================
         self.multiwindow_check = QCheckBox(self)
@@ -308,6 +317,7 @@ class DataReadWindow(QWidget):
         self.multiwindow_check.setEnabled(False)
         self.SimVars.multiwindow_flag  = True
         self.grid.addWidget(self.multiwindow_check, 2, 0, 1, 1)
+        self.multiwindow_check.setToolTip('Check if you want to consider all channels simulatenously')
 
         #========= multiwindow checkbox ================
         self.multitime_check = QCheckBox(self)
@@ -315,6 +325,7 @@ class DataReadWindow(QWidget):
         self.multitime_check.setEnabled(False)
         self.SimVars.multitime_flag  = False
         self.grid.addWidget(self.multitime_check, 2, 1, 1, 1)
+        self.multitime_check.setToolTip('Check if you want to include temporal dynamics')
 
         #========= resolution input ================
         self.res = QLineEdit(self)
@@ -336,6 +347,7 @@ class DataReadWindow(QWidget):
         self.channel_counter = QLabel(str(self.channel_slider.value()))
         self.grid.addWidget(self.channel_counter, 1, 9, 1, 1)
         self.hide_stuff([self.channel_slider,self.channel_counter,self.channel_label])
+        self.channel_slider.setToolTip('Scroll through the experimental channels')
 
         #========= timestep slider ================
         self.timestep_label = QLabel("Timestep")
@@ -350,6 +362,7 @@ class DataReadWindow(QWidget):
         self.timestep_counter = QLabel(str(self.timestep_slider.value()))
         self.grid.addWidget(self.timestep_counter, 2, 9, 1, 1)
         self.hide_stuff([self.timestep_slider,self.timestep_counter,self.timestep_label])
+        self.timestep_slider.setToolTip('Scroll through the experimental timepoints')
 
         label = QLabel("Dendrite analysis")
         label.setAlignment(Qt.AlignCenter)  # Centers the label horizontally
@@ -362,6 +375,7 @@ class DataReadWindow(QWidget):
         MakeButtonInActive(self.medial_axis_path_button)
         self.grid.addWidget(self.medial_axis_path_button, 7, 0, 1, 2)
         self.medial_axis_path_button.clicked.connect(self.medial_axis_eval_handle)
+        self.medial_axis_path_button.setToolTip('Calculate the medial axis paths by selecting the start and end of the dendrites')
 
         #============= dendritic width button ==================
         self.dendritic_width_button = QPushButton(self)
@@ -391,6 +405,7 @@ class DataReadWindow(QWidget):
             self.button_set_NN.clicked.connect(self.download_NN)
         MakeButtonActive(self.button_set_NN)
         self.grid.addWidget(self.button_set_NN, 11, 0, 1, 1)
+        self.button_set_NN.setToolTip('Download the online NN or use a local version')
 
 
         #============= NN spine button ==================
@@ -442,6 +457,7 @@ class DataReadWindow(QWidget):
         MakeButtonInActive(self.measure_puncta_button)
         self.grid.addWidget(self.measure_puncta_button, 15, 0, 1, 2)
         self.measure_puncta_button.clicked.connect(self.get_puncta)
+        self.measure_puncta_button.setToolTip('Calculate puncta for dendritic ROI and all synaptic ROIs')
 
         label = QLabel("Save/clear")
         label.setAlignment(Qt.AlignCenter)  # Centers the label horizontally
@@ -454,6 +470,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.delete_old_result_button, 17, 0, 1, 1)
         self.delete_old_result_button.clicked.connect(lambda: self.clear_stuff(True))
         MakeButtonInActive(self.delete_old_result_button)
+        self.delete_old_result_button.setToolTip('Clear all analysis and start fresh')
 
         self.save_button = QPushButton(self)
         self.save_button.setText("Save results")
@@ -467,6 +484,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.set_status_message, 18, 0, 1, 2)
         self.grid.addWidget
         self.set_status_message.setText(self.status_msg["0"])
+        self.set_status_message.setToolTip('The current mode you are in (or if something went wrong, the error message)')
 
         #============= dialog fields (commands) ==================
         self.command_box = QPlainTextEdit(self)
@@ -474,6 +492,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.command_box, 19, 0, 1, 2)
         self.command_box.setFixedWidth(550)
         self.command_box.setFixedHeight(100)
+        self.command_box.setToolTip('What you can do in your current mode')
 
         # ============= dend width change slider ==================
         self.dend_width_mult_label = QLabel("Dendritic Width Multiplication Factor")
@@ -497,6 +516,8 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.thresh_slider, 3, 2, 1, 6)
         self.hide_stuff([self.thresh_slider,self.thresh_label])
 
+        self.thresh_slider.setToolTip('Select the threshold to filter out background noise')
+
         #============= dend width slider ==================
         self.neighbour_label = QLabel("Dendritic Width Smoothness")
         self.grid.addWidget(self.neighbour_label, 3, 8, 1, 1)
@@ -510,6 +531,8 @@ class DataReadWindow(QWidget):
         self.neighbour_counter = QLabel(str(self.neighbour_slider.value()))
         self.grid.addWidget(self.neighbour_counter, 3, 9, 1, 1)
         self.hide_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label])
+
+        self.neighbour_slider.setToolTip('Number of pixels to take into account to do width smoothing')
 
         #============= ML confidence slider ==================
         self.ml_confidence_label = QLabel("ML Confidence")
@@ -525,6 +548,8 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.confidence_counter, 3, 9, 1, 1)
         self.hide_stuff([self.ml_confidence_label,self.ml_confidence_slider,self.confidence_counter ])
 
+        self.ml_confidence_slider.setToolTip('Select the value to filter out NN suggestions that fall below this confidence')
+
         #============= spine tolerance slider ==================
         self.tolerance_label = QLabel("Roi Tolerance")
         self.grid.addWidget(self.tolerance_label, 3, 8, 1, 1)
@@ -539,6 +564,8 @@ class DataReadWindow(QWidget):
         self.tolerance_counter = QLabel(str(self.tolerance_slider.value()))
         self.grid.addWidget(self.tolerance_counter, 3, 9, 1, 1)
         self.hide_stuff([self.tolerance_label,self.tolerance_counter,self.tolerance_slider])
+
+        self.tolerance_slider.setToolTip('Select tolerance for ROI generation - higher means larger ROIs')
 
         #============= spine sigma slider ==================
         self.sigma_label = QLabel("Roi Sigma")
@@ -556,6 +583,8 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.sigma_counter, 4, 9, 1, 1)
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider])
 
+        self.sigma_slider.setToolTip('Select σ value of the canny-edge detection used in the ROI algorithm - lower values means smaller ROIs')
+
         #============= Dendrite shifting button ==================
         self.Dend_shift_check = QCheckBox(self)
         self.Dend_shift_check.setText("Dendrite shifting")
@@ -564,6 +593,8 @@ class DataReadWindow(QWidget):
         self.Dend_shift = False
         self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
 
+        self.Dend_shift_check.setToolTip('Check if you only want to use the calculated dendrite to correct for temporal shifting, otherwise uses whole image')
+
         #============= Local shifting button ==================
         self.local_shift_check = QCheckBox(self)
         self.local_shift_check.setText("Local shifting")
@@ -571,6 +602,7 @@ class DataReadWindow(QWidget):
         self.local_shift_check.setVisible(False)
         self.local_shift = False
         self.local_shift_check.stateChanged.connect(lambda state: self.check_changed(state,2))
+        self.local_shift_check.setToolTip('Check if you want each ROI to be locally motion corrected in addition to the global correction')
         
         # ============= Puncta dendritic threshold slider ==================
         self.puncta_dend_label = QLabel("Threshold dendrite")
@@ -585,7 +617,7 @@ class DataReadWindow(QWidget):
 
         self.puncta_dend_counter = QLabel(str(self.puncta_dend_slider.value()))
         self.grid.addWidget(self.puncta_dend_counter, 3, 9, 1, 1)
-
+        self.puncta_dend_slider.setToolTip('Select the detection threshold for the dendritic puncta')
 
         # ============= Puncta soma threshold slider ==================
         self.puncta_soma_label = QLabel("Threshold synapse/soma")
@@ -597,6 +629,7 @@ class DataReadWindow(QWidget):
         self.puncta_soma_slider.setMaximum(100)
         self.puncta_soma_slider.setValue(50)
         self.puncta_soma_slider.singleStep()
+        self.puncta_soma_slider.setToolTip('Select the synaptic threshold for the dendritic puncta')
 
         self.puncta_soma_counter = QLabel(str(self.puncta_soma_slider.value()))
         self.grid.addWidget(self.puncta_soma_counter, 4, 9, 1, 1)
@@ -794,6 +827,7 @@ class DataReadWindow(QWidget):
         self.measure_spine_button.setChecked(False)
         MakeButtonActive(self.save_button)
         self.set_status_message.setText("Measuring ROI statistics")
+        self.SpinesMeasured = True
         return None
     
     def dend_measure(self,Dend,i,Dend_Dir):
@@ -1024,6 +1058,9 @@ class DataReadWindow(QWidget):
             SaveFlag[0] = False
 
         if(len(self.SpineArr)>0):
+            if(not self.SpinesMeasured):
+                self.spine_measure()
+                self.SpinesMeasured = True
             T = np.argsort([s.distance for s in self.SpineArr])
             try:
                 Spine_Dir = self.SimVars.Dir + "Spine/"
@@ -1323,11 +1360,14 @@ class DataReadWindow(QWidget):
         if(self.SimVars.Mode=="Luminosity"): MakeButtonActive(self.spine_bg_button)
         MakeButtonActive(self.measure_spine_button)
         MakeButtonActive(self.measure_puncta_button)
+        MakeButtonActive(self.save_button)
         self.spine_button_ROI.setChecked(False)
 
         self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
 
         self.set_status_message.setText(self.status_msg["9"])
+
+
 
     def old_ROI_eval(self):
 
@@ -1454,7 +1494,7 @@ class DataReadWindow(QWidget):
         if(self.SimVars.Mode=="Luminosity"): MakeButtonActive(self.spine_bg_button)
         MakeButtonActive(self.measure_spine_button)
         MakeButtonActive(self.measure_puncta_button)
-
+        MakeButtonActive(self.save_button)
         self.old_ROI_button.setChecked(False)
 
         self.set_status_message.setText(self.status_msg["9"])
@@ -1742,7 +1782,10 @@ class DataReadWindow(QWidget):
         if(indx==1):
             if(not CallTwice):
                 self.clear_stuff(True)
-            self.SimVars.Unit = float(self.res.text())
+            try:
+                self.SimVars.Unit = float(self.res.text())
+            except:
+                pass
             MakeButtonActive(self.medial_axis_path_button)
             self.CheckOldDend()
         self.mpl.canvas.setFocus()
@@ -1781,7 +1824,8 @@ class DataReadWindow(QWidget):
                     self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
                     self.SimVars.xLims = self.SimVars.xLimsD
                     self.SimVars.yLims = self.SimVars.yLimsD
-                self.show_stuff([self.Dend_shift_check])
+                if(self.SimVars.multitime_flag):
+                    self.show_stuff([self.Dend_shift_check])
 
             for Dend in self.DendArr:
                 if(len(self.SimVars.xLims)>0):
@@ -2374,6 +2418,8 @@ class DirStructWindow(QWidget):
         self.sourcepath_button = QPushButton(self)
         self.sourcepath_button.setText("Select source path!")
         self.sourcepath_button.clicked.connect(self.get_source)
+        self.sourcepath_button.setToolTip('Provide the path to your expt. data')
+
         MakeButtonActive(self.sourcepath_button)
         self.grid.addWidget(self.sourcepath_button, 0, 0)
         self.sourcepath_label = QLineEdit(self)
@@ -2383,8 +2429,9 @@ class DirStructWindow(QWidget):
 
         self.targetpath_button = QPushButton(self)
         self.targetpath_button.setText("Select target path!")
-        MakeButtonInActive(self.targetpath_button)
         self.targetpath_button.clicked.connect(self.get_target)
+        MakeButtonInActive(self.targetpath_button)
+        self.targetpath_button.setToolTip('Provide the path to where you want to copy it')
         self.grid.addWidget(self.targetpath_button, 1, 0)
         self.targetpath_label = QLineEdit(self)
         self.targetpath_label.setReadOnly(True)
@@ -2559,7 +2606,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.0-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.1-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
@@ -2595,6 +2642,7 @@ class MainWindow(QWidget):
         MakeButtonActive(self.read_data_button,1)
         self.read_data_button.clicked.connect(self.read_data)
         self.grid.addWidget(self.read_data_button, 8, 1, 2, 2)
+        self.read_data_button.setToolTip('Open the data analysis window')
 
         # Tutorial button
         self.tutorial_button = QPushButton(self)
@@ -2602,6 +2650,7 @@ class MainWindow(QWidget):
         MakeButtonActive(self.tutorial_button,1)
         self.tutorial_button.clicked.connect(self.tutorial)
         self.grid.addWidget(self.tutorial_button, 8, 3, 2, 2)
+        self.tutorial_button.setToolTip('Links to video tutorials')
 
         # Analyze button
         self.generate_button = QPushButton(self)
@@ -2609,12 +2658,14 @@ class MainWindow(QWidget):
         MakeButtonActive(self.generate_button,1)
         self.generate_button.clicked.connect(self.generate)
         self.grid.addWidget(self.generate_button, 8, 5, 2, 2)
+        self.generate_button.setToolTip('Format your files so SpyDen can read them')
 
         #========= multiwindow checkbox ================
         self.DevMode_check = QCheckBox(self)
         self.DevMode_check.setText("Developer Mode")
         self.grid.addWidget(self.DevMode_check, 7, 3, 1, 1)
         self.DevMode_check.stateChanged.connect(lambda state: self.check_changed(state))
+        self.DevMode_check.setToolTip('Turn on Dev-mode, disables failsafes')
 
 
     def generate(self) -> None:
