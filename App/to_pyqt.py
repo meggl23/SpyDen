@@ -281,12 +281,13 @@ class DataReadWindow(QWidget):
         self.folderpath_button.setToolTip('Provide the path to the folder holding the cell_* folders')
 
         #============= path input ==================
-        self.cell = QLineEdit(self)
+
+        self.cell = QComboBox(self)
         self.cell.setEnabled(False)
-        self.cell.editingFinished.connect(lambda: self.handle_editing_finished(0))
+        self.cell.currentTextChanged.connect(lambda: self.handle_editing_finished(0))
         self.grid.addWidget(self.cell, 1, 1, 1, 1)
         self.grid.addWidget(QLabel("Filename:"), 1, 0, 1, 1)
-        self.cell.setToolTip('Select the number of the cell you want to study (e.g. if you want to study cell_2 type <b> 2 </b>)')
+        self.cell.setToolTip('Select the folder you want to analyze')
 
         #========= projection dropdown ===============
         self.projection = QComboBox(self)
@@ -1604,7 +1605,7 @@ class DataReadWindow(QWidget):
         """
 
         Dir = self.folderpath
-        cell = "cell_"+self.cell.text()
+        cell = self.cell.currentText()
         Mode = self.analyze.currentText()
         self.multiwindow_check.setChecked(True)
         multwin = self.multiwindow_check.isChecked()
@@ -2075,7 +2076,7 @@ class DataReadWindow(QWidget):
         performs the medial axis calcultation
         Returns: None
         """
-
+        #save_window_pdf(self,'DataAnalWindow',2)
         self.PunctaCalc = False
         self.show_stuff_coll(["MedAx"])
 
@@ -2103,12 +2104,18 @@ class DataReadWindow(QWidget):
         """
         path = QFileDialog.getExistingDirectory(self, "Select Folder!")
         if(path):
+            self.cell.clear()
             self.folderpath = path
             self.folderpath_label.setText(str(self.folderpath))
             self.set_status_message.setText(self.status_msg["1"])
             self.cell.setEnabled(True)
             self.res.setEnabled(True)
+            choices = sorted(os.listdir(self.folderpath))
+            for choice in choices:
+                if(os.path.isdir(self.folderpath+'/'+choice)):
+                    self.cell.addItem(choice)
         self.folderpath_button.setChecked(False)
+
 
 
     def dend_thresh(self):
@@ -2606,7 +2613,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.1-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.2-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

@@ -158,7 +158,7 @@ def getMetadata(filename, frame=None):
     """
 
     if filename.endswith(".tif"):
-        return getTifDimenstions(filename),tf.imread(filename)
+        return getTifDimensions(filename),tf.imread(filename)
     elif filename.endswith(".lsm"):
         return getLSMDimensions(filename),tf.imread(filename)
     elif(filename.endswith('.png') or filename.endswith('.jpg')):
@@ -186,7 +186,7 @@ def getScale(filename):
     else:
         print("Unsupported file format found. contact admin")
 
-def getTifDimenstions(filename):
+def getTifDimensions(filename):
 
     """
     Input:
