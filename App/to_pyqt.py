@@ -1048,9 +1048,9 @@ class DataReadWindow(QWidget):
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
-                DendSave_csv(Dend_Dir,self.DendArr)
-                DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit)
-                DendSave_imj(Dend_Dir,self.DendArr)
+                DendSave_csv(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                DendSave_imj(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
             except Exception as e:
                 if DevMode: print(e)
                 SaveFlag[0] = False
@@ -1631,6 +1631,7 @@ class DataReadWindow(QWidget):
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
+            self.Dend_shift_check.setChecked(False)
             self.SimVars.multitime_flag = self.multitime_check.isChecked()
             self.SimVars.multiwindow_flag = self.multiwindow_check.isChecked()
             try:
@@ -1735,10 +1736,6 @@ class DataReadWindow(QWidget):
                                     self.dend_width_mult_slider.setValue(value)
                                     dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
                                     self.dend_width_mult_counter.setText(dend_factor)
-                                elif(key=="Dendritic shifting"):
-                                    self.dend_width_mult_slider.setValue(value)
-                                    dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
-                                    self.dend_width_mult_counter.setText(dend_factor)
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
                     if DevMode: print(e)
@@ -1816,12 +1813,12 @@ class DataReadWindow(QWidget):
                 self.DendArr.append(Dend)
 
             if (self.SimVars.Snapshots > 1):
-                dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
-                dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
-                dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
-                dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
-                self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
                 if(self.Dend_shift_check.isChecked()):
+                    dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                    dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                    dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
+                    dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
+                    self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
                     self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
                     self.SimVars.xLims = self.SimVars.xLimsD
                     self.SimVars.yLims = self.SimVars.yLimsD
@@ -2357,24 +2354,7 @@ class DataReadWindow(QWidget):
                 self.local_shift = True
                 self.spine_ROI_eval()
             elif(flag==3):
-                if(hasattr(self,"tiff_Arr_Dend")):
-                    self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
-                    self.SimVars.xLims = self.SimVars.xLimsD
-                    self.SimVars.yLims = self.SimVars.yLimsD
-                elif(len(self.DendArr)>0):
-                    dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
-                    dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
-                    dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
-                    dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
-                    self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
-                    self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
-                    self.SimVars.xLims = self.SimVars.xLimsD
-                    self.SimVars.yLims = self.SimVars.yLimsD
-                if(len(self.DendArr)>0):
-                    for D in self.DendArr:
-                        D.UpdateParams(self.tiff_Arr)
-                image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-                self.mpl.update_plot(image)
+                self.UpdateLims(0)
         else:
             if(flag==0):
                 self.SimVars.multiwindow_flag = False
@@ -2386,20 +2366,103 @@ class DataReadWindow(QWidget):
                 self.local_shift = False
                 self.spine_ROI_eval()
             elif(flag==3):
-                if(hasattr(self,"tiff_Arr_glob")):
-                    self.tiff_Arr = np.copy(self.tiff_Arr_glob)
-                    self.SimVars.xLims = self.SimVars.xLimsG
-                    self.SimVars.yLims = self.SimVars.yLimsG
-                else:
-                    self.tiff_Arr_glob = GetTiffShift(self.tiff_Arr, self.SimVars)
-                    self.tiff_Arr = np.copy(self.tiff_Arr_glob)
-                    self.SimVars.xLims = self.SimVars.xLimsG
-                    self.SimVars.yLims = self.SimVars.yLimsG
-                if(len(self.DendArr)>0):
-                    for D in self.DendArr:
-                        D.UpdateParams(self.tiff_Arr)
-                image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
-                self.mpl.update_plot(image)
+                self.UpdateLims(1)
+                
+    def UpdateLims(self,flag):
+        self.mpl.clear_plot()
+        if(flag==0):
+            if(hasattr(self.SimVars,"xLimsD")):
+                self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
+                self.SimVars.xLims = self.SimVars.xLimsD
+                self.SimVars.yLims = self.SimVars.yLimsD
+            elif(len(self.DendArr)>0):
+                dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                dMin = np.min([np.min(D.control_points,axis=0) for D in self.DendArr],axis=0)
+                dX = np.clip([dMin[0]-20,dMax[0]+20],0,self.tiff_Arr_Raw.shape[-1])
+                dY = np.clip([dMin[1]-20,dMax[1]+20],0,self.tiff_Arr_Raw.shape[-2])
+                self.tiff_Arr_Dend = GetTiffShiftDend(self.tiff_Arr_Raw, self.SimVars,dX,dY)
+                self.tiff_Arr = np.copy(self.tiff_Arr_Dend)
+                self.SimVars.xLims = self.SimVars.xLimsD
+                self.SimVars.yLims = self.SimVars.yLimsD
+        elif(flag==1):
+            if(hasattr(self.SimVars,"xLimsG")):
+                self.tiff_Arr = np.copy(self.tiff_Arr_glob)
+                self.SimVars.xLims = self.SimVars.xLimsG
+                self.SimVars.yLims = self.SimVars.yLimsG
+            else:
+                self.tiff_Arr_glob = GetTiffShift(self.tiff_Arr, self.SimVars)
+                self.tiff_Arr = np.copy(self.tiff_Arr_glob)
+                self.SimVars.xLims = self.SimVars.xLimsG
+                self.SimVars.yLims = self.SimVars.yLimsG
+        image = self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+        try:
+            self.update_plot_handle(
+                self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+            )
+        except:
+            pass
+        if(hasattr(self,'DendMeasure')):
+            for Dend in self.DendMeasure.DendArr:
+                    Dend.UpdateParams(self.tiff_Arr)
+                    if(len(self.SimVars.xLims)>0):
+                        if(flag==0):
+                            Dend.control_points = Dend.control_points-np.array([self.SimVars.yLimsG[0],self.SimVars.xLimsG[0]])
+                            Dend.control_points = Dend.control_points+np.array([self.SimVars.yLimsD[0],self.SimVars.xLimsD[0]])
+                        elif(flag==1):
+                            Dend.control_points = Dend.control_points-np.array([self.SimVars.yLimsD[0],self.SimVars.xLimsD[0]])
+                            Dend.control_points = Dend.control_points+np.array([self.SimVars.yLimsG[0],self.SimVars.xLimsG[0]])
+                    Dend.complete_medial_axis_path = GetAllpointsonPath(Dend.control_points)[:, :]
+                    Dend.medial_axis = Dend.control_points
+                    Dend.thresh      = int(self.thresh_slider.value())
+                    Dend.pol = Polygon(
+                    Dend.control_points, fill=False, closed=False, animated=False
+                    )
+                    Dend.curvature_sampled = Dend.control_points
+                    Dend.length            = GetLength(Dend.complete_medial_axis_path)*self.SimVars.Unit
+                    self.mpl.axes.add_patch(Dend.pol)
+                    try:
+                        Dend.lineinteract.poly = Dend.pol
+                        Dend.lineinteract.line.set_data(zip(*Dend.pol.xy))
+                    except:
+                        pass
+        elif(hasattr(self,'DendArr')):
+            if(len(self.DendArr)>0):
+                for Dend in self.DendArr:
+                    Dend.UpdateParams(self.tiff_Arr)
+                    if(len(self.SimVars.xLims)>0):
+                        if(flag==0):
+                            Dend.control_points = Dend.control_points-np.array([self.SimVars.yLimsG[0],self.SimVars.xLimsG[0]])
+                            Dend.control_points = Dend.control_points+np.array([self.SimVars.yLimsD[0],self.SimVars.xLimsD[0]])
+                        elif(flag==1):
+                            Dend.control_points = Dend.control_points-np.array([self.SimVars.yLimsD[0],self.SimVars.xLimsD[0]])
+                            Dend.control_points = Dend.control_points+np.array([self.SimVars.yLimsG[0],self.SimVars.xLimsG[0]])
+                    Dend.complete_medial_axis_path = GetAllpointsonPath(Dend.control_points)[:, :]
+                    Dend.medial_axis = Dend.control_points
+                    Dend.thresh      = int(self.thresh_slider.value())
+                    Dend.pol = Polygon(
+                    Dend.control_points, fill=False, closed=False, animated=False
+                    )
+                    Dend.curvature_sampled = Dend.control_points
+                    Dend.length            = GetLength(Dend.complete_medial_axis_path)*self.SimVars.Unit
+                    self.mpl.axes.add_patch(Dend.pol)
+                    try:
+                        Dend.lineinteract.poly = Dend.pol
+                        Dend.lineinteract.line.set_data(zip(*Dend.pol.xy))
+                    except:
+                        pass
+        if(hasattr(self,'spine_marker')):
+            if(len(self.spine_marker.points)>0):
+                if(flag==0):
+                    self.spine_marker.points = self.spine_marker.points-np.array([self.SimVars.yLimsG[0],self.SimVars.xLimsG[0]])
+                    self.spine_marker.points = self.spine_marker.points+np.array([self.SimVars.yLimsD[0],self.SimVars.xLimsD[0]])
+                elif(flag==1):
+                    self.spine_marker.points = self.spine_marker.points-np.array([self.SimVars.yLimsD[0],self.SimVars.xLimsD[0]])
+                    self.spine_marker.points = self.spine_marker.points+np.array([self.SimVars.yLimsG[0],self.SimVars.xLimsG[0]])
+
+
+                self.spine_marker = spine_eval(self.SimVars, self.spine_marker.points,self.spine_marker.scores,self.spine_marker.flags,clear_plot=False)
+                self.spine_marker.disconnect()
+
 @handle_exceptions
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""
@@ -2613,7 +2676,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.2-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.3-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

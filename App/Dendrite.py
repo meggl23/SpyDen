@@ -353,7 +353,7 @@ class DendriteMeasurement:
         self.SimVars.frame.add_commands(["MP_Desc","MP_line"])
 
 
-def DendSave_csv(Dir,Dend_Arr):
+def DendSave_csv(Dir,Dend_Arr,shift):
     """
     Saves dendrite data to multiple CSV files, each corresponding to a specific channel.
 
@@ -376,8 +376,9 @@ def DendSave_csv(Dir,Dend_Arr):
         csv_file_path = Dir+'Dendrite_Channel_'+str(c)+'.csv'
         DendVar = []
         for D in Dend_Arr:
-            loc   = np.array([str([x,y]) for x,y in D.dend_stat[:,:2]])
-            width = np.array([str(t*D.WidthFactor) for t in D.dend_stat[:,2]])
+            pts   = D.dend_stat[:,:2] + shift
+            loc   = np.array([str([x,y]) for x,y in pts])
+            width = np.array([str(t*D.WidthFactor) for t in pts])
             x =  np.hstack([loc.reshape(-1,1),width.reshape(-1,1),D.dend_lumin[:,:,c],D.dend_lumin_ell[:,:,c]])
             DendVar.append(x)
         max_sublists = max(len(var) for var in DendVar)
@@ -403,7 +404,7 @@ def DendSave_csv(Dir,Dend_Arr):
             for row in flattened_data:
                 writer.writerow(row)
 
-def DendSave_json(Dir,Dend_Arr,tf,Snapshots,Channels,Unit):
+def DendSave_json(Dir,Dend_Arr,tf,Snapshots,Channels,Unit,shift):
     """
     Saves dendrite data to multiple CSV files, each corresponding to a specific channel.
 
@@ -417,7 +418,8 @@ def DendSave_json(Dir,Dend_Arr,tf,Snapshots,Channels,Unit):
 
     DDic = []
     for D in Dend_Arr:
-        Start,End = D.control_points[0].tolist(),D.control_points[-1].tolist()
+        pts = D.control_points + shift
+        Start,End = pts[0].tolist(),pts[-1].tolist()
         length = D.length
         Mean = []
         Area = []
@@ -440,11 +442,11 @@ def DendSave_json(Dir,Dend_Arr,tf,Snapshots,Channels,Unit):
     with open(Dir + "Dendrites.json", "w") as fp:
         json.dump([D for D in DDic], fp, indent=4)
 
-def DendSave_imj(Dir,Dend_Arr):
+def DendSave_imj(Dir,Dend_Arr,shift):
     os.mkdir(path=Dir+'ImageJ/')
     Dir2 = Dir+'ImageJ/'
     for i,D in enumerate(Dend_Arr):
-        pts = np.flip(D.dend_stat[:,:2],axis=1)
+        pts = np.flip(D.dend_stat[:,:2]+shift,axis=1)
 
         roi = rf.ImagejRoi.frompoints(pts)
     
