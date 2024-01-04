@@ -163,6 +163,8 @@ def getMetadata(filename, frame=None):
         return getLSMDimensions(filename),tf.imread(filename)
     elif(filename.endswith('.png') or filename.endswith('.jpg')):
         temp = imageio.imread(filename)
+        if(len(temp.shape)>2):
+            temp = np.dot(temp[..., :3], [0.2989, 0.5870, 0.1140])
         meta_data = np.ones((5))
         meta_data[1] = 1
         meta_data[2] = 1
@@ -174,8 +176,6 @@ def getMetadata(filename, frame=None):
         if frame is None:
             print("Unsupported file format found. contact admin")
         # TODO: Format print as pop-up/In the main window
-        exit()
-
 
 def getScale(filename):
     tf_file = tf.TiffFile(filename)
