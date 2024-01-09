@@ -1048,9 +1048,14 @@ class DataReadWindow(QWidget):
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
-                DendSave_csv(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
-                DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
-                DendSave_imj(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                try:
+                    DendSave_csv(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                    DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                    DendSave_imj(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                except:
+                    DendSave_csv(Dend_Dir,self.DendArr,-np.array([0,0]))
+                    DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([0,0]))
+                    DendSave_imj(Dend_Dir,self.DendArr,-np.array([0,0]))
             except Exception as e:
                 if DevMode: print(e)
                 SaveFlag[0] = False
@@ -1134,7 +1139,6 @@ class DataReadWindow(QWidget):
                 pass
         else:
             SaveFlag[2] = False
-
         self.SaveSettings()
         if(SaveFlag.all()):
             self.set_status_message.setText(self.status_msg["7"])
