@@ -1044,6 +1044,7 @@ class DataReadWindow(QWidget):
             try:
                 Dend_Dir = self.SimVars.Dir + "Dendrite/"
                 if os.path.exists(Dend_Dir):
+                    shutil.copytree(Dend_Dir, Dend_Dir[-1]+'temp/')
                     shutil.rmtree(Dend_Dir)
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
@@ -1056,7 +1057,12 @@ class DataReadWindow(QWidget):
                     DendSave_csv(Dend_Dir,self.DendArr,-np.array([0,0]))
                     DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([0,0]))
                     DendSave_imj(Dend_Dir,self.DendArr,-np.array([0,0]))
+                if os.path.exists(Dend_Dir[-1]+'temp/'):
+                    shutil.rmtree(Dend_Dir[-1]+'temp/')
             except Exception as e:
+                if os.path.exists(Dend_Dir[-1]+'temp/'):
+                    shutil.rmtree(Dend_Dir)
+                    shutil.copytree(Dend_Dir[-1]+'temp/', Dend_Dir)
                 if DevMode: print(e)
                 SaveFlag[0] = False
                 pass
@@ -1071,6 +1077,7 @@ class DataReadWindow(QWidget):
             try:
                 Spine_Dir = self.SimVars.Dir + "Spine/"
                 if os.path.exists(Spine_Dir):
+                    shutil.copytree(Spine_Dir, Spine_Dir[-1]+'temp/')
                     for file_name in os.listdir(Spine_Dir):
                         file_path = os.path.join(Spine_Dir, file_name)
                         
@@ -1113,7 +1120,12 @@ class DataReadWindow(QWidget):
                     SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
                     SpineSave_imj(Spine_Dir,orderedSpineArr)
                 self.PlotSyn()
+                if os.path.exists(Spine_Dir[-1]+'temp/'):
+                    shutil.rmtree(Spine_Dir[-1]+'temp/')
             except Exception as e:
+                if os.path.exists(Spine_Dir[-1]+'temp/'):
+                    shutil.rmtree(Spine_Dir)
+                    shutil.copytree(Spine_Dir[-1]+'temp/', Spine_Dir)
                 if DevMode: print(e)
                 SaveFlag[1] = False
                 pass
