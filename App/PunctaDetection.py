@@ -40,7 +40,7 @@ class PunctaDetection:
     class that holds meta data for puncta detection and methods for puncta stats calculations
     """
 
-    def __init__(self, SimVars, tiff_Arr, somas, dendrites, dend_thresh=0.75,soma_thresh=0.5):
+    def __init__(self, SimVars, tiff_Arr, somas, dendrites, dend_thresh=0.75,soma_thresh=0.5,sigmas=(1,1)):
         self.Dir = SimVars.Dir
         self.tiff_Arr = tiff_Arr
         self.somas = somas  
@@ -51,6 +51,7 @@ class PunctaDetection:
         self.dend_thresh = dend_thresh
         self.soma_thresh = soma_thresh
         self.SimVars = SimVars
+        self.sigmas = sigmas
 
     def isBetween(self, a, b, c):
         """
@@ -230,10 +231,11 @@ class PunctaDetection:
 
             anti_soma = np.multiply(anti_soma, 1 - lsm_img)
             soma_img = np.multiply(orig_img, lsm_img)
-            t = np.max(orig_img[rr,cc])*self.soma_thresh
-            blobs_log = blob_log(soma_img, threshold=t,max_sigma=1)
+            t = np.max(orig_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
+            print("sigma range",self.sigmas)
+            blobs_log = blob_log(soma_img, threshold=t,max_sigma=self.sigmas[1],min_sigma = self.sigmas[0])
             blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
-
+            print("soma {0} threshold = {1}, bg = {2}".format(i, t,self.SimVars.bgmean[0, ch]))
 
             for blob in blobs_log:
                 y, x, r = blob
@@ -274,8 +276,11 @@ class PunctaDetection:
             # anti_soma = np.multiply(anti_soma,1 - dilated)
             dend_img = np.multiply(dilated, orig_img)
             filtered_dend_img = dend_img[np.nonzero(dend_img)]
-            t = np.max(filtered_dend_img)*self.dend_thresh
-            dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=1)
+            # breakpoint()
+            t = np.max(filtered_dend_img)*self.dend_thresh#np.max((np.max(filtered_dend_img)*self.dend_thresh,self.SimVars.bgmean[0, ch]+1))
+            print("dendrite {0} threshold = {1}, bg = {2}".format(i, t,self.SimVars.bgmean[0, ch]).format(i,t))
+
+            dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=self.sigmas[1],min_sigma = self.sigmas[0])
             dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)
             dp = []
             for blob in dend_blobs_log:

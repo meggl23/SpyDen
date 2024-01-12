@@ -18,9 +18,10 @@ from .RoiInteractor import RoiInteractor,RoiInteractor_BG
 from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
 
+from superqt import QLabeledRangeSlider
 import webbrowser as wb
 import platform
-
+# from sider
 DevMode = False
 
 def catch_exceptions(func):
@@ -613,7 +614,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.puncta_dend_slider,3 , 3, 1, 6)
         self.puncta_dend_slider.setMinimum(0)
         self.puncta_dend_slider.setMaximum(100)
-        self.puncta_dend_slider.setValue(75)
+        self.puncta_dend_slider.setValue(30)
         self.puncta_dend_slider.singleStep()
 
         self.puncta_dend_counter = QLabel(str(self.puncta_dend_slider.value()))
@@ -628,15 +629,26 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.puncta_soma_slider, 4, 3, 1, 6)
         self.puncta_soma_slider.setMinimum(0)
         self.puncta_soma_slider.setMaximum(100)
-        self.puncta_soma_slider.setValue(50)
+        self.puncta_soma_slider.setValue(30)
         self.puncta_soma_slider.singleStep()
         self.puncta_soma_slider.setToolTip('Select the synaptic threshold for the dendritic puncta')
 
         self.puncta_soma_counter = QLabel(str(self.puncta_soma_slider.value()))
         self.grid.addWidget(self.puncta_soma_counter, 4, 9, 1, 1)
 
+        # ============= Puncta sigma range slider ==================
+
+        self.puncta_sigma_label = QLabel("Puncta size")
+        self.grid.addWidget(self.puncta_sigma_label,5,4,1,1)
+        self.puncta_sigma_range_slider = QLabeledRangeSlider(PyQt5.QtCore.Qt.Horizontal,self)
+        self.puncta_sigma_range_slider.setValue((2,5))
+        self.grid.addWidget(self.puncta_sigma_range_slider,5,5,1,6)
+        self.puncta_sigma_range_slider.setRange(1,10)
+        self.puncta_sigma_range_slider.setToolTip('Select the range of puncta sizes ')
+
         self.hide_stuff([self.puncta_soma_label, self.puncta_soma_counter, self.puncta_soma_slider])
         self.hide_stuff([self.puncta_dend_label, self.puncta_dend_counter, self.puncta_dend_slider])
+        self.hide_stuff([self.puncta_sigma_label, self.puncta_sigma_range_slider])
 
     def set_NN(self):
         """
@@ -928,7 +940,19 @@ class DataReadWindow(QWidget):
         self.puncta_soma_counter.setText(str(self.puncta_soma_slider.value()))
         self.get_puncta()
 
-    def get_puncta(self):
+    def puncta_sigma_slider_update(self):
+        """
+        Updates the puncta soma counter and retrieves puncta based on the slider value.
+
+        This method is triggered when the puncta soma slider is moved.
+        It updates the text of the puncta soma counter to reflect the new slider value.
+        It then calls the 'get_puncta' method to retrieve puncta based on the updated slider value.
+
+        Returns:
+            None
+        """
+        self.get_puncta()
+    def get_puncta(self, max_simga=None):
         """Retrieves and displays puncta based on the current slider values.
 
         This method shows puncta, adds commands, sets status messages, and performs puncta detection
@@ -945,8 +969,9 @@ class DataReadWindow(QWidget):
 
         soma_thresh = self.puncta_soma_slider.value()/100.0
         dend_thresh = self.puncta_dend_slider.value()/100.0
-
-        PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,self.DendArr,dend_thresh,soma_thresh)
+        sigmas =  self.puncta_sigma_range_slider.value()
+        print(sigmas[0],sigmas[1])
+        PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,self.DendArr,dend_thresh,soma_thresh,sigmas)
         somatic_punctas, dendritic_punctas = PD.GetPunctas()
         self.punctas = [somatic_punctas,dendritic_punctas]
         self.display_puncta()
@@ -981,8 +1006,12 @@ class DataReadWindow(QWidget):
             )
         except:
             pass
-        self.plot_puncta(self.punctas[0][int(self.timestep_slider.value())][int(self.channel_slider.value())],"soma")
-        self.plot_puncta(self.punctas[1][int(self.timestep_slider.value())][int(self.channel_slider.value())],"dendrite")
+        try:
+            self.plot_puncta(self.punctas[0][int(self.timestep_slider.value())][int(self.channel_slider.value())],"soma")
+            self.plot_puncta(self.punctas[1][int(self.timestep_slider.value())][int(self.channel_slider.value())],"dendrite")
+        except:
+            print("No punctas detected anywhere, try lowering the thresholds")
+            pass
 
     def plot_puncta(self,puncta_dict,flag='dendrite'):
 
@@ -1363,7 +1392,7 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.measure_puncta_button)
         MakeButtonActive(self.save_button)
         self.spine_button_ROI.setChecked(False)
-
+        # debug_trace()
         self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
 
         self.set_status_message.setText(self.status_msg["9"])
@@ -1748,6 +1777,7 @@ class DataReadWindow(QWidget):
             self.tolerance_slider.valueChanged.connect(self.spine_tolerance_sigma)
             self.puncta_soma_slider.valueChanged.connect(self.soma_threshold_slider_update)
             self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
+            self.puncta_sigma_range_slider.valueChanged.connect(self.puncta_sigma_slider_update)
             self.multitime_check.stateChanged.connect(lambda state: self.check_changed(state,1))
             self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
             self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
@@ -2279,6 +2309,7 @@ class DataReadWindow(QWidget):
 
         self.hide_stuff([self.puncta_dend_label,self.puncta_dend_slider,self.puncta_dend_counter])
         self.hide_stuff([self.puncta_soma_label,self.puncta_soma_slider,self.puncta_soma_counter])
+        self.hide_stuff([self.puncta_sigma_label, self.puncta_sigma_range_slider])
         self.hide_stuff([self.thresh_slider, self.thresh_label])
         self.hide_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label])
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider,
@@ -2291,6 +2322,8 @@ class DataReadWindow(QWidget):
             if(Name=="Puncta"):
                 self.show_stuff([self.puncta_dend_label,self.puncta_dend_slider,self.puncta_dend_counter])
                 self.show_stuff([self.puncta_soma_label,self.puncta_soma_slider,self.puncta_soma_counter])
+                self.show_stuff([self.puncta_sigma_label, self.puncta_sigma_range_slider])
+
             if(Name=="MedAx"):
                 self.show_stuff([self.thresh_slider, self.thresh_label])
             if(Name=="DendWidth"):
