@@ -756,6 +756,7 @@ class DataReadWindow(QWidget):
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
+                pol.set_edgecolor('white')
                 self.mpl.axes.add_patch(pol)
                 self.roi_interactor_list[index].poly = pol
                 if(self.roi_interactor_list[index].loc is not None):
@@ -786,6 +787,7 @@ class DataReadWindow(QWidget):
                     self.SpineArr[index].closest_Dend = closest_Dend
                 polygon = np.array(self.SpineArr[index].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
+                pol.set_edgecolor('white')
                 self.mpl.axes.add_patch(pol)
                 self.roi_interactor_list[index].poly = pol
                 self.roi_interactor_list[index].line.set_data(pol.xy[:, 0], pol.xy[:, 1])
@@ -1070,17 +1072,29 @@ class DataReadWindow(QWidget):
         SaveFlag = np.array([True,True,True])
         np.save(self.SimVars.Dir + "background.npy",self.SimVars.bgmean)
         if(len(self.DendArr)>0):
+            Dend_Dir = self.SimVars.Dir + "Dendrite/"
             try:
-                Dend_Dir = self.SimVars.Dir + "Dendrite/"
                 if os.path.exists(Dend_Dir):
+                    shutil.copytree(Dend_Dir, Dend_Dir[:-1]+'temp/')
                     shutil.rmtree(Dend_Dir)
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
-                DendSave_csv(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
-                DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
-                DendSave_imj(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                try:
+                    DendSave_csv(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                    DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                    DendSave_imj(Dend_Dir,self.DendArr,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                except:
+                    DendSave_csv(Dend_Dir,self.DendArr,-np.array([0,0]))
+                    DendSave_json(Dend_Dir,self.DendArr,self.tiff_Arr,self.SimVars.Snapshots,self.SimVars.Channels,self.SimVars.Unit,-np.array([0,0]))
+                    DendSave_imj(Dend_Dir,self.DendArr,-np.array([0,0]))
+                if os.path.exists(Dend_Dir[:-1]+'temp/'):
+                    shutil.rmtree(Dend_Dir[:-1]+'temp/')
             except Exception as e:
+                if os.path.exists(Dend_Dir[:-1]+'temp/'):
+                    shutil.rmtree(Dend_Dir)
+                    shutil.copytree(Dend_Dir[:-1]+'temp/', Dend_Dir)
+                    shutil.rmtree(Dend_Dir[:-1]+'temp/')
                 if DevMode: print(e)
                 SaveFlag[0] = False
                 pass
@@ -1095,6 +1109,7 @@ class DataReadWindow(QWidget):
             try:
                 Spine_Dir = self.SimVars.Dir + "Spine/"
                 if os.path.exists(Spine_Dir):
+                    shutil.copytree(Spine_Dir, Spine_Dir[:-1]+'temp/')
                     for file_name in os.listdir(Spine_Dir):
                         file_path = os.path.join(Spine_Dir, file_name)
                         
@@ -1117,8 +1132,9 @@ class DataReadWindow(QWidget):
                     Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
                     xperts = R.getPolyXYs()
                     mask = np.zeros_like(self.tiff_Arr[0,0])
-                    c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-2]-1)
-                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-1]-1)
+
+                    c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-1]-1)
+                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2]-1)
                     rr, cc = polygon(r, c)
                     mask[rr, cc] = 255
                     try:
@@ -1128,19 +1144,30 @@ class DataReadWindow(QWidget):
                     cv.imwrite(Spine_Mask_Dir, mask)
                 nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
-                if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                    SaveSynDict(orderedSpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_imj(Spine_Dir,orderedSpineArr)
-                else:
-                    SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_imj(Spine_Dir,orderedSpineArr)
+                try:
+                    if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
+                        SaveSynDict(orderedSpineArr, Spine_Dir, "Luminosity",[self.SimVars.yLims,self.SimVars.xLims])
+                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,'Luminosity',[self.SimVars.yLims,self.SimVars.xLims])
+                        SpineSave_imj(Spine_Dir,orderedSpineArr)
+                    else:
+                        SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                        SpineSave_imj(Spine_Dir,orderedSpineArr)
+                except:
+                        SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[[],[]])
+                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[[],[]])
+                        SpineSave_imj(Spine_Dir,orderedSpineArr)
                 self.PlotSyn()
+                if os.path.exists(Spine_Dir[:-1]+'temp/'):
+                    shutil.rmtree(Spine_Dir[:-1]+'temp/')
             except Exception as e:
-                if DevMode: print(e)
-                SaveFlag[1] = False
-                pass
+               if os.path.exists(Spine_Dir[:-1]+'temp/'):
+                   shutil.rmtree(Spine_Dir)
+                   shutil.copytree(Spine_Dir[:-1]+'temp/', Spine_Dir)
+                   shutil.rmtree(Spine_Dir[:-1]+'temp/')
+               if DevMode: print(e)
+               SaveFlag[1] = False
+               pass
         else:
             SaveFlag[1] = False
         if(len(self.punctas)>0):
@@ -1163,7 +1190,6 @@ class DataReadWindow(QWidget):
                 pass
         else:
             SaveFlag[2] = False
-
         self.SaveSettings()
         if(SaveFlag.all()):
             self.set_status_message.setText(self.status_msg["7"])
@@ -1397,7 +1423,7 @@ class DataReadWindow(QWidget):
 
         self.set_status_message.setText(self.status_msg["9"])
 
-
+        self.SpinesMeasured = False
 
     def old_ROI_eval(self):
 
@@ -1531,6 +1557,7 @@ class DataReadWindow(QWidget):
 
         self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
 
+        self.SpinesMeasured = False
     def clear_stuff(self,RePlot):
         """Clear and reset various components and data.
 
@@ -1646,7 +1673,7 @@ class DataReadWindow(QWidget):
         instance = self
 
         if(indx==0):
-
+            self.SpinesMeasured = False
             try:
                 self.neighbour_slider.disconnect()
                 self.thresh_slider.disconnect()
@@ -2709,7 +2736,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.3-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.4-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

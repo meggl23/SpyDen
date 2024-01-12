@@ -72,6 +72,7 @@ class Spine_Marker:
         if len(self.points) == 0:
             self.canvas.draw()
             MakeButtonInActive(self.SimVars.frame.spine_button_ROI)
+            MakeButtonInActive(self.SimVars.frame.old_ROI_button)
         elif len(self.points) > 0 and self.scatter is None:
             MakeButtonActive(self.SimVars.frame.spine_button_ROI)
             self.scatter = self.axes.scatter(

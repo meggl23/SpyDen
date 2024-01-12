@@ -319,9 +319,9 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
     """
 
     modifiedSynArr = copy.deepcopy(SynArr)
-    # breakpoint()
+
     if(len(xLims[0])==0):
-        xLims = 0
+        Lims = np.array([0,0])
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
     for S in modifiedSynArr:
