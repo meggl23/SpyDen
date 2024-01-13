@@ -590,7 +590,7 @@ class DataReadWindow(QWidget):
         #============= Dendrite shifting button ==================
         self.Dend_shift_check = QCheckBox(self)
         self.Dend_shift_check.setText("Dendrite shifting")
-        self.grid.addWidget(self.Dend_shift_check, 5, 2, 1, 1)
+        self.grid.addWidget(self.Dend_shift_check, 2, 10, 1, 1)
         self.Dend_shift_check.setVisible(False)
         self.Dend_shift = False
         self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
@@ -600,7 +600,7 @@ class DataReadWindow(QWidget):
         #============= Local shifting button ==================
         self.local_shift_check = QCheckBox(self)
         self.local_shift_check.setText("Local shifting")
-        self.grid.addWidget(self.local_shift_check, 5, 3, 1, 1)
+        self.grid.addWidget(self.local_shift_check,3, 10, 1, 1)
         self.local_shift_check.setVisible(False)
         self.local_shift = False
         self.local_shift_check.stateChanged.connect(lambda state: self.check_changed(state,2))
