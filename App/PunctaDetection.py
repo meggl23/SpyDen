@@ -232,10 +232,8 @@ class PunctaDetection:
             anti_soma = np.multiply(anti_soma, 1 - lsm_img)
             soma_img = np.multiply(orig_img, lsm_img)
             t = np.max(orig_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
-            print("sigma range",self.sigmas)
             blobs_log = blob_log(soma_img, threshold=t,max_sigma=self.sigmas[1],min_sigma = self.sigmas[0])
             blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
-            print("soma {0} threshold = {1}, bg = {2}".format(i, t,self.SimVars.bgmean[0, ch]))
 
             for blob in blobs_log:
                 y, x, r = blob
@@ -276,9 +274,8 @@ class PunctaDetection:
             # anti_soma = np.multiply(anti_soma,1 - dilated)
             dend_img = np.multiply(dilated, orig_img)
             filtered_dend_img = dend_img[np.nonzero(dend_img)]
-            # breakpoint()
+
             t = np.max(filtered_dend_img)*self.dend_thresh#np.max((np.max(filtered_dend_img)*self.dend_thresh,self.SimVars.bgmean[0, ch]+1))
-            print("dendrite {0} threshold = {1}, bg = {2}".format(i, t,self.SimVars.bgmean[0, ch]).format(i,t))
 
             dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=self.sigmas[1],min_sigma = self.sigmas[0])
             dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)

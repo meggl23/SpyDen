@@ -468,11 +468,11 @@ class DataReadWindow(QWidget):
 
         #============= delete button ==================
         self.delete_old_result_button = QPushButton(self)
-        self.delete_old_result_button.setText("Clear all")
+        self.delete_old_result_button.setText("Clear old")
         self.grid.addWidget(self.delete_old_result_button, 17, 0, 1, 1)
         self.delete_old_result_button.clicked.connect(lambda: self.clear_stuff(True))
         MakeButtonInActive(self.delete_old_result_button)
-        self.delete_old_result_button.setToolTip('Clear all analysis and start fresh')
+        self.delete_old_result_button.setToolTip('Clear old analysis and start fresh')
 
         self.save_button = QPushButton(self)
         self.save_button.setText("Save results")
@@ -639,10 +639,10 @@ class DataReadWindow(QWidget):
         # ============= Puncta sigma range slider ==================
 
         self.puncta_sigma_label = QLabel("Puncta size")
-        self.grid.addWidget(self.puncta_sigma_label,5,4,1,1)
+        self.grid.addWidget(self.puncta_sigma_label,5,2,1,1)
         self.puncta_sigma_range_slider = QLabeledRangeSlider(PyQt5.QtCore.Qt.Horizontal,self)
         self.puncta_sigma_range_slider.setValue((2,5))
-        self.grid.addWidget(self.puncta_sigma_range_slider,5,5,1,6)
+        self.grid.addWidget(self.puncta_sigma_range_slider,5,3,1,6)
         self.puncta_sigma_range_slider.setRange(1,10)
         self.puncta_sigma_range_slider.setToolTip('Select the range of puncta sizes ')
 
@@ -972,7 +972,6 @@ class DataReadWindow(QWidget):
         soma_thresh = self.puncta_soma_slider.value()/100.0
         dend_thresh = self.puncta_dend_slider.value()/100.0
         sigmas =  self.puncta_sigma_range_slider.value()
-        print(sigmas[0],sigmas[1])
         PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,self.DendArr,dend_thresh,soma_thresh,sigmas)
         somatic_punctas, dendritic_punctas = PD.GetPunctas()
         self.punctas = [somatic_punctas,dendritic_punctas]
@@ -1418,7 +1417,7 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.measure_puncta_button)
         MakeButtonActive(self.save_button)
         self.spine_button_ROI.setChecked(False)
-        # debug_trace()
+
         self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
 
         self.set_status_message.setText(self.status_msg["9"])
@@ -2736,7 +2735,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.4-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.5-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

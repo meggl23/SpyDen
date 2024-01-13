@@ -65,6 +65,7 @@ opencv-python
 PyQt5
 imageio
 roifile
+superqt
 ```
 
 ***
