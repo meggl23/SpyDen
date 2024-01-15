@@ -1794,10 +1794,6 @@ class DataReadWindow(QWidget):
                                     self.dend_width_mult_slider.setValue(value)
                                     dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
                                     self.dend_width_mult_counter.setText(dend_factor)
-                                # elif(key=="Puncta min sigma"):
-                                #     self.puncta_sigma_range_slider.setMinimum(value)
-                                # elif (key == "Puncta max sigma"):
-                                #     self.puncta_sigma_range_slider.setMaximum(value)
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
                     if DevMode: print(e)
