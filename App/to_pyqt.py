@@ -1217,7 +1217,7 @@ class DataReadWindow(QWidget):
             None
 
         """
-    
+
         Settings_File = self.SimVars.Dir + "Settings.txt"
 
         if os.path.exists(Settings_File):
@@ -1225,19 +1225,19 @@ class DataReadWindow(QWidget):
 
         file = open(Settings_File, "w")
         values = [("multi-time",self.SimVars.multitime_flag),
-                 ("resolution",self.SimVars.Unit),
-                ("Image threshold",self.thresh_slider.value()),
-                ("Dendritic width",self.neighbour_slider.value()),
-                ("Dend. width multiplier",self.dend_width_mult_slider.value()),
-                ("ML Confidence",self.ml_confidence_slider.value()),
-                ("ROI Tolerance",self.tolerance_slider.value()),
-                ("ROI Sigma",self.sigma_slider.value()),
-                ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
-                ("Somatic puncta threshold",self.puncta_soma_slider.value()),
-                ("MLLocation",self.NN_path),
-                ("Dend. shift",self.Dend_shift_check.isChecked())
-                ]
-
+                  ("resolution",self.SimVars.Unit),
+                  ("Image threshold",self.thresh_slider.value()),
+                  ("Dendritic width",self.neighbour_slider.value()),
+                  ("Dend. width multiplier",self.dend_width_mult_slider.value()),
+                  ("ML Confidence",self.ml_confidence_slider.value()),
+                  ("ROI Tolerance",self.tolerance_slider.value()),
+                  ("ROI Sigma",self.sigma_slider.value()),
+                  ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
+                  ("Somatic puncta threshold",self.puncta_soma_slider.value()),
+                  ("MLLocation",self.NN_path),
+                  ("Dend. shift",self.Dend_shift_check.isChecked()),
+                  ("Puncta sigma range","-".join([str(x) for x in self.puncta_sigma_range_slider.value()]))
+                  ]
         for value in values:
             file.write(value[0]+":"+str(value[1]) + "\n")
         file.close()
@@ -1763,6 +1763,9 @@ class DataReadWindow(QWidget):
                                 self.Dend_shift_check.setChecked(boolean_value)
                             elif(key=="resolution"):
                                 scale = float(value)
+                            elif(key == "Puncta sigma range"):
+                                sigma_r = tuple(map(int, value.split('-')))
+                                self.puncta_sigma_range_slider.setValue(sigma_r)
                             else:
                                 value = int(value)
                                 if(key=="Image threshold"):
@@ -1791,6 +1794,10 @@ class DataReadWindow(QWidget):
                                     self.dend_width_mult_slider.setValue(value)
                                     dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
                                     self.dend_width_mult_counter.setText(dend_factor)
+                                # elif(key=="Puncta min sigma"):
+                                #     self.puncta_sigma_range_slider.setMinimum(value)
+                                # elif (key == "Puncta max sigma"):
+                                #     self.puncta_sigma_range_slider.setMaximum(value)
                 except Exception as e:
                     self.set_status_message.setText('There was a problem with the settings file')
                     if DevMode: print(e)
