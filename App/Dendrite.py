@@ -449,13 +449,13 @@ def DendSave_imj(Dir,Dend_Arr,shift):
         pts = np.flip(D.dend_stat[:,:2]+shift,axis=1)
 
         roi = rf.ImagejRoi.frompoints(pts)
-    
+        roi.roitype = rf.ROI_TYPE.FREELINE
         roi.tofile(Dir2+'DendMed_'+str(i)+'.roi')
 
         pts = D.contours[0].squeeze()
 
         roi = rf.ImagejRoi.frompoints(pts)
-    
+
         roi.tofile(Dir2+'DendSeg_'+str(i)+'.roi')
 
 
