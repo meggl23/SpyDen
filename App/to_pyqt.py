@@ -21,8 +21,10 @@ from .PathFinding import GetLength
 from superqt import QLabeledRangeSlider
 import webbrowser as wb
 import platform
-# from sider
+import time
+
 DevMode = False
+
 
 def catch_exceptions(func):
 
@@ -177,7 +179,7 @@ class DataReadWindow(QWidget):
             "8": "Medial Axis Path Calculation",
             "9": "Change the ROIs of the spines via drag and drop of the points",
             "10": "Old data was loaded",
-            "11": "Calculating punctas"
+            "11": "Calculating puncta"
         }
 
         self.command_list = {
@@ -455,7 +457,7 @@ class DataReadWindow(QWidget):
 
         #============= puncta button ==================
         self.measure_puncta_button = QPushButton(self)
-        self.measure_puncta_button.setText("Get and measure punctas")
+        self.measure_puncta_button.setText("Get and measure puncta")
         MakeButtonInActive(self.measure_puncta_button)
         self.grid.addWidget(self.measure_puncta_button, 15, 0, 1, 2)
         self.measure_puncta_button.clicked.connect(self.get_puncta)
@@ -958,8 +960,8 @@ class DataReadWindow(QWidget):
         """Retrieves and displays puncta based on the current slider values.
 
         This method shows puncta, adds commands, sets status messages, and performs puncta detection
-        using the current slider values. It calculates somatic and dendritic punctas and updates
-        the punctas list. Finally, it displays the puncta, updates the status message accordingly,
+        using the current slider values. It calculates somatic and dendritic puncta and updates
+        the puncta list. Finally, it displays the puncta, updates the status message accordingly,
         and returns None.
         """
         self.show_stuff_coll(["Puncta"])
@@ -1011,7 +1013,7 @@ class DataReadWindow(QWidget):
             self.plot_puncta(self.punctas[0][int(self.timestep_slider.value())][int(self.channel_slider.value())],"soma")
             self.plot_puncta(self.punctas[1][int(self.timestep_slider.value())][int(self.channel_slider.value())],"dendrite")
         except:
-            print("No punctas detected anywhere, try lowering the thresholds")
+            print("No puncta detected anywhere, try lowering the thresholds")
             pass
 
     def plot_puncta(self,puncta_dict,flag='dendrite'):
@@ -1201,7 +1203,7 @@ class DataReadWindow(QWidget):
             if(SaveFlag[1]):
                 Text += "Synapses saved properly, "
             if(SaveFlag[2]):
-                Text += "Punctas saved properly"
+                Text += "Puncta saved properly"
             self.set_status_message.setText(Text)
         self.save_button.setChecked(False)
         self.mpl.canvas.draw()
@@ -1557,6 +1559,7 @@ class DataReadWindow(QWidget):
         self.SpineArr = SynDistance(self.SpineArr, medial_axis_Arr, self.SimVars.Unit)
 
         self.SpinesMeasured = False
+
     def clear_stuff(self,RePlot):
         """Clear and reset various components and data.
 
@@ -1683,6 +1686,7 @@ class DataReadWindow(QWidget):
                 self.puncta_soma_slider.disconnect()
                 self.dend_width_mult_slider.disconnect()
                 self.Dend_shift_check.disconnect()
+                self.puncta_sigma_range_slider.disconnect()
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
@@ -1870,7 +1874,6 @@ class DataReadWindow(QWidget):
                 Dend = Dendrite(self.tiff_Arr,self.SimVars)
                 Dend.control_points = np.load(D) 
                 self.DendArr.append(Dend)
-
             if (self.SimVars.Snapshots > 1):
                 if(self.Dend_shift_check.isChecked()):
                     dMax = np.max([np.max(D.control_points,axis=0) for D in self.DendArr],axis=0)
@@ -1885,6 +1888,7 @@ class DataReadWindow(QWidget):
                     self.show_stuff([self.Dend_shift_check])
 
             for Dend in self.DendArr:
+                Dend.UpdateParams(self.tiff_Arr)
                 if(len(self.SimVars.xLims)>0):
                     Dend.control_points = Dend.control_points+np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
                 Dend.complete_medial_axis_path = GetAllpointsonPath(Dend.control_points)[:, :]
@@ -1897,7 +1901,6 @@ class DataReadWindow(QWidget):
                 Dend.length            = GetLength(Dend.complete_medial_axis_path)*self.SimVars.Unit
                 self.mpl.axes.add_patch(pol)
 
-            
             MakeButtonActive(self.dendritic_width_button)
 
             MakeButtonActive(self.spine_button)
@@ -1989,7 +1992,7 @@ class DataReadWindow(QWidget):
         """Applies a threshold to the neural network scores and updates the spine marker.
 
         The method retrieves the threshold value from the confidence slider and updates the corresponding GUI element.
-        It then displays a spine marker based on the spine points with scores above the threshold.
+        It then displays a spinemarker based on the spine points with scores above the threshold.
 
         Returns:
             None
@@ -2524,7 +2527,6 @@ class DataReadWindow(QWidget):
 
                 self.spine_marker = spine_eval(self.SimVars, self.spine_marker.points,self.spine_marker.scores,self.spine_marker.flags,clear_plot=False)
                 self.spine_marker.disconnect()
-
 @handle_exceptions
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""

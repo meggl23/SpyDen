@@ -199,9 +199,9 @@ class PunctaDetection:
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
 
         if(not NoDendrite):
-            self.SimVars.frame.set_status_message.setText("Punctas are available on all snaphshots/channels")
+            self.SimVars.frame.set_status_message.setText("Puncta are available on all snaphshots/channels")
         else:
-            self.SimVars.frame.set_status_message.setText("Punctas are available on all snaphshots/channels, but there was no dendrite, so no dendritic puncta")
+            self.SimVars.frame.set_status_message.setText("Puncta are available on all snaphshots/channels, but there was no dendrite, so no dendritic puncta")
         return all_c_t_somatic_puncta, all_c_t_dendritic_puncta
 
     def GetPunctasSoma(self,orig_img,ch,t_snape):
