@@ -613,14 +613,14 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.puncta_dend_label,3, 2, 1, 1)
         self.puncta_dend_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.puncta_dend_slider.setTickPosition(QSlider.TicksBelow)
-        self.grid.addWidget(self.puncta_dend_slider,3 , 3, 1, 6)
+        self.grid.addWidget(self.puncta_dend_slider,3 , 3, 1, 9)
         self.puncta_dend_slider.setMinimum(0)
         self.puncta_dend_slider.setMaximum(100)
-        self.puncta_dend_slider.setValue(30)
+        self.puncta_dend_slider.setValue(12)
         self.puncta_dend_slider.singleStep()
 
         self.puncta_dend_counter = QLabel(str(self.puncta_dend_slider.value()))
-        self.grid.addWidget(self.puncta_dend_counter, 3, 9, 1, 1)
+        self.grid.addWidget(self.puncta_dend_counter, 3, 12, 1, 1)
         self.puncta_dend_slider.setToolTip('Select the detection threshold for the dendritic puncta')
 
         # ============= Puncta soma threshold slider ==================
@@ -628,23 +628,23 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.puncta_soma_label, 4, 2, 1, 1)
         self.puncta_soma_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
         self.puncta_soma_slider.setTickPosition(QSlider.TicksBelow)
-        self.grid.addWidget(self.puncta_soma_slider, 4, 3, 1, 6)
+        self.grid.addWidget(self.puncta_soma_slider, 4, 3, 1, 9)
         self.puncta_soma_slider.setMinimum(0)
         self.puncta_soma_slider.setMaximum(100)
-        self.puncta_soma_slider.setValue(30)
+        self.puncta_soma_slider.setValue(12)
         self.puncta_soma_slider.singleStep()
         self.puncta_soma_slider.setToolTip('Select the synaptic threshold for the dendritic puncta')
 
         self.puncta_soma_counter = QLabel(str(self.puncta_soma_slider.value()))
-        self.grid.addWidget(self.puncta_soma_counter, 4, 9, 1, 1)
+        self.grid.addWidget(self.puncta_soma_counter, 4, 12, 1, 1)
 
         # ============= Puncta sigma range slider ==================
 
         self.puncta_sigma_label = QLabel("Puncta size")
         self.grid.addWidget(self.puncta_sigma_label,5,2,1,1)
         self.puncta_sigma_range_slider = QLabeledRangeSlider(PyQt5.QtCore.Qt.Horizontal,self)
-        self.puncta_sigma_range_slider.setValue((2,5))
-        self.grid.addWidget(self.puncta_sigma_range_slider,5,3,1,6)
+        self.puncta_sigma_range_slider.setValue((1,2))
+        self.grid.addWidget(self.puncta_sigma_range_slider,5,3,1,9)
         self.puncta_sigma_range_slider.setRange(1,10)
         self.puncta_sigma_range_slider.setToolTip('Select the range of puncta sizes ')
 
@@ -1000,8 +1000,13 @@ class DataReadWindow(QWidget):
             if(dend_surface is not None):
                 dend_cont = D.get_contours()
                 polygon = np.array(dend_cont[0][:, 0, :])
-                pol = Polygon(dend_cont[0][:, 0, :], fill=False, closed=True,color='r')
+                pol = Polygon(polygon, fill=False, closed=True,color='r')
                 self.mpl.axes.add_patch(pol)
+        self.mpl.canvas.draw()
+        for i,S in enumerate(self.SpineArr):
+            polygon = np.array(S.points)
+            pol = Polygon(polygon, fill=False, closed=True,color='k')
+            self.mpl.axes.add_patch(pol)
         self.mpl.canvas.draw()
         try:
             self.update_plot_handle(

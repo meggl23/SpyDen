@@ -181,23 +181,23 @@ class PunctaDetection:
             all_c_somatic_puncta = []
             all_c_dendritic_puncta = []
             for ch in range(self.channels):
-
                 orig_img = self.tiff_Arr[t, ch, :, :].astype(float)
                 if(Soma):
                     somatic_puncta,anti_soma   = self.GetPunctasSoma(orig_img,ch,t)
+                    # breakpoint()
                     all_c_somatic_puncta.append(somatic_puncta)
                 else:
                     anti_soma = np.ones(np.shape(orig_img), "uint8")
                 try:
                     dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma,ch,t)
                 except:
-                    NoDendrite = True
-                    dendritic_puncta = []
-
+                     NoDendrite = True
+                     dendritic_puncta = []
                 all_c_dendritic_puncta.append(dendritic_puncta)
+
+
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
-
         if(not NoDendrite):
             self.SimVars.frame.set_status_message.setText("Puncta are available on all snaphshots/channels")
         else:
@@ -231,16 +231,22 @@ class PunctaDetection:
 
             anti_soma = np.multiply(anti_soma, 1 - lsm_img)
             soma_img = np.multiply(orig_img, lsm_img)
-            t = np.max(orig_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
-            blobs_log = blob_log(soma_img, threshold=t,max_sigma=self.sigmas[1],min_sigma = self.sigmas[0])
-            blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
+            if np.max(soma_img[rr,cc]) > self.SimVars.bgmean[0, ch]+1:
+                print("max > bg")
+                t = np.max(soma_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
+                blobs_log = blob_log(soma_img, threshold=t, max_sigma=self.sigmas[1], min_sigma=self.sigmas[0])
+                blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
 
-            for blob in blobs_log:
-                y, x, r = blob
-                puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
-                sp = Puncta([x,y],r,puncta_stats,False,0,i,ch,t_snape)
-                sp.RoiID = i
-                somatic_puncta.append(sp)
+                for blob in blobs_log:
+                    y, x, r = blob
+                    puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
+                    sp = Puncta([x, y], r, puncta_stats, False, 0, i, ch, t_snape)
+                    sp.RoiID = i
+                    somatic_puncta.append(sp)
+            else:
+                "ommit the rois which is  < background"
+                pass
+
 
         return somatic_puncta,anti_soma
 
@@ -274,22 +280,23 @@ class PunctaDetection:
             # anti_soma = np.multiply(anti_soma,1 - dilated)
             dend_img = np.multiply(dilated, orig_img)
             filtered_dend_img = dend_img[np.nonzero(dend_img)]
-
-            t = np.max(filtered_dend_img)*self.dend_thresh#np.max((np.max(filtered_dend_img)*self.dend_thresh,self.SimVars.bgmean[0, ch]+1))
-
-            dend_blobs_log = blob_log(dend_img, threshold=t,max_sigma=self.sigmas[1],min_sigma = self.sigmas[0])
-            dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)
-            dp = []
-            for blob in dend_blobs_log:
-                y, x, r = blob
-                on_dendrite, distance_from_origin = self.Is_On_Dendrite(
-                    [xs, ys], [x, y], dendrite_instance.dend_stat[:,2].max()
-                )
-                puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
-                dp = Puncta([x,y],r,puncta_stats,on_dendrite,distance_from_origin,i,ch,t_snape)
-                dp.RoiID = i
-                dendritic_puncta.append(dp)
-
+            if np.max(filtered_dend_img) > self.SimVars.bgmean[0, ch]+1:
+                t = np.max(filtered_dend_img)*self.dend_thresh#np.max((np.max(filtered_dend_img)*self.dend_thresh,self.SimVars.bgmean[0, ch]+1))
+                dend_blobs_log = blob_log(dend_img, threshold=t, max_sigma=self.sigmas[1], min_sigma=self.sigmas[0])
+                dend_blobs_log[:, 2] = dend_blobs_log[:, 2] * sqrt(2)
+                dp = []
+                for blob in dend_blobs_log:
+                    y, x, r = blob
+                    on_dendrite, distance_from_origin = self.Is_On_Dendrite(
+                        [xs, ys], [x, y], dendrite_instance.dend_stat[:, 2].max()
+                    )
+                    puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
+                    dp = Puncta([x, y], r, puncta_stats, on_dendrite, distance_from_origin, i, ch, t_snape)
+                    dp.RoiID = i
+                    dendritic_puncta.append(dp)
+            else:
+                "ommit the rois which is  < background"
+                pass
         return dendritic_puncta
 
 def save_puncta(puncta_Dir,punctas,xLims):
