@@ -184,7 +184,6 @@ class PunctaDetection:
                 orig_img = self.tiff_Arr[t, ch, :, :].astype(float)
                 if(Soma):
                     somatic_puncta,anti_soma   = self.GetPunctasSoma(orig_img,ch,t)
-                    # breakpoint()
                     all_c_somatic_puncta.append(somatic_puncta)
                 else:
                     anti_soma = np.ones(np.shape(orig_img), "uint8")
@@ -232,7 +231,6 @@ class PunctaDetection:
             anti_soma = np.multiply(anti_soma, 1 - lsm_img)
             soma_img = np.multiply(orig_img, lsm_img)
             if np.max(soma_img[rr,cc]) > self.SimVars.bgmean[0, ch]+1:
-                print("max > bg")
                 t = np.max(soma_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
                 blobs_log = blob_log(soma_img, threshold=t, max_sigma=self.sigmas[1], min_sigma=self.sigmas[0])
                 blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)

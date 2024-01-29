@@ -502,7 +502,6 @@ def SpineSave_imj(Dir,Spine_Arr):
     Dir2 = Dir+'ImageJ/'
     for i,S in enumerate(Spine_Arr):
         pts = S.points
-
         roi = rf.ImagejRoi.frompoints(pts)
-        roi = rf.ROI_TYPE.POLYGON
+        roi.roitype = rf.ROI_TYPE.POLYGON
         roi.tofile(Dir2+'Spine_'+str(i)+'.roi')
