@@ -1108,6 +1108,7 @@ class DataReadWindow(QWidget):
             SaveFlag[0] = False
 
         if(len(self.SpineArr)>0):
+            self.SaveROIstoSpine()
             if(not self.SpinesMeasured):
                 self.spine_measure()
                 self.SpinesMeasured = True
@@ -1133,21 +1134,39 @@ class DataReadWindow(QWidget):
 
                 orderedSpineArr = [self.SpineArr[t] for t in T]
                 #save spine masks
-                for i,t in  enumerate(T):
-                    R = self.roi_interactor_list[t]
-                    Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
-                    xperts = R.getPolyXYs()
-                    mask = np.zeros_like(self.tiff_Arr[0,0])
 
-                    c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-1]-1)
-                    r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2]-1)
-                    rr, cc = polygon(r, c)
-                    mask[rr, cc] = 255
-                    try:
-                        mask = np.pad(mask,((-self.SimVars.xLims[0],self.SimVars.xLims[1]),(-self.SimVars.yLims[0],self.SimVars.yLims[1])),'constant', constant_values=(0,0))
-                    except:
-                        pass
-                    cv.imwrite(Spine_Mask_Dir, mask)
+                for i,t in  enumerate(T):
+                    if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
+                        R = self.roi_interactor_list[t]
+                        Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) + ".png"
+                        xperts = R.getPolyXYs()
+                        mask = np.zeros_like(self.tiff_Arr[0,0])
+
+                        c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-1]-1)
+                        r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2]-1)
+                        rr, cc = polygon(r, c)
+                        mask[rr, cc] = 255
+                        try:
+                            mask = np.pad(mask,((-self.SimVars.xLims[0],self.SimVars.xLims[1]),(-self.SimVars.yLims[0],self.SimVars.yLims[1])),'constant', constant_values=(0,0))
+                        except:
+                            pass
+                        cv.imwrite(Spine_Mask_Dir, mask)
+                    else:
+                        for j,xperts in enumerate(self.SpineArr[t].points):
+                            xperts = np.array(xperts)
+                            Spine_Mask_Dir = Spine_Dir + "Mask_" + str(i) +"_t"+str(j)+ ".png"
+                            mask = np.zeros_like(self.tiff_Arr[0,0])
+
+                            c = np.clip(xperts[:, 0],0,self.tiff_Arr.shape[-1]-1)
+                            r = np.clip(xperts[:, 1],0,self.tiff_Arr.shape[-2]-1)
+                            rr, cc = polygon(r, c)
+                            mask[rr, cc] = 255
+                            try:
+                                mask = np.pad(mask,((-self.SimVars.xLims[0],self.SimVars.xLims[1]),(-self.SimVars.yLims[0],self.SimVars.yLims[1])),'constant', constant_values=(0,0))
+                            except:
+                                    pass
+                            cv.imwrite(Spine_Mask_Dir, mask)
+
                 nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
                 try:
@@ -2745,7 +2764,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.5-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.6-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

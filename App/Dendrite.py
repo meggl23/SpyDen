@@ -172,10 +172,9 @@ class Dendrite:
         for pdx, p in enumerate(self.smoothed_all_pts):
             self.dend_stat[pdx, 0] = p[1]
             self.dend_stat[pdx, 1] = p[0]
-            self.dend_stat[pdx, 2] = width_arr[pdx]/width_factor
+            self.dend_stat[pdx, 2] = width_arr[pdx]
             self.dend_stat[pdx, 3] = 2
             self.dend_stat[pdx, 4] = degrees[pdx]
-
             mask = self.GenEllipse(mask,p,pdx,degrees,width_arr,Snaps,Chans)
 
         gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
@@ -369,7 +368,7 @@ def DendSave_csv(Dir,Dend_Arr,shift):
     nSnaps = Dend_Arr[0].dend_lumin.shape[-2]
     customhead = ['Dendrite']
 
-    oglist = [['Dendrite: '+str(i)]+['Width'] +['Timestep '+ str(i) + ' (Luminosity (mid.))' for i in range(1,nSnaps+1)]
+    oglist = [['Dendrite: '+str(i)]+['Width of ell.'] +['Timestep '+ str(i) + ' (Luminosity (mid.))' for i in range(1,nSnaps+1)]
      +['Timestep '+ str(i) + ' (Luminosity (ell.))' for i in range(1,nSnaps+1)] for i in range(len(Dend_Arr))]
     flattened_list = [item for sublist in oglist for item in sublist]
     for c in range(nChans):
@@ -378,7 +377,7 @@ def DendSave_csv(Dir,Dend_Arr,shift):
         for D in Dend_Arr:
             pts   = D.dend_stat[:,:2] + shift
             loc   = np.array([str([x,y]) for x,y in pts])
-            width = np.array([str(t*D.WidthFactor) for t in pts])
+            width = np.array(D.dend_stat[:,2])
             x =  np.hstack([loc.reshape(-1,1),width.reshape(-1,1),D.dend_lumin[:,:,c],D.dend_lumin_ell[:,:,c]])
             DendVar.append(x)
         max_sublists = max(len(var) for var in DendVar)
