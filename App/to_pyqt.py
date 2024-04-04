@@ -1304,7 +1304,7 @@ class DataReadWindow(QWidget):
                     print(e)
                 plt.tight_layout()
 
-                fig.savefig(self.SimVars.Dir+'ROIs_'+str(i)+'.png')
+                fig.savefig(self.SimVars.Dir+'Spine/ROIs_'+str(i)+'.png')
 
         else:
             fig = plt.figure()
@@ -2707,15 +2707,15 @@ class TutorialWindow(QWidget):
 
         self.foldurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
 
-        self.genurl = 'https://www.youtube.com/watch?v=dYi8-B6OIv4'
+        self.genurl = 'https://youtu.be/xY69jnVrOXI'
 
         self.dendurl = 'https://www.youtube.com/watch?v=wxRVMRkTVoY'
 
-        self.spineurl = 'https://www.youtube.com/watch?v=i6YGx5wq2VY'
+        self.spineurl = 'https://youtu.be/hVe6avfatVM'
 
         self.punctaurl = 'https://www.youtube.com/watch?v=TXSsa4Zr4Ao'
 
-        self.filesurl = 'https://www.youtube.com/watch?v=k4r61ijv_ek'
+        self.filesurl = 'https://youtu.be/tg7I0_yBACw'
 
     def initUI(self):
 

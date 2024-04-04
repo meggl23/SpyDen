@@ -330,7 +330,7 @@ class DendriteMeasurement:
             if(self.AnotherDendFlag):
                 self.sc.remove()
                 self.coords = []
-                self.SimVars.frame.canvas.draw()
+                self.SimVars.frame.mpl.canvas.draw()
         elif event.key == 'backspace':
             self.DendClear(self.SimVars.frame.tiff_Arr)
             MakeButtonInActive(self.SimVars.frame.dendritic_width_button)
