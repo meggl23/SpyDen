@@ -320,6 +320,17 @@ class Simulation:
         self.SingleClick = True
         self.frame = frame
 
+        self.GetNumpyFunc(z_type)
+
+        self.Mode = Mode
+
+        self.multitime_flag = False
+        self.multiwindow_flag = True
+
+        self.xLims = []
+        self.yLims = []
+
+    def GetNumpyFunc(self,z_type):
         if z_type == "Sum":
             self.z_type = np.sum
         elif z_type == "Max":
@@ -335,15 +346,7 @@ class Simulation:
         else:
             self.z_type = None
 
-        self.Mode = Mode
-
-        self.multitime_flag = False
-        self.multiwindow_flag = True
-
-        self.xLims = []
-        self.yLims = []
-
-
+                
 def dist(x, y):
     """
     Return the distance between two points.

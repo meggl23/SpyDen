@@ -472,7 +472,7 @@ class DataReadWindow(QWidget):
         self.delete_old_result_button = QPushButton(self)
         self.delete_old_result_button.setText("Clear old")
         self.grid.addWidget(self.delete_old_result_button, 17, 0, 1, 1)
-        self.delete_old_result_button.clicked.connect(lambda: self.clear_stuff(True))
+        self.delete_old_result_button.clicked.connect(lambda: self.clear_old())
         MakeButtonInActive(self.delete_old_result_button)
         self.delete_old_result_button.setToolTip('Clear old analysis and start fresh')
 
@@ -1639,6 +1639,31 @@ class DataReadWindow(QWidget):
                     self.tiff_Arr
                 )
         self.delete_old_result_button.setChecked(False)
+
+    def clear_old(self):
+
+        """Clear and reset various components and data.
+
+        The method clears and resets various components and data used in the application. It deactivates
+        specific buttons, hides specific UI elements, clears the lists `SpineArr` and `DendArr`, removes
+        ROI interactors, disconnects the spine marker, clears the plot, and resets the state of the
+        delete old result button.
+
+        Returns:
+            None
+        """
+
+        self.clear_stuff(True)
+
+        Dend_Dir = self.SimVars.Dir + "Dendrite/"
+        if os.path.exists(Dend_Dir):
+            shutil.copytree(Dend_Dir, Dend_Dir[:-1]+'temp/')
+            shutil.rmtree(Dend_Dir)
+        Spine_Dir = self.SimVars.Dir + "Spine/"
+        if os.path.exists(Spine_Dir):
+            shutil.copytree(Spine_Dir, Spine_Dir[:-1]+'temp/')
+            shutil.rmtree(Spine_Dir)
+
     
     def on_projection_changed(self):
 
@@ -1652,11 +1677,25 @@ class DataReadWindow(QWidget):
             None
         """
 
-        new_proj = self.projection.currentText()
-        self.handle_editing_finished(0)
-        self.handle_editing_finished(1,True)
-        
-    
+        self.SimVars.GetNumpyFunc(self.projection.currentText())
+        multwin = self.multiwindow_check.isChecked()
+        res = self.res.text()
+        if(res==""):
+            res = 0
+
+        self.tiff_Arr_Raw, self.SimVars.Times, meta_data, scale = GetTiffData(None, float(res), self.SimVars.z_type, self.SimVars.Dir,
+                                                            Channels=multwin)
+        self.tiff_Arr = np.copy(self.tiff_Arr_Raw)
+
+        if (self.SimVars.Snapshots>1):
+            self.tiff_Arr = GetTiffShift(self.tiff_Arr_Raw, self.SimVars)
+            self.tiff_Arr_glob = np.copy(self.tiff_Arr)
+            self.SimVars.xLims = self.SimVars.xLimsG
+            self.SimVars.yLims = self.SimVars.yLimsG
+        else:
+            self.tiff_Arr = self.tiff_Arr_Raw
+        self.mpl.update_plot(self.tiff_Arr[self.actual_timestep, self.actual_channel])
+
     def on_analyze_changed(self):
 
         """Handles the change of analysis option.
@@ -1850,9 +1889,7 @@ class DataReadWindow(QWidget):
                 self.tiff_Arr = self.tiff_Arr_Raw
 
                 # Get Background values
-            cArr_m = np.zeros_like(self.tiff_Arr[0, :, :, :])
             for i in range(self.SimVars.Channels):
-                cArr_m[i, :, :] = canny(self.tiff_Arr[:, i, :, :].max(axis=0), sigma=1)
                 self.SimVars.bgmean[:, i] = Measure_BG(self.tiff_Arr[:, i, :, :], self.SimVars.Snapshots, self.SimVars.z_type)
 
             self.mpl.image = self.tiff_Arr[0,0]
@@ -2764,7 +2801,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.6-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.7-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

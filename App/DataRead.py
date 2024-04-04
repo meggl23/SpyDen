@@ -140,8 +140,13 @@ def GetTiffData(File_Names, scale, z_type=np.sum, Dir=None, Channels=False):
     if not z_type == None:
         md[1] = 1
     md[2:] = tiff_Arr[0].shape
+    tiff_Arr = np.array(tiff_Arr)
 
-    return np.array(tiff_Arr), Times, md, scale
+    if z_type == np.sum:
+
+        tiff_Arr = 256*tiff_Arr/tiff_Arr.max() # dividing by the max to get it back within RGB range. Dividing by the max of everything because if image 1 has a lower sum then the normalised version should too.
+
+    return tiff_Arr, Times, md, scale
 
 
 def getMetadata(filename, frame=None):
