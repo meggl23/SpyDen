@@ -1913,7 +1913,7 @@ class DataReadWindow(QWidget):
         self.mpl.canvas.setFocus()
         
     def get_actual_multiple_factor(self):
-        return 0.05*self.dend_width_mult_slider.value()
+        return 0.1*self.dend_width_mult_slider.value()
 
     def CheckOldDend(self):
         """Checks for the existence of old dendrite data and updates the corresponding buttons and plots.
@@ -2179,6 +2179,7 @@ class DataReadWindow(QWidget):
             D.actual_timestep= self.actual_timestep
             D.WidthFactor     = dend_factor
             mask = np.zeros(shape=self.tiff_Arr[0,0].shape)
+
             for pdx, p in enumerate(D.smoothed_all_pts):
                 mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor,self.actual_timestep,self.actual_channel)
 

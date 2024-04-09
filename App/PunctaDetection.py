@@ -286,7 +286,7 @@ class PunctaDetection:
                 for blob in dend_blobs_log:
                     y, x, r = blob
                     on_dendrite, distance_from_origin = self.Is_On_Dendrite(
-                        [xs, ys], [x, y], dendrite_instance.dend_stat[:, 2].max()
+                        [xs, ys], [x, y], dendrite_instance.dend_stat[:, 2].max()*dendrite_instance.width_factor
                     )
                     puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
                     dp = Puncta([x, y], r, puncta_stats, on_dendrite, distance_from_origin, i, ch, t_snape)
