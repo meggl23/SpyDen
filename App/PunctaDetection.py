@@ -190,10 +190,9 @@ class PunctaDetection:
                 try:
                     dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma,ch,t)
                 except:
-                     NoDendrite = True
-                     dendritic_puncta = []
+                    NoDendrite = True
+                    dendritic_puncta = []
                 all_c_dendritic_puncta.append(dendritic_puncta)
-
 
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
@@ -286,7 +285,7 @@ class PunctaDetection:
                 for blob in dend_blobs_log:
                     y, x, r = blob
                     on_dendrite, distance_from_origin = self.Is_On_Dendrite(
-                        [xs, ys], [x, y], dendrite_instance.dend_stat[:, 2].max()*dendrite_instance.width_factor
+                        [xs, ys], [x, y], dendrite_instance.dend_stat[:, 2].max()*dendrite_instance.WidthFactor
                     )
                     puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
                     dp = Puncta([x, y], r, puncta_stats, on_dendrite, distance_from_origin, i, ch, t_snape)
