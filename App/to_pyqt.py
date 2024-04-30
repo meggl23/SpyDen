@@ -1001,12 +1001,12 @@ class DataReadWindow(QWidget):
             if(dend_surface is not None):
                 dend_cont = D.get_contours()
                 polygon = np.array(dend_cont[0][:, 0, :])
-                pol = Polygon(polygon, fill=False, closed=True,color='r')
+                pol = Polygon(polygon, fill=False, closed=True,color='y')
                 self.mpl.axes.add_patch(pol)
         self.mpl.canvas.draw()
         for i,S in enumerate(self.SpineArr):
             polygon = np.array(S.points)
-            pol = Polygon(polygon, fill=False, closed=True,color='k')
+            pol = Polygon(polygon, fill=False, closed=True,color='w')
             self.mpl.axes.add_patch(pol)
         self.mpl.canvas.draw()
         try:
@@ -1036,9 +1036,9 @@ class DataReadWindow(QWidget):
             puncta_x,puncta_y = p.location
             puncta_r          = p.radius
             if(flag=='dendrite'):
-                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="red", linewidth=0.5, fill=False)
+                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="red", linewidth=2, fill=False)
             else:
-                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="y", linewidth=0.5, fill=False)
+                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="y", linewidth=2, fill=False)
             self.mpl.axes.add_patch(c)
         QCoreApplication.processEvents()
         self.mpl.canvas.draw()
@@ -2143,7 +2143,7 @@ class DataReadWindow(QWidget):
             dend_surface = D.get_dendritic_surface_matrix()
             dend_cont = D.get_contours()
             polygon = np.array(dend_cont[0][:, 0, :])
-            pol = Polygon(dend_cont[0][:, 0, :], fill=False, closed=True,color='r')
+            pol = Polygon(dend_cont[0][:, 0, :], fill=False, closed=True,color='y')
             self.mpl.axes.add_patch(pol)
             self.mpl.canvas.draw()
 
@@ -2189,7 +2189,7 @@ class DataReadWindow(QWidget):
             D.dendritic_surface_matrix= gaussian_mask
 
             polygon = np.array(D.contours[0][:, 0, :])
-            pol = Polygon(D.contours[0][:, 0, :], fill=False, closed=True,color='r')
+            pol = Polygon(D.contours[0][:, 0, :], fill=False, closed=True,color='y')
             self.mpl.axes.add_patch(pol)
             self.mpl.canvas.draw()
     
