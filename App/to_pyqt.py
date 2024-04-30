@@ -9,7 +9,8 @@ from .DataRead import *
 from matplotlib.widgets import Slider, Button
 
 from PyQt5.QtPrintSupport import QPrinter
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter,QDesktopServices
+from PyQt5.QtCore import QUrl
 
 from . import GenFolderStruct as GFS
 
@@ -24,7 +25,7 @@ import platform
 import time
 
 DevMode = False
-
+version = '0.8.8'
 
 def catch_exceptions(func):
 
@@ -2694,7 +2695,7 @@ class DirStructWindow(QWidget):
 
 @handle_exceptions
 class TutorialWindow(QWidget):
-    """Class that defines the directory structure window"""
+    """Class that defines the tutorial window"""
 
     def __init__(self):
         super().__init__()
@@ -2704,7 +2705,6 @@ class TutorialWindow(QWidget):
         self.top = 100
         self.width = 200
         self.height = 400
-        self.initUI()
 
         self.foldurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
 
@@ -2717,6 +2717,12 @@ class TutorialWindow(QWidget):
         self.punctaurl = 'https://www.youtube.com/watch?v=TXSsa4Zr4Ao'
 
         self.filesurl = 'https://youtu.be/tg7I0_yBACw'
+
+        self.emailurl = 'mailto:meggl@umh.es?subject=SpyDen v'+version+' Bug // Feedback '
+
+        self.Giturl = '<a href="https://github.com/meggl23/Spyne">Github repo</a>'
+
+        self.initUI()
 
     def initUI(self):
 
@@ -2761,6 +2767,48 @@ class TutorialWindow(QWidget):
         self.FileTutorial_button.clicked.connect((lambda: self.LoadURL(self.filesurl)))
         self.grid.addWidget(self.FileTutorial_button, 2, 1, 1, 1)
 
+        
+        h_layout2 = QHBoxLayout()
+
+
+        label = QLabel(self.Giturl)
+        label.setOpenExternalLinks(True) 
+        label.setAlignment(Qt.AlignCenter)
+        label.setMaximumHeight(30)
+        label.linkActivated.connect(self.OpenLink)  # Connect to a slot to handle link activation
+        label.setStyleSheet("QLabel { font-size: 20pt; }")
+
+        self.grid.setRowStretch(3, 0)
+
+        h_layout = QHBoxLayout()
+        h_layout.addStretch(1)
+        # Create and add the third button to the horizontal layout
+        h_layout.addWidget(label)
+        h_layout.addStretch(1)
+
+
+        self.grid.addLayout(h_layout, 3, 0, 1, 2) 
+
+
+        self.email_button = QPushButton(self)
+        self.email_button.setText("Report a bug/provide feedback")
+        self.email_button.clicked.connect((lambda: self.LoadURL(self.emailurl)))
+        MakeButtonActive(self.email_button)
+        # Create a horizontal layout for the second row
+        h_layout = QHBoxLayout()
+        h_layout.addStretch(1)
+        # Create and add the third button to the horizontal layout
+        h_layout.addWidget(self.email_button)
+        h_layout.addStretch(1)
+
+
+        self.grid.addLayout(h_layout, 4, 0, 1, 2) 
+
+        self.setLayout(self.grid)
+
+    def OpenLink(self, link_str):
+        QDesktopServices.openUrl(QUrl(link_str))
+
     def LoadURL(self,url):
 
         wb.open(url)
@@ -2771,6 +2819,8 @@ class TutorialWindow(QWidget):
         self.PunctaTutorial_button.setChecked(False)
         self.FileTutorial_button.setChecked(False)
         self.GenInfoTut_button.setChecked(False)
+        self.email_button.setChecked(False)
+
 
 
 class MainWindow(QWidget):
@@ -2802,7 +2852,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v0.8.7-alpha</font>")
+        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v"+version+"-alpha</font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
