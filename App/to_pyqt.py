@@ -1135,7 +1135,6 @@ class DataReadWindow(QWidget):
 
                 orderedSpineArr = [self.SpineArr[t] for t in T]
                 #save spine masks
-
                 for i,t in  enumerate(T):
                     if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                         R = self.roi_interactor_list[t]
@@ -1167,7 +1166,6 @@ class DataReadWindow(QWidget):
                             except:
                                     pass
                             cv.imwrite(Spine_Mask_Dir, mask)
-
                 nSnaps = self.number_timesteps if self.SimVars.multitime_flag else 1
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
                 try:
@@ -2311,15 +2309,13 @@ class DataReadWindow(QWidget):
         try:
             if(self.SimVars.Mode=="Luminosity"):
                 for i,R in enumerate(self.roi_interactor_list):
-                    R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
-                    self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
+                    self.SpineArr[i].points = (R.poly.xy - R.shift[R.Snapshot])[:-1].tolist()
             else:
                 for i,R in enumerate(self.roi_interactor_list):
                     if(self.local_shift):
-                        R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
-                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy - R.shift[R.Snapshot])[:-1].tolist()
                     else:
-                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
+                        self.SpineArr[i].points[R.Snapshot] = (R.poly.xy - R.shift[R.Snapshot])[:-1].tolist()
         except Exception as e:
             print(e)
             pass
