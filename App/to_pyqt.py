@@ -896,10 +896,10 @@ class DataReadWindow(QWidget):
         self.spine_bg_button.setChecked(False)
         self.roi_interactor_bg_list = []
         for index, (S,R) in enumerate(zip(self.SpineArr,self.roi_interactor_list)):
-            S.points = R.poly.xy.tolist()[:-1]
+            S.points = (R.poly.xy - R.shift[R.Snapshot])[:-1].tolist()
             ROIline = Line2D(
-                np.array(R.poly.xy.tolist())[:,0],
-                np.array(R.poly.xy.tolist())[:, 1],
+                np.array(S.points)[:,0],
+                np.array(S.points)[:, 1],
                 marker=".",
                 markerfacecolor="k",
                 markersize=10,

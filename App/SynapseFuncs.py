@@ -122,8 +122,8 @@ def FindShape(
 
         pt_proc = np.array(projection(DendArr[Order0[0]], DendArr[Order0[1]], pt))
         OppDir = np.array(3 * pt - 2 * pt_proc).astype(int)
-        OppDir[0] = max(min(OppDir[0], tiff_Arr.shape[-1] - 10), 10)
-        OppDir[1] = max(min(OppDir[1], tiff_Arr.shape[-2] - 10), 10)
+        OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
+        OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
     else:
         OppDir = pt
     o_arr = np.asarray(other_pts)
@@ -384,6 +384,7 @@ def ReadSynDict(Dir, SimVars):
         FileName="Synapse_l.json"
         FileName2="Synapse_a.json"
 
+    # Should have a check if the file exists to see if it can be read
     try:
         try:
             with open(Dir + FileName, "r") as fp:
