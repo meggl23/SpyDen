@@ -25,7 +25,7 @@ import platform
 import time
 
 DevMode = False
-version = '0.8.8'
+version = '1.0.0'
 
 def catch_exceptions(func):
 
@@ -2702,21 +2702,21 @@ class TutorialWindow(QWidget):
         self.width = 200
         self.height = 400
 
-        self.foldurl = 'https://www.youtube.com/watch?v=3GOStVqGbA0'
+        self.foldurl = 'https://youtu.be/1o-l9o2W514'
 
-        self.genurl = 'https://youtu.be/xY69jnVrOXI'
+        self.genurl = 'https://youtu.be/1DYjQp4MUGA'
 
-        self.dendurl = 'https://www.youtube.com/watch?v=wxRVMRkTVoY'
+        self.dendurl = 'https://youtu.be/bU41g8NW8Ts'
 
-        self.spineurl = 'https://youtu.be/hVe6avfatVM'
+        self.spineurl = 'https://youtu.be/DiqYDdBQRz8'
 
-        self.punctaurl = 'https://www.youtube.com/watch?v=TXSsa4Zr4Ao'
+        self.punctaurl = 'https://youtu.be/fgDD-Ucr3ms'
 
         self.filesurl = 'https://youtu.be/tg7I0_yBACw'
 
         self.emailurl = 'mailto:meggl@umh.es?subject=SpyDen v'+version+' Bug // Feedback '
 
-        self.Giturl = '<a href="https://github.com/meggl23/Spyne">Github repo</a>'
+        self.Giturl = '<a href="https://github.com/meggl23/SpyDen">Github repo</a>'
 
         self.initUI()
 
