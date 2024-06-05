@@ -38,12 +38,12 @@ This will load up the GUI and then you are free to go.
 ***
 ## Tutorials
 To find information on how to operate, we suggest that users watch the following videos:
-- [Loading data into Spyden](https://www.youtube.com/watch?v=3GOStVqGbA0)
-- [Getting started analyzing](https://youtu.be/xY69jnVrOXI)
-- [Analyzing dendrites](https://www.youtube.com/watch?v=wxRVMRkTVoY)
-- [Analyzing synapses](https://youtu.be/hVe6avfatVM)
-- [Analyzing puncta](https://www.youtube.com/watch?v=TXSsa4Zr4Ao)
-- [Understanding the output](https://youtu.be/tg7I0_yBACw')
+- [Loading data into Spyden](https://youtu.be/1o-l9o2W514)
+- [Getting started analyzing](https://youtu.be/1DYjQp4MUGA)
+- [Analyzing dendrites](https://youtu.be/bU41g8NW8Ts)
+- [Analyzing synapses](https://youtu.be/DiqYDdBQRz8)
+- [Analyzing puncta](https://youtu.be/fgDD-Ucr3ms)
+- [Understanding the output](https://youtu.be/3QC2gGxzXi0)
 
 The links to these tutorials can also be found in the *Tutorials* section of SpyDen.
 
