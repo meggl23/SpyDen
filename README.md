@@ -21,7 +21,7 @@ The first approach will require you to make sure your environment includes all r
 
 We recommend the second approach for those who already have conda installed and have some experience with coding. This will do all the heavy lifting for you and allow you to get to analyzing faster. Firstly, you need to install miniconda (see link [here](https://docs.conda.io/projects/miniconda/en/latest/)). If you are on Windows, this will provide you with a terminal (anaconda terminal) that allows you to run command line code. On Mac, the terminal is already pre-installed. The conda package of spyden can be found here [here](https://anaconda.org/meggl23/spyden/). Then you can run the above mentioned `conda install spyden`. This will create an environment that has all necessary packages and updating is as easy as `conda update spyden`.
 
-3. For those with no coding experience, we also provide the option to download an exe (windows)/dmg (mac) file directly. This will run out of the box without any need for installations and all versions can be found [here](https://www.dropbox.com/scl/fo/i7e2x239blgovjgpj63vl/h?rlkey=mk7y37jabzymst5uwrev5glok&dl=0).
+3. For those with no coding experience, we also provide the option to download an exe (windows)/dmg (mac) file directly. This will run out of the box without any need for installations and all versions can be found [here](https://gin.g-node.org/CompNeuroNetworks/SpyDenTrainedNetwork/src/master/Executables).
 
 ***
 ## Running SpyDen
