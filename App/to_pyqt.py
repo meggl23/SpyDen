@@ -2958,7 +2958,7 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.title = "Dendritic Spine Tool"
+        self.title = "SpyDen"
         self.left = 100
         self.top = 100
         self.width = 600
@@ -2980,7 +2980,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v"+version+"-alpha</font>")
+        self.headline.setText("SpyDen <br> <font size='0.1'>v"+version+"-alpha (Dev) </font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
