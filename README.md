@@ -70,5 +70,22 @@ superqt
 ```
 
 ***
+
+***
 ## How to cite
-The preprint of SpyDen is currently being prepared.
+The preprint of SpyDen can be found [here](https://anaconda.org/meggl23/spyden/). 
+
+Eggl*, M. F., Wagle*, S., Filling*, J. P. Chater, T. E., Goda, Y., Tchumatchenko, T.  (2024). SpyDen: Automating molecular and structural analysis across
+spines and dendrites. bioRxiv, 2024-06.
+
+BibTeX entry for LaTeX users:
+
+```bibtex
+@article{eggl2024spyden,
+  title={SpyDen: Automating molecular and structural analysis across spines and dendrites},
+  author={Eggl, Maximilian F and Wagle, Surbhit and Filling, Jean P and Chater, Thomas E and Goda, Yukiko and Tchumatchenko, Tatjana},
+  journal={bioRxiv},
+  pages={2024--06},
+  year={2024},
+  publisher={Cold Spring Harbor Laboratory}
+}
