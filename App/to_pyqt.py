@@ -1083,7 +1083,7 @@ class DataReadWindow(QWidget):
             try:
                 if os.path.exists(Dend_Dir):
                     shutil.copytree(Dend_Dir, Dend_Dir[:-1]+'temp/')
-                    shutil.rmtree(Dend_Dir)
+                    os.rmtree(Dend_Dir)
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
@@ -1616,6 +1616,13 @@ class DataReadWindow(QWidget):
 
         self.SpinesMeasured = False
 
+    def clear_settings(self):
+        self.LoadSettings(None)
+        Settings_File = self.SimVars.Dir + "Settings.txt"
+        Global_Settings_File = os.path.expanduser("~") + "/SpyDenSettings.txt"
+        if os.path.exists(Settings_File): os.remove(Settings_File)
+        if os.path.exists(Global_Settings_File): os.remove(Global_Settings_File)
+
     def clear_stuff(self,RePlot):
         """Clear and reset various components and data.
 
@@ -1627,6 +1634,8 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
+
+
         self.add_commands([])
         self.PunctaCalc = False
         for button in [self.dendritic_width_button,
@@ -1686,6 +1695,7 @@ class DataReadWindow(QWidget):
         """
 
         self.clear_stuff(True)
+        self.clear_settings()
 
         Dend_Dir = self.SimVars.Dir + "Dendrite/"
         if os.path.exists(Dend_Dir):
@@ -1746,81 +1756,149 @@ class DataReadWindow(QWidget):
         self.handle_editing_finished(1)
         
     def LoadSettings(self,Settings_File):
+        if(Settings_File is not None):
+            try:
+                with open(Settings_File, "r") as file:
+                    # Read the lines of the file
+                    lines = file.readlines()
 
-        try:
-            with open(Settings_File, "r") as file:
-                # Read the lines of the file
-                lines = file.readlines()
+                # Process the lines
+                for line in lines:
+                    # Split each line into key-value pairs
+                    if("MLLocation" in line):
+                        value = line[11:-1]
+                        if(os.path.isfile(value)):
+                            self.NN_path = value
+                            self.NN = True
+                            self.button_set_NN.setText("Set NN! (saved)")
+                        elif(os.path.isfile(self.NN_path)):
+                            self.NN_path = self.NN_path
+                            self.NN = True
+                            self.button_set_NN.setText("Set NN! (default)")
+                        else:
+                            self.NN = False
+                            self.button_set_NN.setText("Download NN")
+                            self.button_set_NN.disconnect()
+                            self.button_set_NN.clicked.connect(self.download_NN)
+                    else:
+                        key, value = line.strip().split(":")
+                        if(key=="multi-time"):
+                            boolean_value = value == "True"
+                            self.multitime_check.setChecked(boolean_value)
+                            self.SimVars.multitime_flag = boolean_value
+                            if(self.SimVars.multitime_flag):
+                                self.timestep_slider.setVisible(True)
+                                self.timestep_counter.setVisible(True)
+                                self.timestep_label.setVisible(True)
+                        elif(key=="Analysis mode"):
+                            self.analyze.setCurrentText(value)
+                        elif(key=="Dend. shift"):
+                            boolean_value = value == "True"
+                            self.Dend_shift_check.setChecked(boolean_value)
+                        elif(key=="resolution"):
+                            scale = float(value)
+                        elif(key == "Puncta sigma range"):
+                            sigma_r = tuple(map(int, value.split('-')))
+                            self.puncta_sigma_range_slider.setValue(sigma_r)
+                        else:
+                            value = int(value)
+                            if(key=="Image threshold"):
+                                self.thresh_slider.setValue(value)
+                            elif(key=="Dendritic width"):
+                                self.neighbour_slider.setValue(value)
+                                self.neighbour_counter.setText(str(value))
+                            elif(key=="ML Confidence"):
+                                self.ml_confidence_slider.setValue(value)
+                                self.confidence_counter.setText(str(value))
+                            elif(key=="ROI Tolerance"):
+                                self.tol_val = value
+                                self.tolerance_slider.setValue(value)
+                                self.tolerance_counter.setText(str(value))
+                            elif(key=="ROI Sigma"):
+                                self.sigma_val = value
+                                self.sigma_slider.setValue(value)
+                                self.sigma_counter.setText(str(value))
+                            elif(key=="Dendritic puncta threshold"):
+                                self.puncta_dend_slider.setValue(value)
+                                self.puncta_dend_counter.setText(str(value))
+                            elif(key=="Somatic puncta threshold"):
+                                self.puncta_soma_slider.setValue(value)
+                                self.puncta_soma_counter.setText(str(value))
+                            elif(key=="Dend. width multiplier"):
+                                self.dend_width_mult_slider.setValue(value)
+                                dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
+                                self.dend_width_mult_counter.setText(dend_factor)
+            except Exception as e:
+                self.set_status_message.setText('There was a problem with the settings file')
+                if DevMode: print(e)
+        else:
+            try:
+                self.neighbour_slider.disconnect()
+                self.thresh_slider.disconnect()
+                self.ml_confidence_slider.disconnect()
+                self.sigma_slider.disconnect()
+                self.tolerance_slider.disconnect()
+                self.puncta_dend_slider.disconnect()
+                self.puncta_soma_slider.disconnect()
+                self.dend_width_mult_slider.disconnect()
+                self.Dend_shift_check.disconnect()
+                self.puncta_sigma_range_slider.disconnect()
+                self.analyze.disconnect()
+            except Exception as e:
+                pass
 
-            # Process the lines
-            for line in lines:
-                # Split each line into key-value pairs
-                if("MLLocation" in line):
-                    value = line[11:-1]
-                    if(os.path.isfile(value)):
-                        self.NN_path = value
-                        self.NN = True
-                        self.button_set_NN.setText("Set NN! (saved)")
-                    elif(os.path.isfile(self.NN_path)):
-                        self.NN_path = self.NN_path
-                        self.NN = True
-                        self.button_set_NN.setText("Set NN! (default)")
-                    else:
-                        self.NN = False
-                        self.button_set_NN.setText("Download NN")
-                        self.button_set_NN.disconnect()
-                        self.button_set_NN.clicked.connect(self.download_NN)
-                else:
-                    key, value = line.strip().split(":")
-                    if(key=="multi-time"):
-                        boolean_value = value == "True"
-                        self.multitime_check.setChecked(boolean_value)
-                        self.SimVars.multitime_flag = boolean_value
-                        if(self.SimVars.multitime_flag):
-                            self.timestep_slider.setVisible(True)
-                            self.timestep_counter.setVisible(True)
-                            self.timestep_label.setVisible(True)
-                    elif(key=="Analysis mode"):
-                        self.analyze.setCurrentText(value)
-                    elif(key=="Dend. shift"):
-                        boolean_value = value == "True"
-                        self.Dend_shift_check.setChecked(boolean_value)
-                    elif(key=="resolution"):
-                        scale = float(value)
-                    elif(key == "Puncta sigma range"):
-                        sigma_r = tuple(map(int, value.split('-')))
-                        self.puncta_sigma_range_slider.setValue(sigma_r)
-                    else:
-                        value = int(value)
-                        if(key=="Image threshold"):
-                            self.thresh_slider.setValue(value)
-                        elif(key=="Dendritic width"):
-                            self.neighbour_slider.setValue(value)
-                            self.neighbour_counter.setText(str(value))
-                        elif(key=="ML Confidence"):
-                            self.ml_confidence_slider.setValue(value)
-                            self.confidence_counter.setText(str(value))
-                        elif(key=="ROI Tolerance"):
-                            self.tol_val = value
-                            self.tolerance_slider.setValue(value)
-                            self.tolerance_counter.setText(str(value))
-                        elif(key=="ROI Sigma"):
-                            self.sigma_val = value
-                            self.sigma_slider.setValue(value)
-                            self.sigma_counter.setText(str(value))
-                        elif(key=="Dendritic puncta threshold"):
-                            self.puncta_dend_slider.setValue(value)
-                            self.puncta_dend_counter.setText(str(value))
-                        elif(key=="Somatic puncta threshold"):
-                            self.puncta_soma_slider.setValue(value)
-                            self.puncta_soma_counter.setText(str(value))
-                        elif(key=="Dend. width multiplier"):
-                            self.dend_width_mult_slider.setValue(value)
-                            dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
-                            self.dend_width_mult_counter.setText(dend_factor)
-        except Exception as e:
-            self.set_status_message.setText('There was a problem with the settings file')
-            if DevMode: print(e)
+            self.analyze.setCurrentText("Luminosity")
+            self.multitime_check.setChecked(False)
+            self.SimVars.multitime_flag = False
+
+
+            self.Dend_shift_check.setChecked(False)
+
+            self.puncta_sigma_range_slider.setValue((1,2))
+
+            self.default_thresh = int(np.mean(self.tiff_Arr[0, 0, :, :]))
+
+            self.thresh_slider.setValue(self.default_thresh)
+
+            self.neighbour_slider.setValue(6)
+            self.neighbour_counter.setText(str(6))
+
+            self.ml_confidence_slider.setValue(5)
+            self.confidence_counter.setText(str(5))
+
+            self.tol_val = 5
+            self.tolerance_slider.setValue(self.tol_val)
+            self.tolerance_counter.setText(str(self.tol_val))
+
+            self.sigma_val = 5
+            self.sigma_slider.setValue(self.sigma_val)
+            self.sigma_counter.setText(str(self.sigma_val))
+
+            self.puncta_dend_slider.setValue(12)
+            self.puncta_dend_counter.setText(str(12))
+
+            self.puncta_soma_slider.setValue(12)
+            self.puncta_soma_counter.setText(str(12))
+
+            self.dend_width_mult_slider.setValue(5)
+            dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
+            self.dend_width_mult_counter.setText(str(5))
+
+            self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
+            self.thresh_slider.valueChanged.connect(self.dend_thresh)
+            self.ml_confidence_slider.valueChanged.connect(self.thresh_NN)
+            self.sigma_slider.valueChanged.connect(self.spine_tolerance_sigma)
+            self.tolerance_slider.valueChanged.connect(self.spine_tolerance_sigma)
+            self.puncta_soma_slider.valueChanged.connect(self.soma_threshold_slider_update)
+            self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
+            self.puncta_sigma_range_slider.valueChanged.connect(self.puncta_sigma_slider_update)
+            self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
+            self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
+            self.analyze.currentTextChanged.connect(self.on_analyze_changed)
+
+            self.SimVars.Unit = None
+            return None
+
         return scale
 
     def handle_editing_finished(self,indx,CallTwice=False):

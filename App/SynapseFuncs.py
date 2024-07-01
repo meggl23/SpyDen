@@ -457,8 +457,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
     if(Mode=='Luminosity'):
-        custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max dist to Dend',
-            'Center dist to dend','Min dist to Dend'] + 
+        custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
+            'Center dist to dend','Min, dist to Dend'] + 
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
@@ -482,8 +482,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.local_bg[c])
                     writer.writerow(row)   
     else:
-        custom_header =(['', 'type','location','distance','closest_Dend','Max dist to Dend',
-            'Center dist to dend','Min dist to Dend'] + 
+        custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
+            'Center dist to dend','Min. dist to Dend'] + 
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
