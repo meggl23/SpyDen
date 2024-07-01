@@ -340,6 +340,10 @@ class DendriteMeasurement:
         MakeButtonInActive(self.SimVars.frame.spine_button)
         MakeButtonInActive(self.SimVars.frame.spine_button_NN)
         MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
+        MakeButtonInActive(self.SimVars.frame.spine_button_ROI)
+        MakeButtonInActive(self.SimVars.frame.old_ROI_button)
+        MakeButtonInActive(self.SimVars.frame.spine_bg_button)
+        MakeButtonInActive(self.SimVars.frame.measure_spine_button)
         self.AtLeastOne=False
         self.AnotherDendFlag=True
         self.coords = ([])

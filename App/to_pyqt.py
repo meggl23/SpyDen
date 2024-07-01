@@ -1083,7 +1083,7 @@ class DataReadWindow(QWidget):
             try:
                 if os.path.exists(Dend_Dir):
                     shutil.copytree(Dend_Dir, Dend_Dir[:-1]+'temp/')
-                    os.rmtree(Dend_Dir)
+                    shutil.rmtree(Dend_Dir)
                 os.mkdir(path=Dend_Dir)
                 for i,Dend in enumerate(self.DendArr):
                     self.dend_measure(Dend,i,Dend_Dir)
@@ -1098,6 +1098,7 @@ class DataReadWindow(QWidget):
                 if os.path.exists(Dend_Dir[:-1]+'temp/'):
                     shutil.rmtree(Dend_Dir[:-1]+'temp/')
             except Exception as e:
+                print(e)
                 if os.path.exists(Dend_Dir[:-1]+'temp/'):
                     shutil.rmtree(Dend_Dir)
                     shutil.copytree(Dend_Dir[:-1]+'temp/', Dend_Dir)
@@ -1564,7 +1565,6 @@ class DataReadWindow(QWidget):
                     sigma=self.sigma_val,
                     tol  = self.tol_val,
                     SpineShift_flag=self.local_shift,
-                    Unit = self.SimVars.Unit
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1859,6 +1859,7 @@ class DataReadWindow(QWidget):
             self.default_thresh = int(np.mean(self.tiff_Arr[0, 0, :, :]))
 
             self.thresh_slider.setValue(self.default_thresh)
+
 
             self.neighbour_slider.setValue(6)
             self.neighbour_counter.setText(str(6))
@@ -2158,7 +2159,11 @@ class DataReadWindow(QWidget):
         self.spine_marker = spine_eval(SimVars=self.SimVars, points=self.SimVars.points_NN[self.SimVars.scores_NN>val],
             scores=self.SimVars.scores_NN[self.SimVars.scores_NN>val],flags=self.SimVars.flags_NN[self.SimVars.scores_NN>val])
 
+        SpineDir = self.SimVars.Dir+'Spine/'
         MakeButtonActive(self.spine_button_ROI)
+        if((os.path.isfile(SpineDir+'Synapse_l.json') and self.SimVars.Mode=="Luminosity") or
+            (os.path.isfile(SpineDir+'Synapse_a.json') and self.SimVars.Mode=="Area" and self.SimVars.multitime_flag)):
+            MakeButtonActive(self.old_ROI_button)
 
         self.spine_button_NN.setChecked(False)
         MakeButtonInActive(self.measure_spine_button)
@@ -2221,7 +2226,12 @@ class DataReadWindow(QWidget):
         MakeButtonInActive(self.measure_spine_button)
         MakeButtonInActive(self.spine_bg_button)
         
-    
+        MakeButtonActive(self.spine_button_ROI)
+        SpineDir = self.SimVars.Dir+'Spine/'
+        if((os.path.isfile(SpineDir+'Synapse_l.json') and self.SimVars.Mode=="Luminosity") or
+            (os.path.isfile(SpineDir+'Synapse_a.json') and self.SimVars.Mode=="Area" and self.SimVars.multitime_flag)):
+            MakeButtonActive(self.old_ROI_button)
+
     def dendritic_width_eval(self) -> None:
         """
         function that performs the dendritic width calculation
