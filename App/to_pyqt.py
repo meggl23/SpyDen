@@ -2239,6 +2239,9 @@ class DataReadWindow(QWidget):
         Returns: None
 
         """
+        self.set_status_message.setText('Calculating Dendritic width')
+        QCoreApplication.processEvents()
+        self.SimVars.frame.set_status_message.repaint()
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
             self.DendArr = self.DendMeasure.DendArr
@@ -2264,6 +2267,9 @@ class DataReadWindow(QWidget):
         except:
             pass
         for i,D in enumerate(self.DendArr): 
+            self.set_status_message.setText('Calculating Dendritic width, Dendrite: '+str(i+1))
+            QCoreApplication.processEvents()
+            self.SimVars.frame.set_status_message.repaint()
             D.actual_channel  = self.actual_channel
             D.actual_timestep = self.actual_timestep
             D.WidthFactor     = dend_factor
@@ -2281,6 +2287,9 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.measure_puncta_button)
         self.dendritic_width_button.setChecked(False)
 
+        self.set_status_message.setText('Width calculation complete')
+        QCoreApplication.processEvents()
+        self.SimVars.frame.set_status_message.repaint()
     def dendritic_width_changer(self) -> None:
         """
         function that multiplies the calculated dendrite segmentation by the correct
@@ -2308,11 +2317,12 @@ class DataReadWindow(QWidget):
 
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
+            D.OldWidthFactor  = D.WidthFactor
             D.WidthFactor     = dend_factor
             mask = np.zeros(shape=self.tiff_Arr[0,0].shape)
 
             for pdx, p in enumerate(D.smoothed_all_pts):
-                mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor,self.actual_timestep,self.actual_channel)
+                mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor/D.OldWidthFactor,self.actual_timestep,self.actual_channel)
 
             gaussian_mask = (gaussian_filter(input=mask, sigma=self.neighbour_slider.value()) >= np.mean(mask)).astype(np.uint8)
             D.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
