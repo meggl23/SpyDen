@@ -25,7 +25,7 @@ import platform
 import time
 
 DevMode = False
-version = '1.0.0'
+version = '1.0.1'
 
 def catch_exceptions(func):
 
@@ -2990,7 +2990,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("SpyDen <br> <font size='0.1'>v"+version+"-alpha (Dev) </font>")
+        self.headline.setText("SpyDen <br> <font size='0.1'>v"+version+"-beta (Dev) </font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")
