@@ -312,7 +312,7 @@ class Simulation:
         self.Snapshots = Snapshots
         self.MinDirCum = []
 
-        self.ML_URL = os.environ.get('MODEL_URL', 'https://gin.g-node.org/CompNeuroNetworks/SpyDenTrainedNetwork/src/198adbc3017080986f5401dc4046849bad54709e/SynapseMLModel')
+        self.ML_URL = os.environ.get('MODEL_URL', 'https://gin.g-node.org/CompNeuroNetworks/SpyDenTrainedNetwork/raw/198adbc3017080986f5401dc4046849bad54709e/SynapseMLModel')
         self.model = "SynapseMLModel"
 
         self.Times = []
