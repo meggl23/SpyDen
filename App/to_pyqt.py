@@ -311,7 +311,6 @@ class DataReadWindow(QWidget):
             self.analyze.addItem(choice)
         self.grid.addWidget(self.analyze, 4, 1, 1, 1)
         self.grid.addWidget(QLabel("Analyze"), 4, 0, 1, 1)
-        self.anal = self.projection.currentText()  # str variable what u want to analyze
         self.analyze.setEnabled(False)
         self.analyze.currentTextChanged.connect(self.on_analyze_changed)
         self.analyze.setToolTip('Synapse temporal analysis mode')
@@ -746,7 +745,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist = FindShape(
                 tf,
                 point,
                 medial_axis_Arr,
@@ -755,7 +754,7 @@ class DataReadWindow(QWidget):
                 True,
                 sigma=self.sigma_val,
                 tol=self.tol_val,
-                SpineShift_flag = self.local_shift
+                SpineShift_flag = self.local_shift,
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -766,7 +765,7 @@ class DataReadWindow(QWidget):
                     self.roi_interactor_list[index].points = np.array(pol.xy)-np.array(self.roi_interactor_list[index].loc)
                 self.roi_interactor_list[index].line.set_data(pol.xy[:, 0], pol.xy[:, 1])
                 self.SpineArr[index] = Synapse(list(point),list(bgloc),pts=xpert,shift=shift,
-                    channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend)
+                    channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,DendDist = DendDist*self.SimVars.Unit)
             else:
                 self.SpineArr[index].points = []
                 pt = self.SpineArr[index].location
@@ -776,7 +775,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[index].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, bgloc,closest_Dend = FindShape(
+                    xpert, _, bgloc,closest_Dend,DendDist = FindShape(
                         tf[i],
                         np.array(self.SpineArr[index].location),
                         medial_axis_Arr,
@@ -784,10 +783,11 @@ class DataReadWindow(QWidget):
                         mean,
                         True,
                         sigma=self.sigma_val,
-                        tol=self.tol_val,
+                        tol=self.tol_val
                     )
                     self.SpineArr[index].points.append(xpert)
                     self.SpineArr[index].closest_Dend = closest_Dend
+                    self.SpineArr[index].distance_to_Dend = DendDist*self.SimVars.Unit
                 polygon = np.array(self.SpineArr[index].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 pol.set_edgecolor('white')
@@ -1098,6 +1098,7 @@ class DataReadWindow(QWidget):
                 if os.path.exists(Dend_Dir[:-1]+'temp/'):
                     shutil.rmtree(Dend_Dir[:-1]+'temp/')
             except Exception as e:
+                print(e)
                 if os.path.exists(Dend_Dir[:-1]+'temp/'):
                     shutil.rmtree(Dend_Dir)
                     shutil.copytree(Dend_Dir[:-1]+'temp/', Dend_Dir)
@@ -1185,13 +1186,14 @@ class DataReadWindow(QWidget):
                 if os.path.exists(Spine_Dir[:-1]+'temp/'):
                     shutil.rmtree(Spine_Dir[:-1]+'temp/')
             except Exception as e:
-               if os.path.exists(Spine_Dir[:-1]+'temp/'):
+                print(e)
+                if os.path.exists(Spine_Dir[:-1]+'temp/'):
                    shutil.rmtree(Spine_Dir)
                    shutil.copytree(Spine_Dir[:-1]+'temp/', Spine_Dir)
                    shutil.rmtree(Spine_Dir[:-1]+'temp/')
-               if DevMode: print(e)
-               SaveFlag[1] = False
-               pass
+                if DevMode: print(e)
+                SaveFlag[1] = False
+                pass
         else:
             SaveFlag[1] = False
         if(len(self.punctas)>0):
@@ -1242,8 +1244,32 @@ class DataReadWindow(QWidget):
             None
 
         """
-
+        Global_Settings_File = os.path.expanduser("~") + "/SpyDenSettings.txt"
         Settings_File = self.SimVars.Dir + "Settings.txt"
+
+
+        if os.path.exists(Global_Settings_File):
+            os.remove(Global_Settings_File)
+
+        file = open(Global_Settings_File, "w")
+        values = [("multi-time",self.SimVars.multitime_flag),
+                  ("resolution",self.SimVars.Unit),
+                  ("Analysis mode",self.SimVars.Mode),
+                  ("Image threshold",self.thresh_slider.value()),
+                  ("Dendritic width",self.neighbour_slider.value()),
+                  ("Dend. width multiplier",self.dend_width_mult_slider.value()),
+                  ("ML Confidence",self.ml_confidence_slider.value()),
+                  ("ROI Tolerance",self.tolerance_slider.value()),
+                  ("ROI Sigma",self.sigma_slider.value()),
+                  ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
+                  ("Somatic puncta threshold",self.puncta_soma_slider.value()),
+                  ("MLLocation",self.NN_path),
+                  ("Dend. shift",self.Dend_shift_check.isChecked()),
+                  ("Puncta sigma range","-".join([str(x) for x in self.puncta_sigma_range_slider.value()]))
+                  ]
+        for value in values:
+            file.write(value[0]+":"+str(value[1]) + "\n")
+        file.close()
 
         if os.path.exists(Settings_File):
             os.remove(Settings_File)
@@ -1251,6 +1277,7 @@ class DataReadWindow(QWidget):
         file = open(Settings_File, "w")
         values = [("multi-time",self.SimVars.multitime_flag),
                   ("resolution",self.SimVars.Unit),
+                  ("Analysis mode",self.SimVars.Mode),
                   ("Image threshold",self.thresh_slider.value()),
                   ("Dendritic width",self.neighbour_slider.value()),
                   ("Dend. width multiplier",self.dend_width_mult_slider.value()),
@@ -1380,7 +1407,7 @@ class DataReadWindow(QWidget):
         self.roi_interactor_list = []
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist = FindShape(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1401,7 +1428,8 @@ class DataReadWindow(QWidget):
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
-                    shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend))
+                    shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,
+                    DendDist = DendDist*self.SimVars.Unit))
             else:
                 self.SpineArr.append(Synapse(list(point),[],pts=[],shift=[],channel=self.actual_channel,Syntype=flag))
                 
@@ -1411,7 +1439,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, shift, radloc,closest_Dend = FindShape(
+                    xpert, shift, radloc,closest_Dend,x = FindShape(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1424,6 +1452,8 @@ class DataReadWindow(QWidget):
                     )
                     self.SpineArr[-1].points.append(xpert)
                     self.SpineArr[-1].closest_Dend = closest_Dend
+                    if(i==0):
+                        self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
@@ -1525,7 +1555,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist = FindShape(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1534,14 +1564,15 @@ class DataReadWindow(QWidget):
                     True,
                     sigma=self.sigma_val,
                     tol  = self.tol_val,
-                    SpineShift_flag=self.local_shift
+                    SpineShift_flag=self.local_shift,
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift=shift))
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
-                    shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend))
+                    shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,
+                    DendDist = DendDist*self.SimVars.Unit))
             else:
                 self.SpineArr.append(Synapse(list(point),[],pts=[],shift=[],channel=self.actual_channel,Syntype=flag))
                 
@@ -1551,7 +1582,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, radloc,closest_Dend = FindShape(
+                    xpert, _, radloc,closest_Dend,x = FindShape(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1561,6 +1592,8 @@ class DataReadWindow(QWidget):
                         sigma=self.sigma_val,
                         tol  = self.tol_val
                     )
+                    if(i==0):
+                        self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
                     self.SpineArr[-1].points.append(xpert)
                     self.SpineArr[-1].closest_Dend = closest_Dend
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
@@ -1583,6 +1616,13 @@ class DataReadWindow(QWidget):
 
         self.SpinesMeasured = False
 
+    def clear_settings(self):
+        self.LoadSettings(None)
+        Settings_File = self.SimVars.Dir + "Settings.txt"
+        Global_Settings_File = os.path.expanduser("~") + "/SpyDenSettings.txt"
+        if os.path.exists(Settings_File): os.remove(Settings_File)
+        if os.path.exists(Global_Settings_File): os.remove(Global_Settings_File)
+
     def clear_stuff(self,RePlot):
         """Clear and reset various components and data.
 
@@ -1594,6 +1634,8 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
+
+
         self.add_commands([])
         self.PunctaCalc = False
         for button in [self.dendritic_width_button,
@@ -1653,6 +1695,7 @@ class DataReadWindow(QWidget):
         """
 
         self.clear_stuff(True)
+        self.clear_settings()
 
         Dend_Dir = self.SimVars.Dir + "Dendrite/"
         if os.path.exists(Dend_Dir):
@@ -1712,7 +1755,153 @@ class DataReadWindow(QWidget):
         MakeButtonInActive(self.spine_bg_button)
         self.handle_editing_finished(1)
         
-    
+    def LoadSettings(self,Settings_File):
+        if(Settings_File is not None):
+            try:
+                with open(Settings_File, "r") as file:
+                    # Read the lines of the file
+                    lines = file.readlines()
+
+                # Process the lines
+                for line in lines:
+                    # Split each line into key-value pairs
+                    if("MLLocation" in line):
+                        value = line[11:-1]
+                        if(os.path.isfile(value)):
+                            self.NN_path = value
+                            self.NN = True
+                            self.button_set_NN.setText("Set NN! (saved)")
+                        elif(os.path.isfile(self.NN_path)):
+                            self.NN_path = self.NN_path
+                            self.NN = True
+                            self.button_set_NN.setText("Set NN! (default)")
+                        else:
+                            self.NN = False
+                            self.button_set_NN.setText("Download NN")
+                            self.button_set_NN.disconnect()
+                            self.button_set_NN.clicked.connect(self.download_NN)
+                    else:
+                        key, value = line.strip().split(":")
+                        if(key=="multi-time"):
+                            boolean_value = value == "True"
+                            self.multitime_check.setChecked(boolean_value)
+                            self.SimVars.multitime_flag = boolean_value
+                            if(self.SimVars.multitime_flag):
+                                self.timestep_slider.setVisible(True)
+                                self.timestep_counter.setVisible(True)
+                                self.timestep_label.setVisible(True)
+                        elif(key=="Analysis mode"):
+                            self.analyze.setCurrentText(value)
+                        elif(key=="Dend. shift"):
+                            boolean_value = value == "True"
+                            self.Dend_shift_check.setChecked(boolean_value)
+                        elif(key=="resolution"):
+                            scale = float(value)
+                        elif(key == "Puncta sigma range"):
+                            sigma_r = tuple(map(int, value.split('-')))
+                            self.puncta_sigma_range_slider.setValue(sigma_r)
+                        else:
+                            value = int(value)
+                            if(key=="Image threshold"):
+                                self.thresh_slider.setValue(value)
+                            elif(key=="Dendritic width"):
+                                self.neighbour_slider.setValue(value)
+                                self.neighbour_counter.setText(str(value))
+                            elif(key=="ML Confidence"):
+                                self.ml_confidence_slider.setValue(value)
+                                self.confidence_counter.setText(str(value))
+                            elif(key=="ROI Tolerance"):
+                                self.tol_val = value
+                                self.tolerance_slider.setValue(value)
+                                self.tolerance_counter.setText(str(value))
+                            elif(key=="ROI Sigma"):
+                                self.sigma_val = value
+                                self.sigma_slider.setValue(value)
+                                self.sigma_counter.setText(str(value))
+                            elif(key=="Dendritic puncta threshold"):
+                                self.puncta_dend_slider.setValue(value)
+                                self.puncta_dend_counter.setText(str(value))
+                            elif(key=="Somatic puncta threshold"):
+                                self.puncta_soma_slider.setValue(value)
+                                self.puncta_soma_counter.setText(str(value))
+                            elif(key=="Dend. width multiplier"):
+                                self.dend_width_mult_slider.setValue(value)
+                                dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
+                                self.dend_width_mult_counter.setText(dend_factor)
+            except Exception as e:
+                self.set_status_message.setText('There was a problem with the settings file')
+                if DevMode: print(e)
+        else:
+            try:
+                self.neighbour_slider.disconnect()
+                self.thresh_slider.disconnect()
+                self.ml_confidence_slider.disconnect()
+                self.sigma_slider.disconnect()
+                self.tolerance_slider.disconnect()
+                self.puncta_dend_slider.disconnect()
+                self.puncta_soma_slider.disconnect()
+                self.dend_width_mult_slider.disconnect()
+                self.Dend_shift_check.disconnect()
+                self.puncta_sigma_range_slider.disconnect()
+                self.analyze.disconnect()
+            except Exception as e:
+                pass
+
+            self.analyze.setCurrentText("Luminosity")
+            self.multitime_check.setChecked(False)
+            self.SimVars.multitime_flag = False
+
+
+            self.Dend_shift_check.setChecked(False)
+
+            self.puncta_sigma_range_slider.setValue((1,2))
+
+            self.default_thresh = int(np.mean(self.tiff_Arr[0, 0, :, :]))
+
+            self.thresh_slider.setValue(self.default_thresh)
+
+
+            self.neighbour_slider.setValue(6)
+            self.neighbour_counter.setText(str(6))
+
+            self.ml_confidence_slider.setValue(5)
+            self.confidence_counter.setText(str(5))
+
+            self.tol_val = 5
+            self.tolerance_slider.setValue(self.tol_val)
+            self.tolerance_counter.setText(str(self.tol_val))
+
+            self.sigma_val = 5
+            self.sigma_slider.setValue(self.sigma_val)
+            self.sigma_counter.setText(str(self.sigma_val))
+
+            self.puncta_dend_slider.setValue(12)
+            self.puncta_dend_counter.setText(str(12))
+
+            self.puncta_soma_slider.setValue(12)
+            self.puncta_soma_counter.setText(str(12))
+
+            self.dend_width_mult_slider.setValue(5)
+            dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
+            self.dend_width_mult_counter.setText(str(5))
+
+            self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
+            self.thresh_slider.valueChanged.connect(self.dend_thresh)
+            self.ml_confidence_slider.valueChanged.connect(self.thresh_NN)
+            self.sigma_slider.valueChanged.connect(self.spine_tolerance_sigma)
+            self.tolerance_slider.valueChanged.connect(self.spine_tolerance_sigma)
+            self.puncta_soma_slider.valueChanged.connect(self.soma_threshold_slider_update)
+            self.puncta_dend_slider.valueChanged.connect(self.dend_threshold_slider_update)
+            self.puncta_sigma_range_slider.valueChanged.connect(self.puncta_sigma_slider_update)
+            self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
+            self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
+            self.analyze.currentTextChanged.connect(self.on_analyze_changed)
+
+            self.SimVars.Unit = None
+            return None
+
+        return scale
+
     def handle_editing_finished(self,indx,CallTwice=False):
         """Handles the behaviour of the GUI after the folder and resolution are chosen.
 
@@ -1749,6 +1938,7 @@ class DataReadWindow(QWidget):
                 self.dend_width_mult_slider.disconnect()
                 self.Dend_shift_check.disconnect()
                 self.puncta_sigma_range_slider.disconnect()
+                self.analyze.disconnect()
             except Exception as e:
                 pass
             self.SimVars = Simulation(res, 0, Dir + "/" + cell + "/", 1, Mode, projection, instance)
@@ -1790,79 +1980,11 @@ class DataReadWindow(QWidget):
             self.SimVars.bgmean = np.zeros([self.SimVars.Snapshots, self.SimVars.Channels])
 
             Settings_File = self.SimVars.Dir + "Settings.txt"
-            if os.path.exists(Settings_File):
-                try:
-                    with open(Settings_File, "r") as file:
-                        # Read the lines of the file
-                        lines = file.readlines()
-
-                    # Process the lines
-                    for line in lines:
-                        # Split each line into key-value pairs
-                        if("MLLocation" in line):
-                            value = line[11:-1]
-                            if(os.path.isfile(value)):
-                                self.NN_path = value
-                                self.NN = True
-                                self.button_set_NN.setText("Set NN! (saved)")
-                            elif(os.path.isfile(self.NN_path)):
-                                self.NN_path = self.NN_path
-                                self.NN = True
-                                self.button_set_NN.setText("Set NN! (default)")
-                            else:
-                                self.NN = False
-                                self.button_set_NN.setText("Download NN")
-                                self.button_set_NN.disconnect()
-                                self.button_set_NN.clicked.connect(self.download_NN)
-                        else:
-                            key, value = line.strip().split(":")
-                            if(key=="multi-time"):
-                                boolean_value = value == "True"
-                                self.multitime_check.setChecked(boolean_value)
-                                self.SimVars.multitime_flag = boolean_value
-                                if(self.SimVars.multitime_flag):
-                                    self.timestep_slider.setVisible(True)
-                                    self.timestep_counter.setVisible(True)
-                                    self.timestep_label.setVisible(True)
-                            elif(key=="Dend. shift"):
-                                boolean_value = value == "True"
-                                self.Dend_shift_check.setChecked(boolean_value)
-                            elif(key=="resolution"):
-                                scale = float(value)
-                            elif(key == "Puncta sigma range"):
-                                sigma_r = tuple(map(int, value.split('-')))
-                                self.puncta_sigma_range_slider.setValue(sigma_r)
-                            else:
-                                value = int(value)
-                                if(key=="Image threshold"):
-                                    self.thresh_slider.setValue(value)
-                                elif(key=="Dendritic width"):
-                                    self.neighbour_slider.setValue(value)
-                                    self.neighbour_counter.setText(str(value))
-                                elif(key=="ML Confidence"):
-                                    self.ml_confidence_slider.setValue(value)
-                                    self.confidence_counter.setText(str(value))
-                                elif(key=="ROI Tolerance"):
-                                    self.tol_val = value
-                                    self.tolerance_slider.setValue(value)
-                                    self.tolerance_counter.setText(str(value))
-                                elif(key=="ROI Sigma"):
-                                    self.sigma_val = value
-                                    self.sigma_slider.setValue(value)
-                                    self.sigma_counter.setText(str(value))
-                                elif(key=="Dendritic puncta threshold"):
-                                    self.puncta_dend_slider.setValue(value)
-                                    self.puncta_dend_counter.setText(str(value))
-                                elif(key=="Somatic puncta threshold"):
-                                    self.puncta_soma_slider.setValue(value)
-                                    self.puncta_soma_counter.setText(str(value))
-                                elif(key=="Dend. width multiplier"):
-                                    self.dend_width_mult_slider.setValue(value)
-                                    dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
-                                    self.dend_width_mult_counter.setText(dend_factor)
-                except Exception as e:
-                    self.set_status_message.setText('There was a problem with the settings file')
-                    if DevMode: print(e)
+            Global_Settings_File = os.path.expanduser("~") + "/SpyDenSettings.txt"
+            if(os.path.exists(Settings_File)):
+                scale = self.LoadSettings(Settings_File)
+            elif(os.path.exists(Global_Settings_File)):
+                scale = self.LoadSettings(Global_Settings_File)
 
             self.SimVars.model = self.NN_path
             self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
@@ -1877,6 +1999,7 @@ class DataReadWindow(QWidget):
             self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
             self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
             self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
+            self.analyze.currentTextChanged.connect(self.on_analyze_changed)
             self.SimVars.Unit = scale
             # Get shifting of snapshots
             if (self.SimVars.Snapshots>1):
@@ -2036,7 +2159,11 @@ class DataReadWindow(QWidget):
         self.spine_marker = spine_eval(SimVars=self.SimVars, points=self.SimVars.points_NN[self.SimVars.scores_NN>val],
             scores=self.SimVars.scores_NN[self.SimVars.scores_NN>val],flags=self.SimVars.flags_NN[self.SimVars.scores_NN>val])
 
+        SpineDir = self.SimVars.Dir+'Spine/'
         MakeButtonActive(self.spine_button_ROI)
+        if((os.path.isfile(SpineDir+'Synapse_l.json') and self.SimVars.Mode=="Luminosity") or
+            (os.path.isfile(SpineDir+'Synapse_a.json') and self.SimVars.Mode=="Area" and self.SimVars.multitime_flag)):
+            MakeButtonActive(self.old_ROI_button)
 
         self.spine_button_NN.setChecked(False)
         MakeButtonInActive(self.measure_spine_button)
@@ -2099,7 +2226,12 @@ class DataReadWindow(QWidget):
         MakeButtonInActive(self.measure_spine_button)
         MakeButtonInActive(self.spine_bg_button)
         
-    
+        MakeButtonActive(self.spine_button_ROI)
+        SpineDir = self.SimVars.Dir+'Spine/'
+        if((os.path.isfile(SpineDir+'Synapse_l.json') and self.SimVars.Mode=="Luminosity") or
+            (os.path.isfile(SpineDir+'Synapse_a.json') and self.SimVars.Mode=="Area" and self.SimVars.multitime_flag)):
+            MakeButtonActive(self.old_ROI_button)
+
     def dendritic_width_eval(self) -> None:
         """
         function that performs the dendritic width calculation
@@ -2107,6 +2239,9 @@ class DataReadWindow(QWidget):
         Returns: None
 
         """
+        self.set_status_message.setText('Calculating Dendritic width')
+        QCoreApplication.processEvents()
+        self.SimVars.frame.set_status_message.repaint()
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
             self.DendArr = self.DendMeasure.DendArr
@@ -2132,6 +2267,9 @@ class DataReadWindow(QWidget):
         except:
             pass
         for i,D in enumerate(self.DendArr): 
+            self.set_status_message.setText('Calculating Dendritic width, Dendrite: '+str(i+1))
+            QCoreApplication.processEvents()
+            self.SimVars.frame.set_status_message.repaint()
             D.actual_channel  = self.actual_channel
             D.actual_timestep = self.actual_timestep
             D.WidthFactor     = dend_factor
@@ -2149,6 +2287,9 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.measure_puncta_button)
         self.dendritic_width_button.setChecked(False)
 
+        self.set_status_message.setText('Width calculation complete')
+        QCoreApplication.processEvents()
+        self.SimVars.frame.set_status_message.repaint()
     def dendritic_width_changer(self) -> None:
         """
         function that multiplies the calculated dendrite segmentation by the correct
@@ -2176,11 +2317,12 @@ class DataReadWindow(QWidget):
 
             D.actual_channel = self.actual_channel
             D.actual_timestep= self.actual_timestep
+            D.OldWidthFactor  = D.WidthFactor
             D.WidthFactor     = dend_factor
             mask = np.zeros(shape=self.tiff_Arr[0,0].shape)
 
             for pdx, p in enumerate(D.smoothed_all_pts):
-                mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor,self.actual_timestep,self.actual_channel)
+                mask = D.GenEllipse(mask,p,pdx,D.dend_stat[:, 4], D.dend_stat[:, 2]*dend_factor/D.OldWidthFactor,self.actual_timestep,self.actual_channel)
 
             gaussian_mask = (gaussian_filter(input=mask, sigma=self.neighbour_slider.value()) >= np.mean(mask)).astype(np.uint8)
             D.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
@@ -2826,7 +2968,7 @@ class MainWindow(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.title = "Dendritic Spine Tool"
+        self.title = "SpyDen"
         self.left = 100
         self.top = 100
         self.width = 600
@@ -2848,7 +2990,7 @@ class MainWindow(QWidget):
         # headline
         self.headline = QLabel(self)
         self.headline.setTextFormat(Qt.TextFormat.RichText)
-        self.headline.setText("The Dendritic Spine Tool <br> <font size='0.1'>v"+version+"-alpha</font>")
+        self.headline.setText("SpyDen <br> <font size='0.1'>v"+version+"-alpha (Dev) </font>")
         Font = QFont("Courier", 60)
         self.headline.setFont(Font)
         self.headline.setStyleSheet("color: white")

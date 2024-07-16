@@ -45,7 +45,7 @@ def FindShape(
     sigma=1.5,
     CheckVec=[True, True, True, True],
     tol=3,
-    SpineShift_flag = True
+    SpineShift_flag = True,
 ):
 
     """
@@ -71,6 +71,7 @@ def FindShape(
             "Dendrite criterion", "Overlap criterion" and "Fallback criterion"
     """
     SpineMinDir = None
+    DendDist = None
     if tiff_Arr_m.ndim > 2:
         tiff_Arr = tiff_Arr_m.max(axis=0)
         if(SpineShift_flag and ErrorCorrect):
@@ -213,22 +214,24 @@ def FindShape(
 
     if ErrorCorrect:
         o_arr2 = np.delete(o_arr, np.where(np.all(o_arr == pt, axis=1)), axis=0)
-        xpert1, _, _,_ = FindShape(
+        xpert1, _, _,_,_ = FindShape(
             tiff_Arr, pt + [0, 1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert2, _, _,_ = FindShape(
+        xpert2, _, _,_,_ = FindShape(
             tiff_Arr, pt + [0, -1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert3, _, _,_ = FindShape(
+        xpert3, _, _,_,_ = FindShape(
             tiff_Arr, pt + [1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert4, _, _,_ = FindShape(
+        xpert4, _, _,_,_ = FindShape(
             tiff_Arr, pt + [-1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
+        dists = np.linalg.norm(np.array(xpert)-pt_proc,axis=1)
+        DendDist = np.array([dists.max(),np.linalg.norm(pt_proc - pt),dists.min()])
         xpert = xpert.tolist()
 
-    return xpert, SpineMinDir, OppDir,Closest
+    return xpert, SpineMinDir, OppDir,Closest,DendDist
 
 
 def SynDistance(SynArr, DendArr_m, Unit):
@@ -245,12 +248,12 @@ def SynDistance(SynArr, DendArr_m, Unit):
     Function:
             Find the distance to the start of the dendrite
     """
+
+    # Horizontal distance
     for S in SynArr:
         DendArr = DendArr_m[S.closest_Dend]
-        if(S.type==2):
-            S.distance = 0
-        else:
-            S.distance = SynDendDistance(S.location, DendArr, DendArr[0]) * Unit
+        S.distance = SynDendDistance(S.location, DendArr, DendArr[0]) * Unit
+
     return SynArr
 
 def SynDendDistance(loc, DendArr, loc0):
@@ -334,6 +337,7 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
         try:
             S.points   = [arr.tolist() for arr in S.points]
             S.location = S.location.tolist()
+            S.distance_to_Dend = S.distance_to_Dend.tolist()
             S.bgloc    = S.bgloc.tolist()
         except:
             pass
@@ -406,7 +410,8 @@ def ReadSynDict(Dir, SimVars):
                             shift=t["shift"],
                             channel=t["channel"],
                             local_bg=t["local_bg"],
-                            closest_Dend=t["closest_Dend"]
+                            closest_Dend=t["closest_Dend"],
+                            DendDist = t["distance_to_Dend"]
                         )
                     )
                 except:
@@ -423,7 +428,8 @@ def ReadSynDict(Dir, SimVars):
                             shift=t["shift"],
                             channel=t["channel"],
                             local_bg=t["local_bg"],
-                            closest_Dend=t["closest_Dend"]
+                            closest_Dend=t["closest_Dend"],
+                            DendDist = t["distance_to_Dend"]
                         )
                     )
                     SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
@@ -450,9 +456,9 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         Lims = np.array(0)
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
-
     if(Mode=='Luminosity'):
-        custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend'] + 
+        custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
+            'Center dist to dend','Min, dist to Dend'] + 
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
@@ -466,7 +472,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 writer.writerow(custom_header) 
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
-                                     str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend]
+                                     str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
+                                     ]+[str(d) for d in s.distance_to_Dend]
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
                     row.extend(s.max[c])
@@ -475,7 +482,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.local_bg[c])
                     writer.writerow(row)   
     else:
-        custom_header =(['', 'type','location','distance','closest_Dend'] + 
+        custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
+            'Center dist to dend','Min. dist to Dend'] + 
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
@@ -489,7 +497,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 writer.writerow(custom_header) 
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
-                                     str(s.location-Lims),s.distance,s.closest_Dend]
+                                     str(s.location-Lims),s.distance,s.closest_Dend
+                                     ]+[str(d) for d in s.distance_to_Dend]
                     row.extend(s.area[c])
                     row.extend(s.mean[c])
                     row.extend(s.min[c])

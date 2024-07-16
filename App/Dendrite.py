@@ -172,11 +172,13 @@ class Dendrite:
         for pdx, p in enumerate(self.smoothed_all_pts):
             self.dend_stat[pdx, 0] = p[1]
             self.dend_stat[pdx, 1] = p[0]
-            self.dend_stat[pdx, 2] = width_arr[pdx]
             self.dend_stat[pdx, 3] = 2
             self.dend_stat[pdx, 4] = degrees[pdx]
             mask = self.GenEllipse(mask,p,pdx,degrees,width_arr,Snaps,Chans)
-
+            if(pdx%100==0):
+                self.SimVars.frame.set_status_message.setText(self.SimVars.frame.set_status_message.text()+'.')
+                QCoreApplication.processEvents()
+                self.SimVars.frame.set_status_message.repaint()
         gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
         self.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
         self.dendritic_surface_matrix= gaussian_mask
@@ -195,6 +197,7 @@ class Dendrite:
             for j in range(Chans):
                 self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
                 self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
+        self.dend_stat[pdx, 2] = width_arr[pdx]
 
         return mask
 
@@ -340,6 +343,10 @@ class DendriteMeasurement:
         MakeButtonInActive(self.SimVars.frame.spine_button)
         MakeButtonInActive(self.SimVars.frame.spine_button_NN)
         MakeButtonInActive(self.SimVars.frame.measure_puncta_button)
+        MakeButtonInActive(self.SimVars.frame.spine_button_ROI)
+        MakeButtonInActive(self.SimVars.frame.old_ROI_button)
+        MakeButtonInActive(self.SimVars.frame.spine_bg_button)
+        MakeButtonInActive(self.SimVars.frame.measure_spine_button)
         self.AtLeastOne=False
         self.AnotherDendFlag=True
         self.coords = ([])
