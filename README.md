@@ -78,7 +78,7 @@ superqt
   
 ***
 ## How to cite
-The preprint of SpyDen can be found [here](https://anaconda.org/meggl23/spyden/). 
+The preprint of SpyDen can be found [here](https://www.biorxiv.org/content/10.1101/2024.06.07.597872v1). 
 
 Eggl*, M. F., Wagle*, S., Filling*, J. P. Chater, T. E., Goda, Y., Tchumatchenko, T.  (2024). SpyDen: Automating molecular and structural analysis across
 spines and dendrites. bioRxiv, 2024-06.
