@@ -1896,8 +1896,10 @@ class DataReadWindow(QWidget):
             self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
             self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
             self.analyze.currentTextChanged.connect(self.on_analyze_changed)
-
-            self.SimVars.Unit = None
+            try:
+                self.SimVars.Unit = float(self.res.text())
+            except: 
+                self.SimVars.Unit = None
             return None
 
         return scale
