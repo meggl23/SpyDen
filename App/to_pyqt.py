@@ -25,7 +25,7 @@ import platform
 import time
 
 DevMode = False
-version = '1.0.2'
+version = '1.0.3'
 
 def catch_exceptions(func):
 
@@ -2730,7 +2730,7 @@ class DataReadWindow(QWidget):
 
                 self.spine_marker = spine_eval(self.SimVars, self.spine_marker.points,self.spine_marker.scores,self.spine_marker.flags,clear_plot=False)
                 self.spine_marker.disconnect()
-@handle_exceptions
+
 class DirStructWindow(QWidget):
     """Class that defines the directory structure window"""
 
@@ -2822,7 +2822,7 @@ class DirStructWindow(QWidget):
         if flag == 0: 
             self.set_status_message.setText("Success: Your new folder exists")
         else:
-            self.set_status_message.setText("Your source had no lsm or tif files")
+            self.set_status_message.setText("There was a problem:"+str(flag))
     def get_path(self) -> None:
         """
         opens a dialog field where you can select the folder
