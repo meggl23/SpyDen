@@ -1,5 +1,6 @@
 from skimage.registration import phase_cross_correlation
 from skimage.draw import polygon
+from skimage.measure import regionprops
 import imageio.v2 as imageio
 import tifffile as tf
 import math
@@ -452,6 +453,8 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.mean.append(Mean)
                     S.local_bg.append(local_bg)
                 S.area.append(Area[0])
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
+
         else:
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
@@ -462,6 +465,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
                 S.area.append(Area)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
     else:
         if(SimVars.Mode=="Luminosity" or Snaps==1):
             for S in SynArr:
@@ -474,6 +478,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.mean.append(Mean)
                 S.local_bg.append(local_bg)
                 S.area.append(Area[0])
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
         else:
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
@@ -484,6 +489,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
                 S.area.append(Area)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
     return 0
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
@@ -522,7 +528,7 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
             r = SynL[:, 0]
             rr, cc = polygon(r, c)
             mask[cc, rr] = 1
-
+            props = regionprops(mask.astype(int))
             try:
                 roi  = tiff_Arr[i].astype(np.float64)
                 roi[np.where(mask == 0)] = math.nan
@@ -586,11 +592,11 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
             r = SynL[:, 0]
             rr, cc = polygon(r, c)
             mask[cc, rr] = 1
+            props = regionprops(mask.astype(int))
             c = SynBg[:,1]
             r = SynBg[:,0]
             rr, cc = polygon(r, c)
             mask2[cc, rr] = 1
-
 
             try:
                 roi  = tiff_Arr[i].astype(np.float64)
@@ -606,6 +612,7 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
                 Mean.append(np.nanmean(roi))
                 local_bg.append(np.nanmean(roi2))
 
+
             except Exception as ex:
                 print(ex)
                 area.append(math.nan)
@@ -615,7 +622,40 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
                 RawIntDen.append(math.nan)
                 IntDen.append(math.nan)
                 local_bg.append(math.nan)
+
     return Mean,area,Max,Min,RawIntDen,IntDen,local_bg
+
+def SpineBoundingBox(S,Unit,Mode):
+    """
+    Rotate coordinates (x, y) by angle `theta` (radians).
+    (x, y) can be arrays. 
+    Returns (x_rot, y_rot).
+    
+    Positive theta => counterclockwise rotation in standard Cartesian coords.
+    """
+    cos_t = np.cos(-S.Orientation)
+    sin_t = np.sin(-S.Orientation)
+    
+    if(Mode=="Luminosity"):
+        # Apply the rotation
+        x_r = cos_t * np.array(S.points)[:,0] - sin_t * np.array(S.points)[:,1]
+        y_r = sin_t * np.array(S.points)[:,0] + cos_t * np.array(S.points)[:,1]
+        
+        xmin, xmax = x_r.min(), x_r.max()
+        ymin, ymax = y_r.min(), y_r.max()
+        
+        S.widths.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
+    elif(Mode=="Area"):
+        for pts in S.points:
+                # Apply the rotation
+                x_r = cos_t * np.array(pts)[:,0] - sin_t * np.array(pts)[:,1]
+                y_r = sin_t * np.array(pts)[:,0] + cos_t * np.array(pts)[:,1]
+                
+                xmin, xmax = x_r.min(), x_r.max()
+                ymin, ymax = y_r.min(), y_r.max()
+                
+                S.widths.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
+    return 0
 
                 
 def medial_axis_eval(SimVars,DendArr=None, window_instance:object=None) -> None:

@@ -7,7 +7,7 @@ from .Utility import MakeButtonInActive,MakeButtonActive
 
 class Synapse(object):
     """Class that holds the parameters associated with the chosen synapse"""
-    def __init__(self,loc,bgloc,pts=[],dist=None,Syntype=None,shift=[],channel=0,local_bg=0,closest_Dend=0,DendDist = [0,0,0]):
+    def __init__(self,loc,bgloc,pts=[],dist=None,Syntype=None,shift=[],channel=0,local_bg=0,closest_Dend=0,DendDist = [0,0,0],Orientation = 0):
         self.type = Syntype
         self.location = loc
         self.bgloc = bgloc
@@ -20,6 +20,8 @@ class Synapse(object):
         self.local_bg = []
 
         self.area = []
+        self.widths = []
+
         if dist == None:
             self.distance = 0
         else:
@@ -32,7 +34,7 @@ class Synapse(object):
         self.closest_Dend = closest_Dend
 
         self.distance_to_Dend = DendDist
-
+        self.Orientation = Orientation
 class Spine_Marker:
 
     Epsilon = 10

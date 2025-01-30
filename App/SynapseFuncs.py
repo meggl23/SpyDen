@@ -125,8 +125,12 @@ def FindShape(
         OppDir = np.array(3 * pt - 2 * pt_proc).astype(int)
         OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
         OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
+        dx = pt_proc[0]-pt[0]
+        dy = pt_proc[1]-pt[1]
+        Orientation = np.arctan2(dy,dx)
     else:
         OppDir = pt
+        Orientation = 0
     o_arr = np.asarray(other_pts)
 
     if CheckVec[3]:
@@ -214,16 +218,16 @@ def FindShape(
 
     if ErrorCorrect:
         o_arr2 = np.delete(o_arr, np.where(np.all(o_arr == pt, axis=1)), axis=0)
-        xpert1, _, _,_,_ = FindShape(
+        xpert1, _, _,_,_,_ = FindShape(
             tiff_Arr, pt + [0, 1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert2, _, _,_,_ = FindShape(
+        xpert2, _, _,_,_,_ = FindShape(
             tiff_Arr, pt + [0, -1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert3, _, _,_,_ = FindShape(
+        xpert3, _, _,_,_,_ = FindShape(
             tiff_Arr, pt + [1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert4, _, _,_,_ = FindShape(
+        xpert4, _, _,_,_,_ = FindShape(
             tiff_Arr, pt + [-1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
@@ -231,7 +235,7 @@ def FindShape(
         DendDist = np.array([dists.max(),np.linalg.norm(pt_proc - pt),dists.min()])
         xpert = xpert.tolist()
 
-    return xpert, SpineMinDir, OppDir,Closest,DendDist
+    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation
 
 
 def SynDistance(SynArr, DendArr_m, Unit):
@@ -374,6 +378,10 @@ def ReadSynDict(Dir, SimVars):
     unit   = SimVars.Unit
     Mode   = SimVars.Mode
     nSnaps = SimVars.Snapshots
+    NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation']
+
+    AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'DendDist' : [0,0,0],'Orientation' : 0}
+
     if(len(SimVars.xLims)==0):
         xLim = 0
         yLim = 0
@@ -399,40 +407,47 @@ def ReadSynDict(Dir, SimVars):
         SynArr = []
 
         for t in temp:
-                try:
-                    SynArr.append(
-                        Synapse(
-                            (t["location"]+np.array([yLim,xLim])).tolist(),
-                            (t["bgloc"]+np.array([yLim,xLim])).tolist(),
-                            Syntype=t["type"],
-                            dist=t["distance"],
-                            pts=(t["points"]+np.array([yLim,xLim])).tolist(),
-                            shift=t["shift"],
-                            channel=t["channel"],
-                            local_bg=t["local_bg"],
-                            closest_Dend=t["closest_Dend"],
-                            DendDist = t["distance_to_Dend"]
-                        )
+
+            for k in NecessaryKeys:
+                if k in t:
+                    AppliedVals[k] = t[k]
+
+            try:
+                SynArr.append(
+                    Synapse(
+                        (AppliedVals["location"]+np.array([yLim,xLim])).tolist(),
+                        (AppliedVals["bgloc"]+np.array([yLim,xLim])).tolist(),
+                        Syntype=AppliedVals["type"],
+                        dist=AppliedVals["distance"],
+                        pts=(AppliedVals["points"]+np.array([yLim,xLim])).tolist(),
+                        shift=AppliedVals["shift"],
+                        channel=AppliedVals["channel"],
+                        local_bg=AppliedVals["local_bg"],
+                        closest_Dend=AppliedVals["closest_Dend"],
+                        DendDist = AppliedVals["distance_to_Dend"],
+                        Orientation = AppliedVals["Orientation"]
                     )
-                except:
-                    pts = []
-                    for pt in t['points']: 
-                        pts.append((pt+np.array([yLim,xLim])).tolist())
-                    SynArr.append(
-                        Synapse(
-                            (t["location"]+np.array([yLim,xLim])).tolist(),
-                            t["bgloc"],
-                            Syntype=t["type"],
-                            dist=t["distance"],
-                            pts=pts,
-                            shift=t["shift"],
-                            channel=t["channel"],
-                            local_bg=t["local_bg"],
-                            closest_Dend=t["closest_Dend"],
-                            DendDist = t["distance_to_Dend"]
-                        )
+                )
+            except:
+                pts = []
+                for pt in AppliedVals['points']: 
+                    pts.append((pt+np.array([yLim,xLim])).tolist())
+                SynArr.append(
+                    Synapse(
+                        (AppliedVals["location"]+np.array([yLim,xLim])).tolist(),
+                        AppliedVals["bgloc"],
+                        Syntype=AppliedVals["type"],
+                        dist=AppliedVals["distance"],
+                        pts=pts,
+                        shift=AppliedVals["shift"],
+                        channel=AppliedVals["channel"],
+                        local_bg=AppliedVals["local_bg"],
+                        closest_Dend=AppliedVals["closest_Dend"],
+                        DendDist = AppliedVals["distance_to_Dend"],
+                        Orientation = AppliedVals["Orientation"]
                     )
-                    SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
+                )
+                SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
     except Exception as e:
        print(e)
        return []
