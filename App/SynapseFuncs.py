@@ -473,7 +473,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         Lims = np.array([xLims[0][0],xLims[1][0]])
     if(Mode=='Luminosity'):
         custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
-            'Center dist to dend','Min, dist to Dend'] + 
+            'Center dist to dend','Min, dist to Dend','Widths'] + 
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
@@ -488,7 +488,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
                                      str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend]
+                                     ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)]
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
                     row.extend(s.max[c])
@@ -504,7 +504,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
-        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)])
+        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
+        ['Timestep '+ str(i) +' (widths)' for i in range(1,nSnaps+1)])
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
@@ -520,6 +521,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.max[c])
                     row.extend(s.RawIntDen[c])
                     row.extend(s.IntDen[c])
+                    row.extend([str(w) for w in s.widths])
                     writer.writerow(row)   
 
 def SpineSave_imj(Dir,Spine_Arr):
