@@ -1,6 +1,7 @@
 from .Utility import *
 from skimage.feature import canny
 from skimage.registration import phase_cross_correlation
+from scipy.signal import medfilt2d
 
 import json
 import copy
@@ -10,6 +11,14 @@ import csv
 import traceback
 
 import roifile as rf
+
+from .PathFinding import (
+    medial_axis_path,
+    downsampling_max_pool,
+    curvature_polygon,
+    curvature_eval,
+    GetAllpointsonPath
+)
 
 def SpineShift(tiff_Arr_small):
 
@@ -72,6 +81,7 @@ def FindShape(
     """
     SpineMinDir = None
     DendDist = None
+    neck_path = None
     if tiff_Arr_m.ndim > 2:
         tiff_Arr = tiff_Arr_m.max(axis=0)
         if(SpineShift_flag and ErrorCorrect):
@@ -218,16 +228,16 @@ def FindShape(
 
     if ErrorCorrect:
         o_arr2 = np.delete(o_arr, np.where(np.all(o_arr == pt, axis=1)), axis=0)
-        xpert1, _, _,_,_,_ = FindShape(
+        xpert1, *_ = FindShape(
             tiff_Arr, pt + [0, 1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert2, _, _,_,_,_ = FindShape(
+        xpert2, *_ = FindShape(
             tiff_Arr, pt + [0, -1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert3, _, _,_,_,_ = FindShape(
+        xpert3, *_ = FindShape(
             tiff_Arr, pt + [1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
-        xpert4, _, _,_,_,_ = FindShape(
+        xpert4, *_ = FindShape(
             tiff_Arr, pt + [-1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
@@ -235,7 +245,9 @@ def FindShape(
         DendDist = np.array([dists.max(),np.linalg.norm(pt_proc - pt),dists.min()])
         xpert = xpert.tolist()
 
-    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation
+        neck_path = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+
+    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation,neck_path
 
 
 def SynDistance(SynArr, DendArr_m, Unit):
@@ -259,6 +271,52 @@ def SynDistance(SynArr, DendArr_m, Unit):
         S.distance = SynDendDistance(S.location, DendArr, DendArr[0]) * Unit
 
     return SynArr
+
+def FindNeck(SpineC,DendProj,image,DendArr):
+
+
+    start = SpineC.astype(int)[::-1]
+    end = DendProj.astype(int)[::-1]
+
+    bbox_min = np.max([np.min(np.stack([end,start]),axis=0)-50,[0,0]],axis=0)
+    bbox_max = np.min([np.max(np.stack([end,start]),axis=0)+50,image.shape],axis=0)
+
+    img = image[bbox_min[0]:bbox_max[0]+1,bbox_min[1]:bbox_max[1]+1]
+    median = medfilt2d(img, kernel_size=5)
+    success = False
+    k = 1
+    while success == False:
+        try:
+            median_thresh = median >= 2*np.mean(median)//(1.1**(k-1))
+
+            medial_axis, length = medial_axis_path(
+                mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
+            success = True
+        except:
+            k+=1
+            if(k==50):
+                median_thresh = median >= 0
+
+                medial_axis, length = medial_axis_path(
+                    mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
+                success = True
+
+
+    x, y = medial_axis[:, 0], medial_axis[:, 1]
+    Tx, Ty, Hx, Hy, T, H = curvature_polygon(x, y)
+    H = H / len(H)
+    sampling, _, _ = curvature_dependent_sampling(H, 100)
+    x, y = x[sampling], y[sampling]
+    curvature_sampled = np.array([x.T, y.T]).T
+
+    shifted_path = curvature_sampled+bbox_min[::-1]
+
+    distances = np.array([np.min(np.linalg.norm(t-DendArr,axis=-1)) for t in shifted_path])
+    try:
+        cutoff = np.argwhere((distances[:-1]-distances[1:])<0)[0][0]
+    except:
+        cutoff = np.argmin(distances)
+    return shifted_path[:cutoff]
 
 def SynDendDistance(loc, DendArr, loc0):
 
@@ -326,7 +384,7 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
     """
 
     modifiedSynArr = copy.deepcopy(SynArr)
-
+    from .MPL_Widget import debug_trace;debug_trace()
     if(len(xLims[0])==0):
         Lims = np.array([0,0])
     else:
@@ -343,10 +401,12 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
             S.location = S.location.tolist()
             S.distance_to_Dend = S.distance_to_Dend.tolist()
             S.bgloc    = S.bgloc.tolist()
+            S.neck    = S.neck.tolist()
         except:
             pass
         try:
             S.bgloc = S.bgloc.tolist()
+            S.neck    = S.neck.tolist()
         except:
             pass
     if Mode == "Area":

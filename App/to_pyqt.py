@@ -7,6 +7,7 @@ import numpy as np
 from .MPL_Widget import *
 from .DataRead import *
 from matplotlib.widgets import Slider, Button
+from matplotlib.path import Path
 
 from PyQt5.QtPrintSupport import QPrinter
 from PyQt5.QtGui import QPainter,QDesktopServices
@@ -315,7 +316,7 @@ class DataReadWindow(QWidget):
         self.analyze.currentTextChanged.connect(self.on_analyze_changed)
         self.analyze.setToolTip('Synapse temporal analysis mode')
 
-        #========= multiwindow checkbox ================
+        #========= multichannel checkbox ================
         self.multiwindow_check = QCheckBox(self)
         self.multiwindow_check.setText("Multi Channel")
         self.multiwindow_check.setEnabled(False)
@@ -323,7 +324,7 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.multiwindow_check, 2, 0, 1, 1)
         self.multiwindow_check.setToolTip('Check if you want to consider all channels simulatenously')
 
-        #========= multiwindow checkbox ================
+        #========= multitime checkbox ================
         self.multitime_check = QCheckBox(self)
         self.multitime_check.setText("Multi Time")
         self.multitime_check.setEnabled(False)
@@ -745,7 +746,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
                 tf,
                 point,
                 medial_axis_Arr,
@@ -775,7 +776,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[index].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, bgloc,closest_Dend,DendDist,Orientation = FindShape(
+                    xpert, _, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
                         tf[i],
                         np.array(self.SpineArr[index].location),
                         medial_axis_Arr,
@@ -1407,9 +1408,10 @@ class DataReadWindow(QWidget):
 
         self.SpineArr = []
         self.roi_interactor_list = []
+        self.line_interactor_list = []
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1424,14 +1426,25 @@ class DataReadWindow(QWidget):
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
+                if(self.DendArr[closest_Dend].get_contours() is not None):
+                    cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
+                    inside = cp.contains_points(neck)
+                    if(inside.any()):
+                        crossing_index = np.where(inside)[0][0]
+                        neck = neck[:crossing_index]
+                pol_line = Polygon(neck, fill=False, closed=False, animated=True)
+                self.mpl.axes.add_patch(pol_line)
+                self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
                 if(not self.local_shift):
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
+
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,
-                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation))
+                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation,neck = neck))
+                
             else:
                 self.SpineArr.append(Synapse(list(point),[],pts=[],shift=[],channel=self.actual_channel,Syntype=flag))
                 
@@ -1441,7 +1454,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, shift, radloc,closest_Dend,x,Orientation = FindShape(
+                    xpert, shift, radloc,closest_Dend,x,Orientation,neck = FindShape(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1455,8 +1468,19 @@ class DataReadWindow(QWidget):
                     self.SpineArr[-1].points.append(xpert)
                     self.SpineArr[-1].closest_Dend = closest_Dend
                     self.SpineArr[-1].Orientation  = Orientation
+                    if(self.DendArr[closest_Dend].get_contours() is not None):
+                        cp = Path(self.DendArr[closest_Dend].get_contours()[i].squeeze())
+                        inside = cp.contains_points(neck)
+                        if(inside.any()):
+                            crossing_index = np.where(inside)[0][0]
+                            neck = neck[:crossing_index]
+                    self.SpineArr[-1].neck.append(neck)
                     if(i==0):
                         self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
+                pol_line = Polygon(self.SpineArr[-1].neck[self.actual_timestep], fill=False, closed=False, animated=True)
+                self.mpl.axes.add_patch(pol_line)
+                self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
@@ -1558,7 +1582,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1585,7 +1609,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, radloc,closest_Dend,x,Orientation = FindShape(
+                    xpert, _, radloc,closest_Dend,x,Orientation,neck = FindShape(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
