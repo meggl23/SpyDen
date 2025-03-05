@@ -9,7 +9,7 @@ import re
 from .Utility import *
 from .Spine    import *
 from .Dendrite import *
-
+from .PathFinding import GetLength
 from .SynapseFuncs import *
 
 import json
@@ -490,6 +490,11 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.mean.append(Mean)
                 S.area.append(Area)
                 SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
+    for S in SynArr:
+        if(len(S.neck[0]) == 2):
+            S.neck_length = GetLength(np.array(S.neck))*SimVars.Unit
+        else:
+            S.neck_length = [GetLength(np.array(n))*SimVars.Unit for n in S.neck]
     return 0
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):

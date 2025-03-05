@@ -43,14 +43,83 @@ def SpineShift(tiff_Arr_small):
 
     return MinDirCum
 
-
-def FindShape(
+def ROI_And_Neck(
     tiff_Arr_m,
     pt,
     DendArr_m,
     other_pts,
     bg,
     ErrorCorrect=False,
+    sigma=1.5,
+    CheckVec=[True, True, True, True],
+    tol=3,
+    SpineShift_flag = True,
+    Mode = 'Both'):
+
+    SpineMinDir = None
+    neck_path = []
+
+    if tiff_Arr_m.ndim > 2:
+        tiff_Arr = tiff_Arr_m.max(axis=0)
+        if(SpineShift_flag and ErrorCorrect):
+            tiff_Arr_small = tiff_Arr_m[
+                :,
+                max(pt[1] - 70, 0) : min(pt[1] + 70, tiff_Arr_m.shape[-2]),
+                max(pt[0] - 70, 0) : min(pt[0] + 70, tiff_Arr_m.shape[-1]),
+            ]
+            SpineMinDir = SpineShift(tiff_Arr_small).T.astype(int).tolist()
+            tiff_Arr = np.array(
+                [
+                    np.roll(tiff_Arr_m, -np.array(m), axis=(-2, -1))[i, :, :]
+                    for i, m in enumerate(SpineMinDir)
+                ]
+            ).max(axis=0)
+    else:
+        tiff_Arr = tiff_Arr_m
+
+    Closest = 0
+    if len(DendArr_m) > 1:
+        Closest = [np.min(np.linalg.norm(pt - d, axis=1)) for d in DendArr_m]
+        DendArr = DendArr_m[np.argmin(Closest)]
+        Closest = np.argmin(Closest)
+    else:
+        DendArr = DendArr_m[0]
+    Order0 = np.sort(
+        np.argsort(np.linalg.norm(np.asarray(DendArr) - np.asarray(pt), axis=1))[
+            0:2
+        ]
+    )
+
+    pt_proc = np.array(projection(DendArr[Order0[0]], DendArr[Order0[1]], pt))
+    OppDir = np.array(3 * pt - 2 * pt_proc).astype(int)
+    OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
+    OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
+    dx = pt_proc[0]-pt[0]
+    dy = pt_proc[1]-pt[1]
+    Orientation = np.arctan2(dy,dx)
+    o_arr = np.asarray(other_pts)
+
+    if(Mode=='Both'):
+        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc)
+        neck_path      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+    elif(Mode=='ROI'):
+        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc)
+    else:
+        neck_path      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+        xpert = []
+        DendDist = [0,0,0]
+
+
+    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation,neck_path
+
+def FindShape(
+    tiff_Arr,
+    pt,
+    o_arr,
+    DendArr,
+    bg,
+    pt_proc,
+    ErrorCorrect=True,
     sigma=1.5,
     CheckVec=[True, True, True, True],
     tol=3,
@@ -79,26 +148,8 @@ def FindShape(
             and pass this out via xpert. Current rules are, "Sanity check", "Fall-off"
             "Dendrite criterion", "Overlap criterion" and "Fallback criterion"
     """
-    SpineMinDir = None
+
     DendDist = None
-    neck_path = None
-    if tiff_Arr_m.ndim > 2:
-        tiff_Arr = tiff_Arr_m.max(axis=0)
-        if(SpineShift_flag and ErrorCorrect):
-            tiff_Arr_small = tiff_Arr_m[
-                :,
-                max(pt[1] - 70, 0) : min(pt[1] + 70, tiff_Arr_m.shape[-2]),
-                max(pt[0] - 70, 0) : min(pt[0] + 70, tiff_Arr_m.shape[-1]),
-            ]
-            SpineMinDir = SpineShift(tiff_Arr_small).T.astype(int).tolist()
-            tiff_Arr = np.array(
-                [
-                    np.roll(tiff_Arr_m, -np.array(m), axis=(-2, -1))[i, :, :]
-                    for i, m in enumerate(SpineMinDir)
-                ]
-            ).max(axis=0)
-    else:
-        tiff_Arr = tiff_Arr_m
 
     cArr = canny(tiff_Arr, sigma=sigma)
 
@@ -116,32 +167,6 @@ def FindShape(
 
     xpert = np.array([pt, pt, pt, pt, pt, pt, pt, pt])
     maxval = tiff_Arr[pt[1], pt[0]]
-
-    Closest = 0
-    if CheckVec[2]:
-        if len(DendArr_m) > 1:
-            Closest = [np.min(np.linalg.norm(pt - d, axis=1)) for d in DendArr_m]
-            DendArr = DendArr_m[np.argmin(Closest)]
-            Closest = np.argmin(Closest)
-        else:
-            DendArr = DendArr_m[0]
-        Order0 = np.sort(
-            np.argsort(np.linalg.norm(np.asarray(DendArr) - np.asarray(pt), axis=1))[
-                0:2
-            ]
-        )
-
-        pt_proc = np.array(projection(DendArr[Order0[0]], DendArr[Order0[1]], pt))
-        OppDir = np.array(3 * pt - 2 * pt_proc).astype(int)
-        OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
-        OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
-        dx = pt_proc[0]-pt[0]
-        dy = pt_proc[1]-pt[1]
-        Orientation = np.arctan2(dy,dx)
-    else:
-        OppDir = pt
-        Orientation = 0
-    o_arr = np.asarray(other_pts)
 
     if CheckVec[3]:
         for keys in Directions.keys():
@@ -228,26 +253,24 @@ def FindShape(
 
     if ErrorCorrect:
         o_arr2 = np.delete(o_arr, np.where(np.all(o_arr == pt, axis=1)), axis=0)
-        xpert1, *_ = FindShape(
-            tiff_Arr, pt + [0, 1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert1, _ = FindShape(
+            tiff_Arr, pt + [0, 1], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
-        xpert2, *_ = FindShape(
-            tiff_Arr, pt + [0, -1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert2, _ = FindShape(
+            tiff_Arr, pt + [0, -1], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
-        xpert3, *_ = FindShape(
-            tiff_Arr, pt + [1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert3, _ = FindShape(
+            tiff_Arr, pt + [1, 0], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
-        xpert4, *_ = FindShape(
-            tiff_Arr, pt + [-1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert4, _ = FindShape(
+            tiff_Arr, pt + [-1, 0], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
         dists = np.linalg.norm(np.array(xpert)-pt_proc,axis=1)
         DendDist = np.array([dists.max(),np.linalg.norm(pt_proc - pt),dists.min()])
         xpert = xpert.tolist()
 
-        neck_path = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
-
-    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation,neck_path
+    return xpert,DendDist
 
 
 def SynDistance(SynArr, DendArr_m, Unit):
@@ -301,7 +324,6 @@ def FindNeck(SpineC,DendProj,image,DendArr):
                     mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
                 success = True
 
-
     x, y = medial_axis[:, 0], medial_axis[:, 1]
     Tx, Ty, Hx, Hy, T, H = curvature_polygon(x, y)
     H = H / len(H)
@@ -312,11 +334,9 @@ def FindNeck(SpineC,DendProj,image,DendArr):
     shifted_path = curvature_sampled+bbox_min[::-1]
 
     distances = np.array([np.min(np.linalg.norm(t-DendArr,axis=-1)) for t in shifted_path])
-    try:
-        cutoff = np.argwhere((distances[:-1]-distances[1:])<0)[0][0]
-    except:
-        cutoff = np.argmin(distances)
-    return shifted_path[:cutoff]
+    cutoff = np.argmin(distances)
+    
+    return shifted_path[:cutoff].tolist()
 
 def SynDendDistance(loc, DendArr, loc0):
 
@@ -384,7 +404,6 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
     """
 
     modifiedSynArr = copy.deepcopy(SynArr)
-    from .MPL_Widget import debug_trace;debug_trace()
     if(len(xLims[0])==0):
         Lims = np.array([0,0])
     else:
@@ -401,7 +420,6 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
             S.location = S.location.tolist()
             S.distance_to_Dend = S.distance_to_Dend.tolist()
             S.bgloc    = S.bgloc.tolist()
-            S.neck    = S.neck.tolist()
         except:
             pass
         try:
@@ -438,7 +456,7 @@ def ReadSynDict(Dir, SimVars):
     unit   = SimVars.Unit
     Mode   = SimVars.Mode
     nSnaps = SimVars.Snapshots
-    NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation']
+    NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation','neck']
 
     AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'DendDist' : [0,0,0],'Orientation' : 0}
 
@@ -485,7 +503,9 @@ def ReadSynDict(Dir, SimVars):
                         local_bg=AppliedVals["local_bg"],
                         closest_Dend=AppliedVals["closest_Dend"],
                         DendDist = AppliedVals["distance_to_Dend"],
-                        Orientation = AppliedVals["Orientation"]
+                        Orientation = AppliedVals["Orientation"],
+                        neck       = AppliedVals["neck"]
+
                     )
                 )
             except:
@@ -504,7 +524,8 @@ def ReadSynDict(Dir, SimVars):
                         local_bg=AppliedVals["local_bg"],
                         closest_Dend=AppliedVals["closest_Dend"],
                         DendDist = AppliedVals["distance_to_Dend"],
-                        Orientation = AppliedVals["Orientation"]
+                        Orientation = AppliedVals["Orientation"],
+                        neck       = AppliedVals["neck"]
                     )
                 )
                 SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
