@@ -1,5 +1,6 @@
 import sys
 import matplotlib.pyplot as plt
+from matplotlib.path import Path
 import numpy as np
 import torchvision.transforms as transforms
 import os
@@ -373,6 +374,77 @@ def dist_point_to_segment(p, s0, s1):
     b = c1 / c2
     pb = s0 + b * v
     return dist(p, pb)
+
+def segment_intersection(p, r, q, s):
+    """
+    Compute the intersection of two line segments:
+      Segment 1: from point p in direction r
+      Segment 2: from point q in direction s
+
+    Solves for parameters t and u in: p + t*r = q + u*s.
+    Returns (t, u) if an intersection exists, else returns None.
+    """
+    p = np.array(p, dtype=float)
+    q = np.array(q, dtype=float)
+    r = np.array(r, dtype=float)
+    s = np.array(s, dtype=float)
+    
+    r_cross_s = np.cross(r, s)
+    if np.abs(r_cross_s) < 1e-8:
+        return None  # lines are parallel or collinear
+    t = np.cross((q - p), s) / r_cross_s
+    u = np.cross((q - p), r) / r_cross_s
+    return t, u
+
+def find_intersection(polyline, polygon):
+    """
+    Given a polyline (Nx2 numpy array) and a closed polygon (Mx2 numpy array),
+    find the intersection point along the first polyline segment that goes
+    from inside the polygon (using matplotlib Path) to outside.
+    
+    Returns the intersection point and the index of the segment, or (None, None)
+    if no intersection is found.
+    """
+    # Create a Path object from the polygon.
+    # If the polygon is not explicitly closed (first != last), Path will close it.
+    polyline = np.array(polyline)
+    polygon = np.array(polygon)
+
+    if not np.array_equal(polygon[0], polygon[-1]):
+        polygon = np.vstack([polygon, polygon[0]])
+
+    path = Path(polygon)
+    # Determine which polyline points are inside the polygon.
+    inside = path.contains_points(polyline)
+    
+    # Loop over segments of the polyline.
+    for i in range(len(polyline) - 1):
+        if inside[i] and not inside[i+1]:
+            p_inside = polyline[i]
+            p_outside = polyline[i+1]
+            seg_vec = p_outside - p_inside
+            intersections = []
+            # Loop through polygon edges.
+            # Assume polygon is closed. If not, you can force it with:
+            # polygon = np.vstack([polygon, polygon[0]])
+            for j in range(len(polygon)-1):
+                edge_start = polygon[j]
+                edge_end = polygon[j+1]
+                edge_vec = edge_end - edge_start
+                result = segment_intersection(p_inside, seg_vec, edge_start, edge_vec)
+                if result is None:
+                    continue
+                t, u = result
+                if 0 <= t <= 1 and 0 <= u <= 1:
+                    ip = p_inside + t * seg_vec
+                    intersections.append(ip)
+            if intersections:
+                intersections = np.array(intersections)
+                # Choose the intersection closest to the inside point.
+                dists = np.linalg.norm(intersections - p_inside, axis=1)
+                idx = np.argmin(dists)
+                return intersections[idx], i
+    return None, None
 
 
 

@@ -15,7 +15,7 @@ from PyQt5.QtCore import QUrl
 
 from . import GenFolderStruct as GFS
 
-from .SynapseFuncs import FindShape
+from .SynapseFuncs import ROI_And_Neck
 from .RoiInteractor import RoiInteractor,RoiInteractor_BG
 from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
@@ -746,7 +746,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
                 tf,
                 point,
                 medial_axis_Arr,
@@ -776,7 +776,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[index].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
+                    xpert, _, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
                         tf[i],
                         np.array(self.SpineArr[index].location),
                         medial_axis_Arr,
@@ -822,15 +822,23 @@ class DataReadWindow(QWidget):
             for S,R in zip(self.SpineArr,self.roi_interactor_bg_list):
                 S.bgloc = [R.line.get_data()[0][0],R.line.get_data()[1][0]]
         medial_axis_Arr = [Dend.medial_axis.astype(int) for Dend in self.DendArr]
-        for i,R in enumerate(self.roi_interactor_list):
+        for i,(R,L) in enumerate(zip(self.roi_interactor_list,self.line_interactor_list)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                 self.SpineArr[i].points = (R.poly.xy - R.shift[R.Snapshot]).tolist()[:-1]
                 try:
                     self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
                 except:
                     pass
+                if(self.local_shift):
+                    self.SpineArr[i].neck[R.Snapshot] = (L.poly.xy).tolist()
+                else:
+                    self.SpineArr[i].neck = (L.poly.xy).tolist()
             else:
-                self.SpineArr[i].points[self.actual_timestep] = (R.poly.xy - R.shift[R.Snapshot]).tolist()[:-1]
+                if(self.local_shift):
+                    self.SpineArr[i].points[self.actual_timestep] = (R.poly.xy - R.shift[R.Snapshot]).tolist()[:-1]
+                else:
+                    self.SpineArr[i].points[self.actual_timestep] = (R.poly.xy).tolist()[:-1]
+                self.SpineArr[i].neck[R.Snapshot] = (L.poly.xy).tolist()
                 try:
                     self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
                 except:
@@ -843,6 +851,8 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].area = []
             self.SpineArr[i].local_bg = []
             self.SpineArr[i].widths = []
+            self.SpineArr[i].neck_length = []
+
 
         Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
         self.measure_spine_button.setChecked(False)
@@ -1381,6 +1391,9 @@ class DataReadWindow(QWidget):
         if(hasattr(self,"roi_interactor_list")):
             for R in self.roi_interactor_list:
                 R.clear()
+        if(hasattr(self,"line_interactor_list")):
+            for L in self.line_interactor_list:
+                L.clear()
         for patch in self.mpl.axes.patches:
             patch.remove()
 
@@ -1411,7 +1424,7 @@ class DataReadWindow(QWidget):
         self.line_interactor_list = []
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1426,15 +1439,42 @@ class DataReadWindow(QWidget):
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                if(self.DendArr[closest_Dend].get_contours() is not None):
-                    cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
-                    inside = cp.contains_points(neck)
-                    if(inside.any()):
-                        crossing_index = np.where(inside)[0][0]
-                        neck = neck[:crossing_index]
-                pol_line = Polygon(neck, fill=False, closed=False, animated=True)
-                self.mpl.axes.add_patch(pol_line)
-                self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+                if(self.local_shift and self.SimVars.multitime_flag):
+                    neck_arr = []
+                    for i in range(self.SimVars.Snapshots):
+                        _, _, _,_,_,_,neck = ROI_And_Neck(
+                            tf[i],
+                            point+ np.array([shift[i][0],shift[i][1]]),
+                            medial_axis_Arr,
+                            points,
+                            mean,
+                            True,
+                            sigma=self.sigma_val,
+                            tol  = self.tol_val,
+                            SpineShift_flag = False,
+                            Mode = 'Neck'
+                        )
+                        if(self.DendArr[closest_Dend].get_contours() is not None):
+                            cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
+                            inside = cp.contains_points(neck)
+                            if(inside.any()):
+                                crossing_index = np.where(inside)[0][0]
+                                neck = neck[:crossing_index]
+                        neck_arr.append(neck)
+                    pol_line = Polygon(neck_arr[self.actual_timestep], fill=False, closed=False, animated=True)
+                    self.mpl.axes.add_patch(pol_line)
+                    self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+                else:
+                    if(self.DendArr[closest_Dend].get_contours() is not None):
+                        cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
+                        inside = cp.contains_points(neck)
+                        if(inside.any()):
+                            crossing_index = np.where(inside)[0][0]
+                            neck = neck[:crossing_index]
+                    neck_arr = neck
+                    pol_line = Polygon(neck_arr, fill=False, closed=False, animated=True)
+                    self.mpl.axes.add_patch(pol_line)
+                    self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
                 if(not self.local_shift):
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
                 else:
@@ -1443,7 +1483,7 @@ class DataReadWindow(QWidget):
 
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,
-                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation,neck = neck))
+                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation,neck = neck_arr))
                 
             else:
                 self.SpineArr.append(Synapse(list(point),[],pts=[],shift=[],channel=self.actual_channel,Syntype=flag))
@@ -1453,8 +1493,9 @@ class DataReadWindow(QWidget):
                                 max(point[0] - 50, 0) : min(point[0] + 50, tf.shape[-1]),
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
+                neck_arr = []
                 for i in range(self.SimVars.Snapshots):
-                    xpert, shift, radloc,closest_Dend,x,Orientation,neck = FindShape(
+                    xpert, shift, radloc,closest_Dend,x,Orientation,_ = ROI_And_Neck(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1463,23 +1504,52 @@ class DataReadWindow(QWidget):
                         True,
                         sigma=self.sigma_val,
                         tol  = self.tol_val,
-                        SpineShift_flag = self.local_shift
+                        SpineShift_flag = self.local_shift,
+                        Mode='ROI'
                     )
                     self.SpineArr[-1].points.append(xpert)
                     self.SpineArr[-1].closest_Dend = closest_Dend
                     self.SpineArr[-1].Orientation  = Orientation
+
+                    
+                    if(self.local_shift):
+                        _, _, _,_,_,_,neck = ROI_And_Neck(
+                            tf[i],
+                            np.array(self.SpineArr[-1].location)+ np.array([self.SpineArr[-1].shift[i][0],self.SpineArr[-1].shift[i][1]]),
+                            medial_axis_Arr,
+                            points,
+                            mean,
+                            True,
+                            sigma=self.sigma_val,
+                            tol  = self.tol_val,
+                            SpineShift_flag = False,
+                            Mode = 'Neck'
+                        )
+                    else:
+                        _, _, _,_,_,_,neck = ROI_And_Neck(
+                            tf[i],
+                            np.array(self.SpineArr[-1].location),
+                            medial_axis_Arr,
+                            points,
+                            mean,
+                            True,
+                            sigma=self.sigma_val,
+                            tol  = self.tol_val,
+                            SpineShift_flag = False,
+                            Mode = 'Neck'
+                        )
                     if(self.DendArr[closest_Dend].get_contours() is not None):
-                        cp = Path(self.DendArr[closest_Dend].get_contours()[i].squeeze())
+                        cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
                         inside = cp.contains_points(neck)
                         if(inside.any()):
                             crossing_index = np.where(inside)[0][0]
                             neck = neck[:crossing_index]
-                    self.SpineArr[-1].neck.append(neck)
-                    if(i==0):
-                        self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
-                pol_line = Polygon(self.SpineArr[-1].neck[self.actual_timestep], fill=False, closed=False, animated=True)
+                    neck_arr.append(neck)
+                pol_line = Polygon(neck_arr[self.actual_timestep], fill=False, closed=False, animated=True)
                 self.mpl.axes.add_patch(pol_line)
                 self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+
+                self.SpineArr[-1].neck  = neck_arr
 
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1488,7 +1558,7 @@ class DataReadWindow(QWidget):
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
-                        pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
+                        pol,point,self.SpineArr[-1].shift,self.actual_timestep,self.SimVars.Snapshots))
 
             self.set_status_message.setText(self.set_status_message.text()+'.')
             QCoreApplication.processEvents()
@@ -1525,6 +1595,9 @@ class DataReadWindow(QWidget):
         if(hasattr(self,"roi_interactor_list")):
             for R in self.roi_interactor_list:
                 R.clear()
+        if(hasattr(self,"line_interactor_list")):
+            for L in self.line_interactor_list:
+                L.clear()
         for patch in self.mpl.axes.patches:
             patch.remove()
         for lines in self.mpl.axes.lines:
@@ -1542,6 +1615,7 @@ class DataReadWindow(QWidget):
         medial_axis_Arr = [Dend.medial_axis.astype(int) for Dend in self.DendArr]
 
         self.roi_interactor_list = []
+        self.line_interactor_list = []
         for S in self.SpineArr:
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                 xpert = S.points
@@ -1558,6 +1632,15 @@ class DataReadWindow(QWidget):
                     self.local_shift_check.setChecked(True)
                     self.local_shift_check.blockSignals(False)
 
+                try:
+                    pol_line = Polygon(S.neck[self.actual_timestep], fill=False, closed=False, animated=True)
+                    self.mpl.axes.add_patch(pol_line)
+                    self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+                except:
+                    pol_line = Polygon(S.neck, fill=False, closed=False, animated=True)
+                    self.mpl.axes.add_patch(pol_line)
+                    self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+
             else:
                 polygon = np.array(S.points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1571,6 +1654,10 @@ class DataReadWindow(QWidget):
                     self.local_shift_check.blockSignals(True)
                     self.local_shift_check.setChecked(True)
                     self.local_shift_check.blockSignals(False)
+
+                pol_line = Polygon(S.neck[self.actual_timestep], fill=False, closed=False, animated=True)
+                self.mpl.axes.add_patch(pol_line)
+                self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
  
         points = self.spine_marker.points.astype(int)[[list(sp) not in [S.location for S in self.SpineArr] for sp in self.spine_marker.points]]
         flags  = self.spine_marker.flags.astype(int)[[list(sp) not in [S.location for S in self.SpineArr] for sp in self.spine_marker.points]]
@@ -1582,7 +1669,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = FindShape(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1609,7 +1696,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, radloc,closest_Dend,x,Orientation,neck = FindShape(
+                    xpert, _, radloc,closest_Dend,x,Orientation,neck = ROI_And_Neck(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -2507,15 +2594,32 @@ class DataReadWindow(QWidget):
         """
         try:
             if(self.SimVars.Mode=="Luminosity"):
-                for i,R in enumerate(self.roi_interactor_list):
+                for i,(R,L) in enumerate(zip(self.roi_interactor_list,self.line_interactor_list)):
+
                     R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
                     self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
                     self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
+
+                    OldSnapshot = R.Snapshot
                     R.Snapshot = self.actual_timestep
                     R.poly.xy = R.poly.xy + R.shift[R.Snapshot]
                     R.line.set_data(zip(*R.poly.xy))
-                    R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
                     R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
+                    x_coord = R.OgLoc[0] + R.shift[R.Snapshot][0]
+                    y_coord = R.OgLoc[1] + R.shift[R.Snapshot][1]
+                    R.line_centre.set_data([x_coord], [y_coord])
+
+                    if(self.local_shift):
+                        self.SpineArr[i].neck[OldSnapshot] = (L.poly.xy).tolist()
+                        L.poly.xy = self.SpineArr[i].neck[R.Snapshot]
+                        L.line.set_data(zip(*L.poly.xy))
+                    else:
+                        L.poly.xy = L.poly.xy - R.shift[OldSnapshot]
+                        self.SpineArr[i].neck = (L.poly.xy).tolist()
+                        L.poly.xy = L.poly.xy + R.shift[OldSnapshot]
+                        L.line.set_data(zip(*L.poly.xy))
+                        L.poly.xy[0] = [x_coord,y_coord]
+
                     if(self.actual_timestep>0):
                         R.line_centre.set_color('r')
                         R.line_centre.set_markerfacecolor('k')
@@ -2524,18 +2628,24 @@ class DataReadWindow(QWidget):
                         R.line_centre.set_markerfacecolor('gray')
 
             else:
-                for i,R in enumerate(self.roi_interactor_list):
+                for i,(R,L) in enumerate(zip(self.roi_interactor_list,self.line_interactor_list)):
                     if(self.local_shift):
+                        OldSnapshot = R.Snapshot
                         R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
                         self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
                         self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
                         R.Snapshot = self.actual_timestep
                         newDat = np.array(self.SpineArr[i].points[R.Snapshot])+np.array(R.shift[R.Snapshot])
                         R.poly.xy = newDat
-                        R.line.set_data(newDat[:,0],newDat[:,1])
-                        R.line_centre.set_data([R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]])
+                        R.line.set_data([[newDat[:,0]],[newDat[:,1]]])
+                        R.line_centre.set_data([[R.OgLoc[0]+R.shift[R.Snapshot][0]],[R.OgLoc[1]+R.shift[R.Snapshot][1]]])
                         R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
                         R.points =  np.array(R.poly.xy)-np.array(R.loc)
+
+                        self.SpineArr[i].neck[OldSnapshot] = (L.poly.xy).tolist()
+                        L.poly.xy = self.SpineArr[i].neck[R.Snapshot]
+                        L.line.set_data(zip(*L.poly.xy))
+
                         if(self.actual_timestep>0):
                             R.line_centre.set_color('r')
                             R.line_centre.set_markerfacecolor('k')
@@ -2543,14 +2653,21 @@ class DataReadWindow(QWidget):
                             R.line_centre.set_color('gray')
                             R.line_centre.set_markerfacecolor('gray')
                     else:
+                        OldSnapshot = R.Snapshot
                         self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
                         R.Snapshot = self.actual_timestep
                         newDat = np.array(self.SpineArr[i].points[R.Snapshot])
                         R.poly.xy = newDat
-                        R.line.set_data(newDat[:,0],newDat[:,1])
+                        R.line.set_data([[newDat[:,0]],[newDat[:,1]]])
+
+                        self.SpineArr[i].neck[OldSnapshot] = (L.poly.xy).tolist()
+                        L.poly.xy = self.SpineArr[i].neck[R.Snapshot]
+                        L.line.set_data(zip(*L.poly.xy))
         except Exception as e:
            # Print the error message associated with the exception
-           pass
+            import traceback
+            tb = traceback.extract_tb(e.__traceback__)
+            print(f"Error on line {tb[-1].lineno}: {e}")
         self.mpl.update_plot(image)
         
     

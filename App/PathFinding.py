@@ -254,10 +254,6 @@ def medial_axis_path(
         find shortest path between two nodes and draw network with path in different color
         """
         node1, node2 = start[0] * len_x + start[1], end[0] * len_x + end[1]
-        path = nx.dijkstra_path(
-            G, node1, node2, weight="weight"
-        )  # shortest path as list of nodes
-        w = nx.path_weight(G, path, weight="weight")
 
         """
         for each node find distance to dendrite boundary
@@ -303,8 +299,6 @@ def medial_axis_path(
             x = path[ind] - len_x * y
             coords[ind] = x, y
 
-        #coords[:, 0] = gaussian_filter1d(coords[:, 0], mode="nearest", sigma=10)
-        #coords[:, 1] = gaussian_filter1d(coords[:, 1], mode="nearest", sigma=10)
 
         # calculate length of path in pixels
         length = GetLength(coords)

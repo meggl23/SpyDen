@@ -555,6 +555,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
     if(Mode=='Luminosity'):
         custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
             'Center dist to dend','Min, dist to Dend','Widths'] + 
+        ['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[0].neck_length))] +
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
@@ -569,7 +570,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
                                      str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)]
+                                     ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)] + [str(n) for n in s.neck_length]
+
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
                     row.extend(s.max[c])
@@ -578,8 +580,10 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.local_bg[c])
                     writer.writerow(row)   
     else:
+        from .MPL_Widget import debug_trace;debug_trace()
         custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
             'Center dist to dend','Min. dist to Dend'] + 
+        ['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[0].neck_length))] +
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
@@ -595,7 +599,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
                                      str(s.location-Lims),s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend]
+                                     ]+[str(d) for d in s.distance_to_Dend] + [str(n) for n in s.neck_length]
                     row.extend(s.area[c])
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
