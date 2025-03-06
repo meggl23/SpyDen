@@ -7,6 +7,7 @@ import json
 import copy
 from .Spine import Synapse
 import csv
+import cv2 as cv
 
 import traceback
 
@@ -19,6 +20,8 @@ from .PathFinding import (
     curvature_eval,
     GetAllpointsonPath
 )
+
+from scipy.ndimage import gaussian_filter1d, gaussian_filter
 
 def SpineShift(tiff_Arr_small):
 
@@ -55,7 +58,8 @@ def ROI_And_Neck(
     tol=3,
     SpineShift_flag = True,
     Mode = 'Both'):
-
+    
+    print(tol)
     SpineMinDir = None
     neck_path = []
 
@@ -99,18 +103,18 @@ def ROI_And_Neck(
     Orientation = np.arctan2(dy,dx)
     o_arr = np.asarray(other_pts)
 
+    neck_thresh = 0
     if(Mode=='Both'):
-        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc)
-        neck_path      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc,sigma=sigma,tol=tol,SpineShift_flag=SpineShift_flag)
+        neck_path,neck_thresh      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
     elif(Mode=='ROI'):
-        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc)
+        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc,sigma=sigma,tol=tol,SpineShift_flag=SpineShift_flag)
     else:
-        neck_path      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+        neck_path,neck_thresh      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
         xpert = []
         DendDist = [0,0,0]
 
-
-    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation,neck_path
+    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation,neck_path,neck_thresh
 
 def FindShape(
     tiff_Arr,
@@ -315,6 +319,7 @@ def FindNeck(SpineC,DendProj,image,DendArr):
             medial_axis, length = medial_axis_path(
                 mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
             success = True
+            neck_thresh = 2*np.mean(median)//(1.1**(k-1))
         except:
             k+=1
             if(k==50):
@@ -323,20 +328,66 @@ def FindNeck(SpineC,DendProj,image,DendArr):
                 medial_axis, length = medial_axis_path(
                     mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
                 success = True
+                neck_thresh = 0
 
     x, y = medial_axis[:, 0], medial_axis[:, 1]
-    Tx, Ty, Hx, Hy, T, H = curvature_polygon(x, y)
-    H = H / len(H)
-    sampling, _, _ = curvature_dependent_sampling(H, 100)
-    x, y = x[sampling], y[sampling]
-    curvature_sampled = np.array([x.T, y.T]).T
+    if((x == x[0]).all() or (y == y[0]).all()):
+        curvature_sampled = np.array([x[[0,len(x)//3,2*len(x)//3,-1]].T, y[[0,len(x)//3,2*len(x)//3,-1]].T]).T
+    else:
+        Tx, Ty, Hx, Hy, T, H = curvature_polygon(x, y)
+        H = H / len(H)
+        sampling, _, _ = curvature_dependent_sampling(H, 100)
+        x, y = x[sampling], y[sampling]
+        curvature_sampled = np.array([x.T, y.T]).T
 
     shifted_path = curvature_sampled+bbox_min[::-1]
 
     distances = np.array([np.min(np.linalg.norm(t-DendArr,axis=-1)) for t in shifted_path])
     cutoff = np.argmin(distances)
     
-    return shifted_path[:cutoff].tolist()
+    return shifted_path[:cutoff].tolist(),neck_thresh
+
+def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int = 10, width_factor: int=0.1):
+    from .MPL_Widget import debug_trace; debug_trace()
+    all_points = GetAllpointsonPath(np.round(neck_path).astype(int))
+
+    gaussian_x = gaussian_filter1d(
+        input=all_points[:, 1], mode="nearest", sigma=sigma
+    ).astype(int)
+    gaussian_y = gaussian_filter1d(
+        input=all_points[:, 0], mode="nearest", sigma=sigma
+    ).astype(int)
+    smoothed_all_pts = np.stack((gaussian_y, gaussian_x), axis=1)
+
+    median = medfilt2d(image, kernel_size=5)
+
+    median_thresh = median >= np.mean(median)
+
+    width_arr, degrees = getWidthnew(
+        median_thresh,
+        smoothed_all_pts,
+        sigma=sigma,
+        max_neighbours=max_neighbours,
+        width_factor=width_factor
+    )
+    mask = np.zeros(shape=image.shape)
+
+    for pdx, p in enumerate(smoothed_all_pts):
+        rr, cc = ellipse(
+            p[1],
+            p[0],
+            width_arr[pdx],
+            2,
+            rotation=degrees[pdx],
+            shape=image.shape,
+        )
+        mask[rr, cc] = 1
+    
+    gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
+    contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+
+    from .MPL_Widget import debug_trace; debug_trace()
+    return contours
 
 def SynDendDistance(loc, DendArr, loc0):
 
@@ -580,7 +631,6 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.local_bg[c])
                     writer.writerow(row)   
     else:
-        from .MPL_Widget import debug_trace;debug_trace()
         custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
             'Center dist to dend','Min. dist to Dend'] + 
         ['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[0].neck_length))] +

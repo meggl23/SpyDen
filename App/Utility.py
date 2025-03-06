@@ -409,7 +409,6 @@ def find_intersection(polyline, polygon):
     # If the polygon is not explicitly closed (first != last), Path will close it.
     polyline = np.array(polyline)
     polygon = np.array(polygon)
-
     if not np.array_equal(polygon[0], polygon[-1]):
         polygon = np.vstack([polygon, polygon[0]])
 

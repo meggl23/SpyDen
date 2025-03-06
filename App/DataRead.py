@@ -497,37 +497,49 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     # - if there is only one snap we can just directly compare the ROI with the spine neck
     # - if we have local-shifts then each timestep is a different spine neck that needs to computer
     # - if we have areas then we have additionally a separate area
+    NewNecks = []
     if(Snaps==1):
         for S in SynArr:
             Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
             new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
             S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+            NewNecks.append(new_neck)
     elif(SimVars.Mode=="Luminosity"):
         if(SimVars.frame.local_shift):
+            temp_neck = []
             for S in SynArr:
                 for n,s in zip(S.neck,S.shift):
                     Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
                     new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
                     S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
-        else:
+                    temp_neck.append(new_neck)
+                NewNecks.append(temp_neck)
+        else:   
             for S in SynArr:
                 Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
                 new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
                 S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                NewNecks.append(new_neck)
     elif(SimVars.Mode=="Area"):
         if(SimVars.frame.local_shift):
+            temp_neck = []
             for S in SynArr:
                 for n,s,p in zip(S.neck,S.shift,S.points):
                     Intersection_pt, seg_idx = find_intersection(n, np.array(p)+ [s[0],s[1]])
                     new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
                     S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                    temp_neck.append(new_neck)
+            NewNecks.append(temp_neck)
         else:
+            temp_neck = []
             for S in SynArr:
                 for n,p in zip(S.neck,S.points):
                     Intersection_pt, seg_idx = find_intersection(n, p)
                     new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
                     S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
-    return 0
+                    temp_neck.append(new_neck)
+            NewNecks.append(temp_neck)
+    return NewNecks
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
 

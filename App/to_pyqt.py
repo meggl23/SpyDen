@@ -746,7 +746,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,_,_ = ROI_And_Neck(
                 tf,
                 point,
                 medial_axis_Arr,
@@ -756,6 +756,7 @@ class DataReadWindow(QWidget):
                 sigma=self.sigma_val,
                 tol=self.tol_val,
                 SpineShift_flag = self.local_shift,
+                Mode = 'ROI'
                 )
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -765,8 +766,12 @@ class DataReadWindow(QWidget):
                 if(self.roi_interactor_list[index].loc is not None):
                     self.roi_interactor_list[index].points = np.array(pol.xy)-np.array(self.roi_interactor_list[index].loc)
                 self.roi_interactor_list[index].line.set_data(pol.xy[:, 0], pol.xy[:, 1])
+                OldNeck = self.SpineArr[index].neck
+                OldNeckthresh = self.SpineArr[index].neck_thresh
                 self.SpineArr[index] = Synapse(list(point),list(bgloc),pts=xpert,shift=shift,
-                    channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,DendDist = DendDist*self.SimVars.Unit,Orientation=Orientation)
+                    channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,DendDist = DendDist*self.SimVars.Unit,Orientation=Orientation,neck = OldNeck,
+                    neck_thresh = OldNeckthresh)
+                print(self.SpineArr[index].neck)
             else:
                 self.SpineArr[index].points = []
                 pt = self.SpineArr[index].location
@@ -776,7 +781,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[index].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
+                    xpert, _, bgloc,closest_Dend,DendDist,Orientation,_,_ = ROI_And_Neck(
                         tf[i],
                         np.array(self.SpineArr[index].location),
                         medial_axis_Arr,
@@ -784,7 +789,8 @@ class DataReadWindow(QWidget):
                         mean,
                         True,
                         sigma=self.sigma_val,
-                        tol=self.tol_val
+                        tol=self.tol_val,
+                        Mode = 'ROI'
                     )
                     self.SpineArr[index].points.append(xpert)
                     self.SpineArr[index].closest_Dend = closest_Dend
@@ -853,8 +859,17 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].widths = []
             self.SpineArr[i].neck_length = []
 
+        NewNecks = Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
+        for N,S in zip(NewNecks,self.SpineArr):
+            N = np.round(N).astype(int)
+            bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
+            bbmax = (min(np.max(N[:,1]) + 50, self.tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, self.tiff_Arr.shape[-1]))
+            N_shift = N-bbmin[::-1]
+            tiff_Arr_small = self.tiff_Arr[self.actual_timestep,self.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+            FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh)
+        print(NewNecks)
 
-        Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
+
         self.measure_spine_button.setChecked(False)
         MakeButtonActive(self.save_button)
         self.set_status_message.setText("Measuring ROI statistics")
@@ -1424,7 +1439,7 @@ class DataReadWindow(QWidget):
         self.line_interactor_list = []
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck,neck_thresh = ROI_And_Neck(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1441,8 +1456,9 @@ class DataReadWindow(QWidget):
                 self.mpl.axes.add_patch(pol)
                 if(self.local_shift and self.SimVars.multitime_flag):
                     neck_arr = []
+                    neck_t_arr = []
                     for i in range(self.SimVars.Snapshots):
-                        _, _, _,_,_,_,neck = ROI_And_Neck(
+                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             point+ np.array([shift[i][0],shift[i][1]]),
                             medial_axis_Arr,
@@ -1461,6 +1477,7 @@ class DataReadWindow(QWidget):
                                 crossing_index = np.where(inside)[0][0]
                                 neck = neck[:crossing_index]
                         neck_arr.append(neck)
+                        neck_t_arr.append(neck_thresh)
                     pol_line = Polygon(neck_arr[self.actual_timestep], fill=False, closed=False, animated=True)
                     self.mpl.axes.add_patch(pol_line)
                     self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
@@ -1472,6 +1489,7 @@ class DataReadWindow(QWidget):
                             crossing_index = np.where(inside)[0][0]
                             neck = neck[:crossing_index]
                     neck_arr = neck
+                    neck_t_arr = neck_thresh
                     pol_line = Polygon(neck_arr, fill=False, closed=False, animated=True)
                     self.mpl.axes.add_patch(pol_line)
                     self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
@@ -1480,10 +1498,9 @@ class DataReadWindow(QWidget):
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
-
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,
-                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation,neck = neck_arr))
+                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation,neck = neck_arr,neck_thresh = neck_t_arr))
                 
             else:
                 self.SpineArr.append(Synapse(list(point),[],pts=[],shift=[],channel=self.actual_channel,Syntype=flag))
@@ -1494,8 +1511,9 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 neck_arr = []
+                neck_t_arr = []
                 for i in range(self.SimVars.Snapshots):
-                    xpert, shift, radloc,closest_Dend,x,Orientation,_ = ROI_And_Neck(
+                    xpert, shift, radloc,closest_Dend,x,Orientation,_,_ = ROI_And_Neck(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1513,7 +1531,7 @@ class DataReadWindow(QWidget):
 
                     
                     if(self.local_shift):
-                        _, _, _,_,_,_,neck = ROI_And_Neck(
+                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             np.array(self.SpineArr[-1].location)+ np.array([self.SpineArr[-1].shift[i][0],self.SpineArr[-1].shift[i][1]]),
                             medial_axis_Arr,
@@ -1526,7 +1544,7 @@ class DataReadWindow(QWidget):
                             Mode = 'Neck'
                         )
                     else:
-                        _, _, _,_,_,_,neck = ROI_And_Neck(
+                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             np.array(self.SpineArr[-1].location),
                             medial_axis_Arr,
@@ -1545,11 +1563,13 @@ class DataReadWindow(QWidget):
                             crossing_index = np.where(inside)[0][0]
                             neck = neck[:crossing_index]
                     neck_arr.append(neck)
+                    neck_t_arr.append(neck_thresh)
                 pol_line = Polygon(neck_arr[self.actual_timestep], fill=False, closed=False, animated=True)
                 self.mpl.axes.add_patch(pol_line)
                 self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
 
                 self.SpineArr[-1].neck  = neck_arr
+                self.SpineArr[-1].neck_t_arr  = neck_t_arr
 
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1669,7 +1689,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck = ROI_And_Neck(
+                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,neck,neck_thresh = ROI_And_Neck(
                     tf,
                     point,
                     medial_axis_Arr,
@@ -1680,13 +1700,61 @@ class DataReadWindow(QWidget):
                     tol  = self.tol_val,
                     SpineShift_flag=self.local_shift,
                 )
+
+
                 polygon = np.array(xpert)
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift=shift))
+                if(not self.local_shift):
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                else:
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
+                        pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
+
+                if(self.local_shift and self.SimVars.multitime_flag):
+                    neck_arr = []
+                    neck_t_arr = []
+                    for i in range(self.SimVars.Snapshots):
+                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                            tf[i],
+                            point+ np.array([shift[i][0],shift[i][1]]),
+                            medial_axis_Arr,
+                            points,
+                            mean,
+                            True,
+                            sigma=self.sigma_val,
+                            tol  = self.tol_val,
+                            SpineShift_flag = False,
+                            Mode = 'Neck'
+                        )
+                        if(self.DendArr[closest_Dend].get_contours() is not None):
+                            cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
+                            inside = cp.contains_points(neck)
+                            if(inside.any()):
+                                crossing_index = np.where(inside)[0][0]
+                                neck = neck[:crossing_index]
+                        neck_arr.append(neck)
+                        neck_t_arr.append(neck_thresh)
+                    pol_line = Polygon(neck_arr[self.actual_timestep], fill=False, closed=False, animated=True)
+                    self.mpl.axes.add_patch(pol_line)
+                    self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+                else:
+                    if(self.DendArr[closest_Dend].get_contours() is not None):
+                        cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
+                        inside = cp.contains_points(neck)
+                        if(inside.any()):
+                            crossing_index = np.where(inside)[0][0]
+                            neck = neck[:crossing_index]
+                    neck_arr = neck
+                    neck_t_arr = neck_thresh
+                    pol_line = Polygon(neck_arr, fill=False, closed=False, animated=True)
+                    self.mpl.axes.add_patch(pol_line)
+                    self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+
                 self.SpineArr.append(Synapse(list(point),list(bgloc),pts=xpert,
                     shift=shift,channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,
-                    DendDist = DendDist*self.SimVars.Unit),Orientation = Orientation)
+                    DendDist = DendDist*self.SimVars.Unit,Orientation = Orientation,neck = neck_arr,neck_thresh = neck_t_arr))
+
             else:
                 self.SpineArr.append(Synapse(list(point),[],pts=[],shift=[],channel=self.actual_channel,Syntype=flag))
                 
@@ -1696,7 +1764,7 @@ class DataReadWindow(QWidget):
                             ]
                 self.SpineArr[-1].shift = SpineShift(tiff_Arr_small).T.astype(int).tolist()
                 for i in range(self.SimVars.Snapshots):
-                    xpert, _, radloc,closest_Dend,x,Orientation,neck = ROI_And_Neck(
+                    xpert, _, radloc,closest_Dend,x,Orientation,neck,neck_thresh = ROI_And_Neck(
                         tf[i],
                         np.array(self.SpineArr[-1].location),
                         medial_axis_Arr,
@@ -1704,7 +1772,7 @@ class DataReadWindow(QWidget):
                         mean,
                         True,
                         sigma=self.sigma_val,
-                        tol  = self.tol_val
+                        tol  = self.tol_val,
                     )
                     if(i==0):
                         self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
@@ -1712,11 +1780,54 @@ class DataReadWindow(QWidget):
                         self.SpineArr[-1].Orientation  = Orientation
                     self.SpineArr[-1].points.append(xpert)
 
-
+                    if(self.local_shift):
+                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                            tf[i],
+                            np.array(self.SpineArr[-1].location)+ np.array([self.SpineArr[-1].shift[i][0],self.SpineArr[-1].shift[i][1]]),
+                            medial_axis_Arr,
+                            points,
+                            mean,
+                            True,
+                            sigma=self.sigma_val,
+                            tol  = self.tol_val,
+                            SpineShift_flag = False,
+                            Mode = 'Neck'
+                        )
+                    else:
+                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                            tf[i],
+                            np.array(self.SpineArr[-1].location),
+                            medial_axis_Arr,
+                            points,
+                            mean,
+                            True,
+                            sigma=self.sigma_val,
+                            tol  = self.tol_val,
+                            SpineShift_flag = False,
+                            Mode = 'Neck'
+                        )
+                    if(self.DendArr[closest_Dend].get_contours() is not None):
+                        cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
+                        inside = cp.contains_points(neck)
+                        if(inside.any()):
+                            crossing_index = np.where(inside)[0][0]
+                            neck = neck[:crossing_index]
+                    self.SpineArr[-1].neck.append(neck_arr)
+                    self.SpineArr[-1].neck_thresh.append(neck_thresh)
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
-                self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, pol,shift=[[0,0]*self.SimVars.Snapshots]))
+                if(not self.local_shift):
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                else:
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
+                        pol,point,self.SpineArr[-1].shift,self.actual_timestep,self.SimVars.Snapshots))
+
+                pol_line = Polygon(neck_arr[self.actual_timestep], fill=False, closed=False, animated=True)
+                self.mpl.axes.add_patch(pol_line)
+                self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
+
+
 
             self.set_status_message.setText(self.set_status_message.text()+'.')
             QCoreApplication.processEvents()
@@ -2777,6 +2888,7 @@ class DataReadWindow(QWidget):
                 self.hide_stuff([self.channel_label,self.channel_slider,self.channel_counter])
             elif(flag==1):
                 self.SimVars.multitime_flag = False
+                self.local_shift_check.setChecked(False)
                 self.hide_stuff([self.timestep_label,self.timestep_slider,self.timestep_counter,self.local_shift_check,self.Dend_shift_check])
             elif(flag==2):
                 self.local_shift = False
