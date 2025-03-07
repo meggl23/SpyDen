@@ -39,6 +39,8 @@ class Synapse(object):
         self.neck = neck
         self.neck_thresh = neck_thresh
 
+        self.neck_contours = []
+
 class Spine_Marker:
 
     Epsilon = 10

@@ -59,7 +59,6 @@ def ROI_And_Neck(
     SpineShift_flag = True,
     Mode = 'Both'):
     
-    print(tol)
     SpineMinDir = None
     neck_path = []
 
@@ -344,11 +343,10 @@ def FindNeck(SpineC,DendProj,image,DendArr):
 
     distances = np.array([np.min(np.linalg.norm(t-DendArr,axis=-1)) for t in shifted_path])
     cutoff = np.argmin(distances)
-    
+
     return shifted_path[:cutoff].tolist(),neck_thresh
 
 def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int = 10, width_factor: int=0.1):
-    from .MPL_Widget import debug_trace; debug_trace()
     all_points = GetAllpointsonPath(np.round(neck_path).astype(int))
 
     gaussian_x = gaussian_filter1d(
@@ -360,8 +358,10 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
     smoothed_all_pts = np.stack((gaussian_y, gaussian_x), axis=1)
 
     median = medfilt2d(image, kernel_size=5)
-
-    median_thresh = median >= np.mean(median)
+    if(thresh > 0):
+        median_thresh = median >= thresh
+    else:
+        median_thresh = median >= np.mean(median)
 
     width_arr, degrees = getWidthnew(
         median_thresh,
@@ -372,12 +372,12 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
     )
     mask = np.zeros(shape=image.shape)
 
-    for pdx, p in enumerate(smoothed_all_pts):
+    for pdx, p in enumerate(smoothed_all_pts[1:]):
         rr, cc = ellipse(
             p[1],
             p[0],
             width_arr[pdx],
-            2,
+            0.1,
             rotation=degrees[pdx],
             shape=image.shape,
         )
@@ -385,9 +385,9 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
     
     gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
     contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+    
 
-    from .MPL_Widget import debug_trace; debug_trace()
-    return contours
+    return contours,smoothed_all_pts
 
 def SynDendDistance(loc, DendArr, loc0):
 

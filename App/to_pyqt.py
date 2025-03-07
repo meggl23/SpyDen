@@ -499,20 +499,6 @@ class DataReadWindow(QWidget):
         self.command_box.setFixedHeight(100)
         self.command_box.setToolTip('What you can do in your current mode')
 
-        # ============= dend width change slider ==================
-        self.dend_width_mult_label = QLabel("Dendritic Width Multiplication Factor")
-        self.grid.addWidget(self.dend_width_mult_label, 4, 8, 1, 1)
-        self.dend_width_mult_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
-        self.dend_width_mult_slider.setTickPosition(QSlider.TicksBelow)
-        self.grid.addWidget(self.dend_width_mult_slider, 4, 2, 1, 6)
-        self.dend_width_mult_slider.setMinimum(1)
-        self.dend_width_mult_slider.setMaximum(40)
-        self.dend_width_mult_slider.setValue(5)
-        self.dend_width_mult_slider.singleStep()
-        self.dend_width_mult_counter = QLabel(str(self.dend_width_mult_slider.value()))
-        self.grid.addWidget(self.dend_width_mult_counter, 4, 9, 1, 1)
-        self.hide_stuff([self.dend_width_mult_counter, self.dend_width_mult_slider, self.dend_width_mult_label])
-
         #============= threshold slider ==================
         self.thresh_label = QLabel("Threshold Value")
         self.grid.addWidget(self.thresh_label, 3, 8, 1, 1)
@@ -538,6 +524,20 @@ class DataReadWindow(QWidget):
         self.hide_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label])
 
         self.neighbour_slider.setToolTip('Number of pixels to take into account to do width smoothing')
+
+        # ============= dend width change slider ==================
+        self.dend_width_mult_label = QLabel("Dendritic Width Multiplication Factor")
+        self.grid.addWidget(self.dend_width_mult_label, 4, 8, 1, 1)
+        self.dend_width_mult_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.dend_width_mult_slider.setTickPosition(QSlider.TicksBelow)
+        self.grid.addWidget(self.dend_width_mult_slider, 4, 2, 1, 6)
+        self.dend_width_mult_slider.setMinimum(1)
+        self.dend_width_mult_slider.setMaximum(40)
+        self.dend_width_mult_slider.setValue(5)
+        self.dend_width_mult_slider.singleStep()
+        self.dend_width_mult_counter = QLabel(str(self.dend_width_mult_slider.value()))
+        self.grid.addWidget(self.dend_width_mult_counter, 4, 9, 1, 1)
+        self.hide_stuff([self.dend_width_mult_counter, self.dend_width_mult_slider, self.dend_width_mult_label])
 
         #============= ML confidence slider ==================
         self.ml_confidence_label = QLabel("ML Confidence")
@@ -572,7 +572,7 @@ class DataReadWindow(QWidget):
 
         self.tolerance_slider.setToolTip('Select tolerance for ROI generation - higher means larger ROIs')
 
-        #============= spine sigma slider ==================
+        #============= spine neck sigma slider ==================
         self.sigma_label = QLabel("Roi Sigma")
         self.grid.addWidget(self.sigma_label, 4, 8, 1, 1)
         self.sigma_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
@@ -589,6 +589,36 @@ class DataReadWindow(QWidget):
         self.hide_stuff([self.sigma_label,self.sigma_counter,self.sigma_slider])
 
         self.sigma_slider.setToolTip('Select σ value of the canny-edge detection used in the ROI algorithm - lower values means smaller ROIs')
+
+        #============= spine neck sigma slider ==================
+        self.spine_neck_sigma_label = QLabel("Neck Width Smoothness")
+        self.grid.addWidget(self.spine_neck_sigma_label, 3, 8, 1, 1)
+        self.spine_neck_sigma_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.spine_neck_sigma_slider.setTickPosition(QSlider.TicksBelow)
+        self.grid.addWidget(self.spine_neck_sigma_slider, 3, 2, 1, 6)
+        self.spine_neck_sigma_slider.setMinimum(1)
+        self.spine_neck_sigma_slider.setMaximum(10)
+        self.spine_neck_sigma_slider.setValue(6)
+        self.spine_neck_sigma_slider.singleStep()
+        self.spine_neck_sigma_counter = QLabel(str(self.spine_neck_sigma_slider.value()))
+        self.grid.addWidget(self.spine_neck_sigma_counter, 3, 9, 1, 1)
+        self.hide_stuff([self.spine_neck_sigma_counter,self.spine_neck_sigma_slider,self.spine_neck_sigma_label])
+
+        self.spine_neck_sigma_slider.setToolTip('Number of pixels to take into account to do width smoothing')
+
+        # ============= spine neck width change slider ==================
+        self.spine_neck_width_mult_label = QLabel("Neck Width Multiplication Factor")
+        self.grid.addWidget(self.spine_neck_width_mult_label, 4, 8, 1, 1)
+        self.spine_neck_width_mult_slider = ClickSlider(PyQt5.QtCore.Qt.Horizontal, self)
+        self.spine_neck_width_mult_slider.setTickPosition(QSlider.TicksBelow)
+        self.grid.addWidget(self.spine_neck_width_mult_slider, 4, 2, 1, 6)
+        self.spine_neck_width_mult_slider.setMinimum(1)
+        self.spine_neck_width_mult_slider.setMaximum(40)
+        self.spine_neck_width_mult_slider.setValue(5)
+        self.spine_neck_width_mult_slider.singleStep()
+        self.spine_neck_width_mult_counter = QLabel(str(self.spine_neck_width_mult_slider.value()))
+        self.grid.addWidget(self.spine_neck_width_mult_counter, 4, 9, 1, 1)
+        self.hide_stuff([self.spine_neck_width_mult_counter, self.spine_neck_width_mult_slider, self.spine_neck_width_mult_label])
 
         #============= Dendrite shifting button ==================
         self.Dend_shift_check = QCheckBox(self)
@@ -859,21 +889,55 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].widths = []
             self.SpineArr[i].neck_length = []
 
+
         NewNecks = Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
+
+        neck_factor ="{:.1f}".format(self.spine_neck_width_mult_slider.value()*0.1)
+        self.spine_neck_width_mult_counter.setText(neck_factor)
+        self.spine_neck_sigma_counter.setText(str(self.spine_neck_sigma_slider.value()))
+
+        try:
+            if hasattr(self,"ContourLines"):
+                for l in self.ContourLines:
+                    l.remove()
+                del self.ContourLines
+        except:
+            pass
+        self.ContourLines = []
+
         for N,S in zip(NewNecks,self.SpineArr):
-            N = np.round(N).astype(int)
-            bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
-            bbmax = (min(np.max(N[:,1]) + 50, self.tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, self.tiff_Arr.shape[-1]))
-            N_shift = N-bbmin[::-1]
-            tiff_Arr_small = self.tiff_Arr[self.actual_timestep,self.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
-            FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh)
-        print(NewNecks)
+            if((self.SimVars.Mode == "Luminosity" and self.local_shift) or (self.SimVars.Mode == "Area" and self.SimVars.multitime_flag)):
+                Contours = []
+                for i,n in enumerate(N):
+                    n = np.round(n).astype(int)
+                    bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
+                    bbmax = (min(np.max(n[:,1]) + 50, self.tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, self.tiff_Arr.shape[-1]))
+                    n_shift = n-bbmin[::-1]
+                    tiff_Arr_small = self.tiff_Arr[i,self.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+                    c,_ = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = self.spine_neck_sigma_slider.value(),width_factor = self.spine_neck_width_mult_slider.value()*0.1)
+                    contour = c[0] + bbmin[::-1]
+                    Contours.append(contour.squeeze())
+                S.neck_contours = Contours
+                line, = plt.plot(S.neck_contours[self.actual_timestep][:, 0], S.neck_contours[self.actual_timestep][:, 1], 'y')
+            else:
+                N = np.round(N).astype(int)
+                bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
+                bbmax = (min(np.max(N[:,1]) + 50, self.tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, self.tiff_Arr.shape[-1]))
+                N_shift = N-bbmin[::-1]
+                tiff_Arr_small = self.tiff_Arr[self.actual_timestep,self.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+                c,_ = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = self.spine_neck_sigma_slider.value(),width_factor = self.spine_neck_width_mult_slider.value()*0.1)
+                S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
+
+                line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
+            self.ContourLines.append(line)
+            self.mpl.canvas.draw()
 
 
         self.measure_spine_button.setChecked(False)
         MakeButtonActive(self.save_button)
         self.set_status_message.setText("Measuring ROI statistics")
         self.SpinesMeasured = True
+        self.show_stuff_coll(["MeasureROI"])
         return None
     
     def dend_measure(self,Dend,i,Dend_Dir):
@@ -1289,6 +1353,8 @@ class DataReadWindow(QWidget):
                   ("ML Confidence",self.ml_confidence_slider.value()),
                   ("ROI Tolerance",self.tolerance_slider.value()),
                   ("ROI Sigma",self.sigma_slider.value()),
+                  ("ROI Sigma",self.sigma_slider.value()),
+                  ("ROI Sigma",self.sigma_slider.value()),
                   ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
                   ("Somatic puncta threshold",self.puncta_soma_slider.value()),
                   ("MLLocation",self.NN_path),
@@ -1312,6 +1378,8 @@ class DataReadWindow(QWidget):
                   ("ML Confidence",self.ml_confidence_slider.value()),
                   ("ROI Tolerance",self.tolerance_slider.value()),
                   ("ROI Sigma",self.sigma_slider.value()),
+                  ("Neck Sigma",self.spine_neck_sigma_slider.value()),
+                  ("Neck width multiplier",self.spine_neck_width_mult_slider.value()),
                   ("Dendritic puncta threshold",self.puncta_dend_slider.value()),
                   ("Somatic puncta threshold",self.puncta_soma_slider.value()),
                   ("MLLocation",self.NN_path),
@@ -1569,7 +1637,7 @@ class DataReadWindow(QWidget):
                 self.line_interactor_list.append(LineInteractor(self.mpl.axes, self.mpl.canvas, pol_line,True,markerprops=['k','g',1.2]))
 
                 self.SpineArr[-1].neck  = neck_arr
-                self.SpineArr[-1].neck_t_arr  = neck_t_arr
+                self.SpineArr[-1].neck_thresh  = neck_t_arr
 
                 polygon = np.array(self.SpineArr[-1].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
@@ -1887,6 +1955,10 @@ class DataReadWindow(QWidget):
         if(hasattr(self,"roi_interactor_list_bg")):
             for R in self.roi_interactor_list_bg:
                 R.clear()
+        if(hasattr(self,"ContourLines")):
+            for l in self.ContourLines:
+                l.remove()
+            del self.ContourLines
         self.roi_interactor_list = []
         self.roi_interactor_list_bg = []
         try:
@@ -2057,6 +2129,13 @@ class DataReadWindow(QWidget):
                                 self.dend_width_mult_slider.setValue(value)
                                 dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
                                 self.dend_width_mult_counter.setText(dend_factor)
+                            elif(key=="Neck Sigma"):
+                                self.spine_neck_sigma_slider.setValue(value)
+                                self.spine_neck_sigma_counter.setText(str(value))
+                            elif(key=="Neck width multiplier"):
+                                self.spine_neck_width_mult_slider.setValue(value)
+                                neck_factor = "{:.1f}".format(0.1*value)
+                                self.spine_neck_width_mult_counter.setText(value)
             except Exception as e:
                 self.set_status_message.setText('There was a problem with the settings file')
                 if DevMode: print(e)
@@ -2070,6 +2149,8 @@ class DataReadWindow(QWidget):
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
                 self.dend_width_mult_slider.disconnect()
+                self.spine_neck_sigma_slider.disconnect()
+                self.spine_neck_width_mult_slider.disconnect()
                 self.Dend_shift_check.disconnect()
                 self.puncta_sigma_range_slider.disconnect()
                 self.analyze.disconnect()
@@ -2112,7 +2193,14 @@ class DataReadWindow(QWidget):
 
             self.dend_width_mult_slider.setValue(5)
             dend_factor = "{:.1f}".format(self.get_actual_multiple_factor())
-            self.dend_width_mult_counter.setText(str(5))
+            self.dend_width_mult_counter.setText(dend_factor)
+
+            self.spine_neck_sigma_slider.setValue(6)
+            self.spine_neck_sigma_counter.setText(str(6))
+
+            self.spine_neck_width_mult_slider.setValue(5)
+            neck_factor = "{:.1f}".format(0.5)
+            self.spine_neck_width_mult_counter.setText(neck_factor)
 
             self.neighbour_slider.valueChanged.connect(self.dendritic_width_eval)
             self.thresh_slider.valueChanged.connect(self.dend_thresh)
@@ -2124,6 +2212,8 @@ class DataReadWindow(QWidget):
             self.puncta_sigma_range_slider.valueChanged.connect(self.puncta_sigma_slider_update)
             self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
             self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
+            self.spine_neck_sigma_slider.valueChanged.connect((self.spine_measure))
+            self.spine_neck_width_mult_slider.valueChanged.connect((self.spine_measure))
             self.analyze.currentTextChanged.connect(self.on_analyze_changed)
             try:
                 self.SimVars.Unit = float(self.res.text())
@@ -2167,6 +2257,8 @@ class DataReadWindow(QWidget):
                 self.puncta_dend_slider.disconnect()
                 self.puncta_soma_slider.disconnect()
                 self.dend_width_mult_slider.disconnect()
+                self.spine_neck_width_mult_slider.disconnect()
+                self.spine_neck_sigma_slider.disconnect()
                 self.Dend_shift_check.disconnect()
                 self.puncta_sigma_range_slider.disconnect()
                 self.analyze.disconnect()
@@ -2230,6 +2322,8 @@ class DataReadWindow(QWidget):
             self.multiwindow_check.stateChanged.connect(lambda state: self.check_changed(state,0))
             self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
             self.dend_width_mult_slider.valueChanged.connect((self.dendritic_width_changer))
+            self.spine_neck_sigma_slider.valueChanged.connect((self.spine_measure))
+            self.spine_neck_width_mult_slider.valueChanged.connect((self.spine_measure))
             self.analyze.currentTextChanged.connect(self.on_analyze_changed)
             self.SimVars.Unit = scale
             # Get shifting of snapshots
@@ -2671,6 +2765,14 @@ class DataReadWindow(QWidget):
             self.thresh_slider.setValue(int(mean))
             self.thresh_slider.blockSignals(False)
 
+        try:
+            if(hasattr(self,"ContourLines") and (self.SimVars.Mode == "Luminosity" and self.local_shift) or (self.SimVars.Mode == "Area" and self.SimVars.multitime_flag)):
+                for i,l in enumerate(self.ContourLines):
+                    l.set_data(self.SpineArr[i].neck_contours[self.actual_timestep][:,0], self.SpineArr[i].neck_contours[self.actual_timestep][:,1])
+        except:
+            debug_trace
+            pass
+
         self.update_plot_handle(
             self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :])
         if(self.PunctaCalc):
@@ -2811,6 +2913,8 @@ class DataReadWindow(QWidget):
         self.hide_stuff([self.ml_confidence_label,self.ml_confidence_slider,self.confidence_counter ])
         self.hide_stuff([self.dend_width_mult_label, self.dend_width_mult_slider, self.dend_width_mult_counter])
         self.hide_stuff([self.local_shift_check])
+        self.hide_stuff([self.spine_neck_width_mult_label, self.spine_neck_width_mult_slider, self.spine_neck_width_mult_counter])
+        self.hide_stuff([self.spine_neck_sigma_label, self.spine_neck_sigma_slider, self.spine_neck_sigma_counter])
 
         for Name in Names:
             if(Name=="Puncta"):
@@ -2831,6 +2935,9 @@ class DataReadWindow(QWidget):
                                 self.tolerance_label,self.tolerance_counter,self.tolerance_slider])
                 if(self.SimVars.multitime_flag):
                     self.show_stuff([self.local_shift_check])
+            if(Name=="MeasureROI"):
+                self.show_stuff([self.spine_neck_width_mult_label,self.spine_neck_width_mult_slider,self.spine_neck_width_mult_counter,
+                                self.spine_neck_sigma_label,self.spine_neck_sigma_slider,self.spine_neck_sigma_counter])
 
     def hide_stuff(self,stuff) -> None:
         """Hides the specified GUI elements.
