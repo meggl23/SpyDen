@@ -15,6 +15,7 @@ from .SynapseFuncs import *
 import json
 
 from PyQt5.QtCore import QCoreApplication
+from matplotlib.path import Path
 
 
 def Measure_BG(tiff_Arr_m, FileLen, z_type):
@@ -539,7 +540,68 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
                     temp_neck.append(new_neck)
             NewNecks.append(temp_neck)
-    return NewNecks
+
+    neck_factor ="{:.1f}".format(frame.spine_neck_width_mult_slider.value()*0.1)
+    frame.spine_neck_width_mult_counter.setText(neck_factor)
+    frame.spine_neck_sigma_counter.setText(str(frame.spine_neck_sigma_slider.value()))
+
+    try:
+        if hasattr(frame,"ContourLines"):
+            for l in frame.ContourLines:
+                l.remove()
+            del frame.ContourLines
+    except:
+        pass
+    frame.ContourLines = []
+
+    for N,S in zip(NewNecks,SynArr):
+        if((SimVars.Mode == "Luminosity" and frame.local_shift) or (SimVars.Mode == "Area" and SimVars.multitime_flag)):
+            Contours = []
+            AvgWidth = []
+            AvgLum   = []
+            for i,n in enumerate(N):
+                n = np.round(n).astype(int)
+                bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
+                bbmax = (min(np.max(n[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, tiff_Arr.shape[-1]))
+                n_shift = n-bbmin[::-1]
+                tiff_Arr_small = tiff_Arr[i,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+                c,w = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
+                contour = c[0] + bbmin[::-1]
+                AvgWidth.append(w*SimVars.Unit)
+                Contours.append(contour.squeeze())
+            S.neck_contours = Contours
+            S.neck_mean  = [Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]
+            S.neck_width = AvgWidth
+            line, = plt.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
+        else:
+            N = np.round(N).astype(int)
+            bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
+            bbmax = (min(np.max(N[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, tiff_Arr.shape[-1]))
+            N_shift = N-bbmin[::-1]
+            tiff_Arr_small = tiff_Arr[frame.actual_timestep,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+            c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
+            S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
+            S.neck_width    = [w*SimVars.Unit]
+            if(SimVars.multitime_flag):
+                S.neck_mean  = [Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]
+            else:
+                S.neck_mean  = Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])
+            line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
+        frame.ContourLines.append(line)
+
+def Luminosity_from_contour(contour,image):
+
+    height,width = image.shape[1:]
+    x, y = np.meshgrid(np.arange(width), np.arange(height))
+    points = np.vstack((x.flatten(), y.flatten())).T
+
+    path_contour = Path(contour)
+
+    mask_flat = path_contour.contains_points(points)
+    mask = mask_flat.reshape((height, width))
+
+    return image[:,mask].mean(axis=-1).T.tolist()
+
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
 

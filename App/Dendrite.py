@@ -21,6 +21,7 @@ import math
 import json
 
 import roifile as rf
+from scipy.ndimage import distance_transform_edt
 
 class Dendrite:
     """this class holds all the params for the dendrite like tif_arr"""
@@ -197,7 +198,6 @@ class Dendrite:
             for j in range(Chans):
                 self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
                 self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
-        self.dend_stat[pdx, 2] = width_arr[pdx]
 
         return mask
 
@@ -206,7 +206,6 @@ class Dendrite:
 
     def get_dendritic_surface_matrix(self) -> np.ndarray:
         return self.dendritic_surface_matrix
-
 
 class DendriteMeasurement:
     """this class handles the communication between the gui and the data calculation classes

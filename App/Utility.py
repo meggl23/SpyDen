@@ -205,7 +205,7 @@ def RunNN(Simvars, DendArr, tiff_Arr):
     return pPoints, score
 
 
-def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
+def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor = 1):
     """
     Calculates the width of the dendrite along the provided points.
 
@@ -224,7 +224,6 @@ def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
     edges1 = feature.canny(img, sigma=sigma)
 
 
-    i_img = np.zeros(img.shape)
     width_arr = np.zeros(all_ps.shape[0])
     degrees = np.zeros(all_ps.shape[0])
     for dxd, d in enumerate(all_ps[1:]):
@@ -244,17 +243,6 @@ def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
             0,
             max_neighbours=max_neighbours,
         )
-
-        rr, cc = ellipse(
-            all_ps[dxd][1],
-            all_ps[dxd][0],
-            width_arr[dxd],
-            4,
-            rotation=degrees[dxd],
-            shape=img.shape,
-        )
-
-        i_img[rr, cc] = edges1[rr, cc]
     ########################## try to remove abrupt changes
     for i in range(len(width_arr) - 1):
         if width_arr[i + 1] > width_arr[i] + max_neighbours:

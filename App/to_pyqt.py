@@ -890,49 +890,10 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].neck_length = []
 
 
-        NewNecks = Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
-
-        neck_factor ="{:.1f}".format(self.spine_neck_width_mult_slider.value()*0.1)
-        self.spine_neck_width_mult_counter.setText(neck_factor)
-        self.spine_neck_sigma_counter.setText(str(self.spine_neck_sigma_slider.value()))
-
-        try:
-            if hasattr(self,"ContourLines"):
-                for l in self.ContourLines:
-                    l.remove()
-                del self.ContourLines
-        except:
-            pass
-        self.ContourLines = []
-
-        for N,S in zip(NewNecks,self.SpineArr):
-            if((self.SimVars.Mode == "Luminosity" and self.local_shift) or (self.SimVars.Mode == "Area" and self.SimVars.multitime_flag)):
-                Contours = []
-                for i,n in enumerate(N):
-                    n = np.round(n).astype(int)
-                    bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
-                    bbmax = (min(np.max(n[:,1]) + 50, self.tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, self.tiff_Arr.shape[-1]))
-                    n_shift = n-bbmin[::-1]
-                    tiff_Arr_small = self.tiff_Arr[i,self.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
-                    c,_ = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = self.spine_neck_sigma_slider.value(),width_factor = self.spine_neck_width_mult_slider.value()*0.1)
-                    contour = c[0] + bbmin[::-1]
-                    Contours.append(contour.squeeze())
-                S.neck_contours = Contours
-                line, = plt.plot(S.neck_contours[self.actual_timestep][:, 0], S.neck_contours[self.actual_timestep][:, 1], 'y')
-            else:
-                N = np.round(N).astype(int)
-                bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
-                bbmax = (min(np.max(N[:,1]) + 50, self.tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, self.tiff_Arr.shape[-1]))
-                N_shift = N-bbmin[::-1]
-                tiff_Arr_small = self.tiff_Arr[self.actual_timestep,self.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
-                c,_ = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = self.spine_neck_sigma_slider.value(),width_factor = self.spine_neck_width_mult_slider.value()*0.1)
-                S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
-
-                line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
-            self.ContourLines.append(line)
-            self.mpl.canvas.draw()
+        Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
 
 
+        self.mpl.canvas.draw()
         self.measure_spine_button.setChecked(False)
         MakeButtonActive(self.save_button)
         self.set_status_message.setText("Measuring ROI statistics")
@@ -2615,6 +2576,7 @@ class DataReadWindow(QWidget):
         self.set_status_message.setText('Width calculation complete')
         QCoreApplication.processEvents()
         self.SimVars.frame.set_status_message.repaint()
+
     def dendritic_width_changer(self) -> None:
         """
         function that multiplies the calculated dendrite segmentation by the correct
@@ -2652,7 +2614,6 @@ class DataReadWindow(QWidget):
             gaussian_mask = (gaussian_filter(input=mask, sigma=self.neighbour_slider.value()) >= np.mean(mask)).astype(np.uint8)
             D.contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
             D.dendritic_surface_matrix= gaussian_mask
-
             polygon = np.array(D.contours[0][:, 0, :])
             pol = Polygon(D.contours[0][:, 0, :], fill=False, closed=True,color='y')
             self.mpl.axes.add_patch(pol)

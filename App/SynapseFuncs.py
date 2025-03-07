@@ -22,6 +22,7 @@ from .PathFinding import (
 )
 
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
+from scipy.ndimage import distance_transform_edt
 
 def SpineShift(tiff_Arr_small):
 
@@ -385,9 +386,24 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
     
     gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
     contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+
+    # Compute the distance transform
+    dist_transform = distance_transform_edt(gaussian_mask)
+
+    # For each point along your centerline (smoothed_all_pts), sample the distance
+    widths = []
+    for p in smoothed_all_pts:
+        y, x = p  # note: p is (y, x)
+        # Make sure indices are within bounds
+        if 0 <= y < dist_transform.shape[0] and 0 <= x < dist_transform.shape[1]:
+            # The width at this point is approximately twice the distance to the edge
+            widths.append(2 * dist_transform[y, x])
+
+    # Now you can compute the median or mean width
+    final_width = np.mean(widths) if widths else None
     
 
-    return contours,smoothed_all_pts
+    return contours,final_width
 
 def SynDendDistance(loc, DendArr, loc0):
 
@@ -453,8 +469,10 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
     Function:
             Save list of spines as json file
     """
-
     modifiedSynArr = copy.deepcopy(SynArr)
+    for S in modifiedSynArr:
+        if hasattr(S, 'neck_contours'):
+            delattr(S, 'neck_contours')
     if(len(xLims[0])==0):
         Lims = np.array([0,0])
     else:
@@ -507,9 +525,9 @@ def ReadSynDict(Dir, SimVars):
     unit   = SimVars.Unit
     Mode   = SimVars.Mode
     nSnaps = SimVars.Snapshots
-    NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation','neck']
+    NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation','neck', 'neck_thresh']
 
-    AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'DendDist' : [0,0,0],'Orientation' : 0}
+    AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'DendDist' : [0,0,0],'Orientation' : 0,'neck' : [], 'neck_thresh' : 0}
 
     if(len(SimVars.xLims)==0):
         xLim = 0
@@ -555,7 +573,8 @@ def ReadSynDict(Dir, SimVars):
                         closest_Dend=AppliedVals["closest_Dend"],
                         DendDist = AppliedVals["distance_to_Dend"],
                         Orientation = AppliedVals["Orientation"],
-                        neck       = AppliedVals["neck"]
+                        neck       = AppliedVals["neck"],
+                        neck_thresh       = AppliedVals["neck_thresh"]
 
                     )
                 )
@@ -576,7 +595,8 @@ def ReadSynDict(Dir, SimVars):
                         closest_Dend=AppliedVals["closest_Dend"],
                         DendDist = AppliedVals["distance_to_Dend"],
                         Orientation = AppliedVals["Orientation"],
-                        neck       = AppliedVals["neck"]
+                        neck       = AppliedVals["neck"],
+                        neck_thresh       = AppliedVals["neck_thresh"]
                     )
                 )
                 SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
@@ -607,12 +627,14 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
             'Center dist to dend','Min, dist to Dend','Widths'] + 
         ['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[0].neck_length))] +
+        ['Timestep '+ str(i+1) +' (neck width)' for i in range(len(Spine_Arr[0].neck_width))] +
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] +
-        ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)])
+        ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)] + 
+        ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]) 
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_l_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
@@ -621,7 +643,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
                                      str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)] + [str(n) for n in s.neck_length]
+                                     ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)] + [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
+                                     
 
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
@@ -629,18 +652,21 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.RawIntDen[c])
                     row.extend(s.IntDen[c])
                     row.extend(s.local_bg[c])
+                    row.extend(s.neck_mean[c])
                     writer.writerow(row)   
     else:
         custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
             'Center dist to dend','Min. dist to Dend'] + 
         ['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[0].neck_length))] +
+        ['Timestep '+ str(i+1) +' (neck width)' for i in range(len(Spine_Arr[0].neck_width))] +
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
-        ['Timestep '+ str(i) +' (widths)' for i in range(1,nSnaps+1)])
+        ['Timestep '+ str(i) +' (widths)' for i in range(1,nSnaps+1)] +
+        ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]) 
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
@@ -649,7 +675,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                 for i,s in enumerate(Spine_Arr):
                     row = ['Spine: '+str(i),s.type,
                                      str(s.location-Lims),s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend] + [str(n) for n in s.neck_length]
+                                     ]+[str(d) for d in s.distance_to_Dend] + [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
                     row.extend(s.area[c])
                     row.extend(s.mean[c])
                     row.extend(s.min[c])
@@ -657,6 +683,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                     row.extend(s.RawIntDen[c])
                     row.extend(s.IntDen[c])
                     row.extend([str(w) for w in s.widths])
+                    row.extend(s.neck_mean[c])
                     writer.writerow(row)   
 
 def SpineSave_imj(Dir,Spine_Arr):
@@ -673,3 +700,13 @@ def SpineSave_imj(Dir,Spine_Arr):
             roi = rf.ImagejRoi.frompoints(pts)
             roi.roitype = rf.ROI_TYPE.POLYGON
             roi.tofile(Dir2+'Spine_'+str(i)+'.roi')
+        necks = S.neck_contours
+        if(len(necks[0])>2):
+            for j,p in enumerate(necks):
+                roi = rf.ImagejRoi.frompoints(p)
+                roi.roitype = rf.ROI_TYPE.POLYGON
+                roi.tofile(Dir2+'Spine_neck_'+str(i)+'_t'+str(j)+'.roi')
+        else:
+            roi = rf.ImagejRoi.frompoints(necks)
+            roi.roitype = rf.ROI_TYPE.POLYGON
+            roi.tofile(Dir2+'Spine_neck_'+str(i)+'.roi')
