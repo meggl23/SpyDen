@@ -204,7 +204,7 @@ def GetAllpointsonPath(xys):
 
 
 def medial_axis_path(
-    mesh: np.ndarray, start: np.ndarray, end: np.ndarray, scale=1
+    mesh: np.ndarray, start: np.ndarray, end: np.ndarray, scale=1,verbose = False
 ) -> tuple[np.ndarray, float]:
     """
     converts image to graph module networkx, computes shortest path between two points where
@@ -304,7 +304,7 @@ def medial_axis_path(
         length = GetLength(coords)
         return coords, length * scale
     else:
-        print("points were not eligible, change threshold and start again!")
+        if verbose: print("points were not eligible, change threshold and start again!")
 
 def GetLength(coords):
     length = 0

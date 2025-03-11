@@ -198,6 +198,7 @@ class Dendrite:
             for j in range(Chans):
                 self.dend_lumin[pdx,i,j] = self.tiff_arr[i,j,p[1],p[0]]
                 self.dend_lumin_ell[pdx,i,j] = (self.tiff_arr[i,j]*mask).sum()/np.sum(mask)
+        self.dend_stat[pdx, 2] = width_arr[pdx]
 
         return mask
 

@@ -11,6 +11,7 @@ from .Spine    import *
 from .Dendrite import *
 from .PathFinding import GetLength
 from .SynapseFuncs import *
+from .MPL_Widget import *
 
 import json
 
@@ -442,7 +443,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     else:
         Chans = 1
     if(Chans>1):
-        if(SimVars.Mode=="Luminosity" or Snaps==1):
+        if(SimVars.Mode=="Luminosity"):
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 for i in range(SimVars.Channels):
@@ -454,21 +455,22 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.mean.append(Mean)
                     S.local_bg.append(local_bg)
                 S.area.append(Area[0])
-                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = 1)
 
         else:
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
-                Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
-                S.max.append(Max)
-                S.min.append(Mean)
-                S.RawIntDen.append(RawIntDen)
-                S.IntDen.append(IntDen)
-                S.mean.append(Mean)
-                S.area.append(Area)
-                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
+                for i in range(SimVars.Channels):
+                    Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
+                    S.max.append(Max)
+                    S.min.append(Min)
+                    S.RawIntDen.append(RawIntDen)
+                    S.IntDen.append(IntDen)
+                    S.mean.append(Mean)
+                    S.area.append(Area)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = Snaps)
     else:
-        if(SimVars.Mode=="Luminosity" or Snaps==1):
+        if(SimVars.Mode=="Luminosity"):
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 Mean,Area,Max,Min,RawIntDen,IntDen,local_bg = MeasureShape_and_BG(S, tiff_Arr[:,SimVars.frame.actual_channel,:,:], SimVars,Snaps)
@@ -479,18 +481,18 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.mean.append(Mean)
                 S.local_bg.append(local_bg)
                 S.area.append(Area[0])
-                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = 1)
         else:
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,SimVars.frame.actual_channel,:,:], SimVars,Snaps)
                 S.max.append(Max)
-                S.min.append(Mean)
+                S.min.append(Min)
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
                 S.area.append(Area)
-                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = Snaps)
 
 
 
@@ -501,45 +503,90 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     NewNecks = []
     if(Snaps==1):
         for S in SynArr:
-            Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
-            new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
-            S.neck_length = [GetLength(new_neck)*SimVars.Unit]
-            NewNecks.append(new_neck)
-    elif(SimVars.Mode=="Luminosity"):
-        if(SimVars.frame.local_shift):
-            temp_neck = []
-            for S in SynArr:
-                for n,s in zip(S.neck,S.shift):
-                    Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
-                    new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
-                    S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
-                    temp_neck.append(new_neck)
-                NewNecks.append(temp_neck)
-        else:   
-            for S in SynArr:
-                Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
-                new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
+            if(S.type < 2):
+                try:
+                    if(np.array(S.neck).ndim>2):
+                        Intersection_pt, seg_idx = find_intersection(S.neck[0], S.points[0])
+                        new_neck =np.vstack([Intersection_pt, S.neck[0][seg_idx+1:]])[np.newaxis,:]
+                    else:
+                        Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
+                        new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])[np.newaxis,:]
+                except:
+                    new_neck = np.array(S.neck)
+
+
                 S.neck_length = [GetLength(new_neck)*SimVars.Unit]
                 NewNecks.append(new_neck)
+            else:
+                S.neck_length = [0]
+                NewNecks.append([])
+    elif(SimVars.Mode=="Luminosity"):
+        if(SimVars.frame.local_shift):
+            
+            for S in SynArr:
+                if(S.type < 2):
+                    nn = []
+                    for n,s in zip(S.neck,S.shift):
+                        try:
+                            Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
+                            new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                        except:
+                            new_neck = np.array(n) 
+                        S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                        nn.append(new_neck)
+
+                    NewNecks.append(nn)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
+        else:   
+            for S in SynArr:
+                if(S.type < 2):
+                    try:
+                        Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
+                        new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
+                    except:
+                        new_neck = np.array(S.neck)
+                    S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                    NewNecks.append(new_neck)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
     elif(SimVars.Mode=="Area"):
         if(SimVars.frame.local_shift):
-            temp_neck = []
             for S in SynArr:
-                for n,s,p in zip(S.neck,S.shift,S.points):
-                    Intersection_pt, seg_idx = find_intersection(n, np.array(p)+ [s[0],s[1]])
-                    new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
-                    S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
-                    temp_neck.append(new_neck)
-            NewNecks.append(temp_neck)
+                if(S.type < 2):
+                    nn = []
+                    for n,s in zip(S.neck,S.shift):
+                        try:
+                            Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
+                            new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                        except:
+                            new_neck = np.array(n) 
+                        S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                        nn.append(new_neck)
+
+                    NewNecks.append(nn)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
         else:
-            temp_neck = []
             for S in SynArr:
-                for n,p in zip(S.neck,S.points):
-                    Intersection_pt, seg_idx = find_intersection(n, p)
-                    new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
-                    S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
-                    temp_neck.append(new_neck)
-            NewNecks.append(temp_neck)
+                nn = []
+                if(S.type < 2):
+                    for n,p in zip(S.neck,S.points):
+                        try:
+                            Intersection_pt, seg_idx = find_intersection(n, p)
+                            new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                        except:
+                            new_neck = np.array(n)
+                        S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                        nn.append(new_neck)
+                    NewNecks.append(nn)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
+
 
     neck_factor ="{:.1f}".format(frame.spine_neck_width_mult_slider.value()*0.1)
     frame.spine_neck_width_mult_counter.setText(neck_factor)
@@ -548,47 +595,61 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     try:
         if hasattr(frame,"ContourLines"):
             for l in frame.ContourLines:
-                l.remove()
+                try:
+                    l.remove()
+                except:
+                    pass
             del frame.ContourLines
-    except:
+    except Exception as e:
         pass
-    frame.ContourLines = []
 
+    frame.ContourLines = []
     for N,S in zip(NewNecks,SynArr):
         if((SimVars.Mode == "Luminosity" and frame.local_shift) or (SimVars.Mode == "Area" and SimVars.multitime_flag)):
-            Contours = []
-            AvgWidth = []
-            AvgLum   = []
-            for i,n in enumerate(N):
-                n = np.round(n).astype(int)
-                bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
-                bbmax = (min(np.max(n[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, tiff_Arr.shape[-1]))
-                n_shift = n-bbmin[::-1]
-                tiff_Arr_small = tiff_Arr[i,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
-                c,w = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
-                contour = c[0] + bbmin[::-1]
-                AvgWidth.append(w*SimVars.Unit)
-                Contours.append(contour.squeeze())
-            S.neck_contours = Contours
-            S.neck_mean  = [Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]
-            S.neck_width = AvgWidth
-            line, = plt.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
-        else:
-            N = np.round(N).astype(int)
-            bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
-            bbmax = (min(np.max(N[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, tiff_Arr.shape[-1]))
-            N_shift = N-bbmin[::-1]
-            tiff_Arr_small = tiff_Arr[frame.actual_timestep,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
-            c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
-            S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
-            S.neck_width    = [w*SimVars.Unit]
-            if(SimVars.multitime_flag):
-                S.neck_mean  = [Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]
+            if(S.type < 2):
+                Contours = []
+                AvgWidth = []
+                AvgLum   = []
+                for i,n in enumerate(N):
+                    n = np.round(n).astype(int)
+                    bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
+                    bbmax = (min(np.max(n[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, tiff_Arr.shape[-1]))
+                    n_shift = n-bbmin[::-1]
+                    tiff_Arr_small = tiff_Arr[i,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+                    c,w = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
+                    contour = c[0] + bbmin[::-1]
+                    AvgWidth.append(w*SimVars.Unit)
+                    Contours.append(contour.squeeze())
+                S.neck_contours = Contours
+                S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
+                S.neck_width = AvgWidth
+                line, = plt.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
+                frame.ContourLines.append(line)
             else:
-                S.neck_mean  = Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])
-            line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
-        frame.ContourLines.append(line)
+                S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                frame.ContourLines.append([])
+        else:
+            if(S.type < 2):
+                N = np.round(N).astype(int)
+                if(N.ndim > 2):
+                    N = N[0]
+                bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
+                bbmax = (min(np.max(N[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, tiff_Arr.shape[-1]))
+                N_shift = N-bbmin[::-1]
+                tiff_Arr_small = tiff_Arr[frame.actual_timestep,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
 
+                c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
+                S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
+                S.neck_width    = [w*SimVars.Unit]
+                if(SimVars.multitime_flag):
+                    S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]).T.tolist()
+                else:
+                    S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])]).T.tolist()
+                line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
+                frame.ContourLines.append(line)
+            else:
+                S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                frame.ContourLines.append([])
 def Luminosity_from_contour(contour,image):
 
     height,width = image.shape[1:]
@@ -599,8 +660,7 @@ def Luminosity_from_contour(contour,image):
 
     mask_flat = path_contour.contains_points(points)
     mask = mask_flat.reshape((height, width))
-
-    return image[:,mask].mean(axis=-1).T.tolist()
+    return image[:,mask].mean(axis=-1)
 
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
@@ -624,12 +684,42 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
     Min  = []
     RawIntDen = []
     IntDen = []
-    for i in range(Snapshots):
-        try:
-            SynL = np.array(SynA[i]) + S.shift[i]
-        except:
-            SynL = np.array(SynA[i])
+    if(np.array(SynA).ndim == 3):
+        for i in range(Snapshots):
+            try:
+                SynL = np.array(SynA[i]) + S.shift[i]
+            except:
+                SynL = np.array(SynA[i])
+            SynL[:,0] = np.clip(SynL[:,0],0,tiff_Arr.shape[-1]-1)
+            SynL[:,1] = np.clip(SynL[:,1],0,tiff_Arr.shape[-2]-1)
+            
+            if SynL.ndim == 2:
+                mask = np.zeros(shape=tiff_Arr.shape[-2:], dtype=np.uint8)
+                c = SynL[:, 1]
+                r = SynL[:, 0]
+                rr, cc = polygon(r, c)
+                mask[cc, rr] = 1
+                props = regionprops(mask.astype(int))
+                try:
+                    roi  = tiff_Arr[i].astype(np.float64)
+                    roi[np.where(mask == 0)] = math.nan
+                    area_pix = np.sum(mask)
+                    area.append(int(area_pix) * SimVars.Unit**2)
+                    Max.append(int(np.nanmax(roi)))
+                    Min.append(int(np.nanmin(roi)))
+                    RawIntDen.append(int(np.nansum(roi)))
+                    IntDen.append(np.nansum(roi) * SimVars.Unit**2)
+                    Mean.append(np.nanmean(roi))
 
+                except Exception as ex:
+                    area.append(math.nan)
+                    Mean.append(math.nan)
+                    Max.append(math.nan)
+                    Min.append(math.nan)
+                    RawIntDen.append(math.nan)
+                    IntDen.append(math.nan)
+    else:
+        SynL = np.array(SynA)
         SynL[:,0] = np.clip(SynL[:,0],0,tiff_Arr.shape[-1]-1)
         SynL[:,1] = np.clip(SynL[:,1],0,tiff_Arr.shape[-2]-1)
         
@@ -658,6 +748,8 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
                 Min.append(math.nan)
                 RawIntDen.append(math.nan)
                 IntDen.append(math.nan)
+
+
 
     return Mean,area,Max,Min,RawIntDen,IntDen
 
@@ -736,7 +828,7 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
 
     return Mean,area,Max,Min,RawIntDen,IntDen,local_bg
 
-def SpineBoundingBox(S,Unit,Mode):
+def SpineBoundingBox(S,Unit,Mode,Snaps):
     """
     Rotate coordinates (x, y) by angle `theta` (radians).
     (x, y) can be arrays. 
@@ -747,7 +839,7 @@ def SpineBoundingBox(S,Unit,Mode):
     cos_t = np.cos(-S.Orientation)
     sin_t = np.sin(-S.Orientation)
     
-    if(Mode=="Luminosity"):
+    if(Snaps == 1):
         # Apply the rotation
         x_r = cos_t * np.array(S.points)[:,0] - sin_t * np.array(S.points)[:,1]
         y_r = sin_t * np.array(S.points)[:,0] + cos_t * np.array(S.points)[:,1]
@@ -756,7 +848,7 @@ def SpineBoundingBox(S,Unit,Mode):
         ymin, ymax = y_r.min(), y_r.max()
         
         S.widths.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
-    elif(Mode=="Area"):
+    else:
         for pts in S.points:
                 # Apply the rotation
                 x_r = cos_t * np.array(pts)[:,0] - sin_t * np.array(pts)[:,1]

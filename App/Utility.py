@@ -247,8 +247,11 @@ def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor = 1):
     for i in range(len(width_arr) - 1):
         if width_arr[i + 1] > width_arr[i] + max_neighbours:
             width_arr[i + 1] = width_arr[i]
-
-    width_arr[-1] = width_arr[-2]
+    try:
+        width_arr[-1] = width_arr[-2]
+    except Exception as e:
+       # Print the error message associated with the exception
+        pass
     ##########################
     reverted = np.flip(width_arr, axis=0)
     for i in range(len(reverted) - 1):
@@ -565,27 +568,34 @@ def averager(arr: np.array, n: int) -> tuple[np.array, np.array]:
             averages.append(res)
         return np.array(averages), boarders
 
-
-def curvature_dependent_sampling(arr: np.array, pixels_per_intervall: int) -> np.array:
+def curvature_dependent_sampling(arr: np.array, pixels_per_intervall: int, min_points: int = 10) -> np.array:
     """
-    function to calculate the points for piecewise linear approximation of the medial axis
-    to reduce the medial axis path to make it presentable in the GUI
-    high curvature means high sampling and vice versa
-    :param arr: curvature per pixel of dendrite path
-    :param pixels_per_intervall: size of interval for average
-    :return: indices of the curvature sampled points
+    Calculate points for a piecewise linear approximation of the medial axis
+    based on curvature-dependent sampling. High curvature regions will have more sampling.
+    
+    :param arr: Curvature per pixel along the dendrite path.
+    :param pixels_per_intervall: Interval size for averaging.
+    :param min_points: Minimum number of points to guarantee in the final sampling.
+    :return: A tuple (sampling, boarders, aver) where:
+             - sampling: indices of the sampled points,
+             - boarders: interval borders from the averaging,
+             - aver: the averaged curvature values.
     """
-    aver, boarders = averager(arr, pixels_per_intervall)  # sub averaging
-    res = list(
-        map(curvature_eval, aver)
-    )  # evaluate mean curvature to get number of points in a sample
+    aver, boarders = averager(arr, pixels_per_intervall)  # sub-averaging
+    res = list(map(curvature_eval, aver))  # evaluate curvature to get number of points per sample
 
     sampling = np.array([])
     for i in range(len(aver)):
+        # For each interval, generate points based on the computed number plus one.
         intervall = np.linspace(boarders[i], boarders[i + 1], res[i] + 1)
+        # Exclude the last point to avoid duplicates (except for the final interval)
         sampling = np.append(sampling, intervall[:-2])
     sampling = np.append(sampling, boarders[-1])
     sampling = sampling.astype(int)
+
+    # Ensure a minimum number of points.
+    if sampling.size < min_points:
+        sampling = np.linspace(boarders[0], boarders[-1], min_points, dtype=int)
 
     return sampling, boarders, aver
 

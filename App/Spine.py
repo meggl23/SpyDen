@@ -40,6 +40,7 @@ class Synapse(object):
         self.neck_thresh = neck_thresh
 
         self.neck_contours = []
+        self.neck_length   = []
 
 class Spine_Marker:
 
@@ -165,7 +166,10 @@ class Spine_Marker:
                         self.SimVars.scores_NN = np.delete(nn_scores[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10],index)
                         self.SimVars.flags_NN = np.delete(nn_flags[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10],index)
             if len(self.points) == 0:
-                self.scatter.set_visible(False)
+                try:
+                    self.scatter.set_visible(False)
+                except:
+                    pass
             self.draw_points()
 
     def _on_key_release(self, event):
@@ -200,7 +204,6 @@ class Spine_Marker:
         """
         zoom_flag = self.SimVars.frame.mpl.toolbox.mode == "zoom rect"
         pan_flag = self.SimVars.frame.mpl.toolbox.mode == "pan/zoom"
-
         if zoom_flag or pan_flag or not event.inaxes:
             pass
         else:
@@ -210,6 +213,8 @@ class Spine_Marker:
                 self.scores = np.array([1])
                 if(self.shift_is_held):
                     self.flags = np.array([1])
+                elif(self.control_is_held):
+                    self.flags = np.array([2])
                 else:
                     self.flags = np.array([0])
             else:
