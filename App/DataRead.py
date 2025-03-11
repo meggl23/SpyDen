@@ -1,6 +1,7 @@
 from skimage.registration import phase_cross_correlation
 from skimage.draw import polygon
 from skimage.measure import regionprops
+import shapely.geometry as shgeo
 import imageio.v2 as imageio
 import tifffile as tf
 import math
@@ -557,9 +558,9 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
             for S in SynArr:
                 if(S.type < 2):
                     nn = []
-                    for n,s in zip(S.neck,S.shift):
+                    for n,s,p in zip(S.neck,S.shift,S.points):
                         try:
-                            Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
+                            Intersection_pt, seg_idx = find_intersection(n, np.array(p)+ [s[0],s[1]])
                             new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
                         except:
                             new_neck = np.array(n) 
@@ -611,6 +612,15 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 AvgWidth = []
                 AvgLum   = []
                 for i,n in enumerate(N):
+                    if((SimVars.Mode == "Luminosity" and frame.local_shift)):
+                        poly1 = shgeo.Polygon(np.array(S.points)+ [S.shift[i][0],S.shift[i][1]])
+                    elif((SimVars.Mode == "Luminosity" and not frame.local_shift)):
+                        poly1 = shgeo.Polygon(np.array(S.points))
+                    elif((SimVars.Mode == "Area" and frame.local_shift)):
+                        poly1 = shgeo.Polygon(np.array(S.points[i])+ [S.shift[i][0],S.shift[i][1]])
+                    else:
+                        poly1 = shgeo.Polygon(np.array(S.points[i]))
+
                     n = np.round(n).astype(int)
                     bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
                     bbmax = (min(np.max(n[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, tiff_Arr.shape[-1]))
@@ -618,8 +628,16 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     tiff_Arr_small = tiff_Arr[i,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
                     c,w = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
                     contour = c[0] + bbmin[::-1]
+                    try:
+                        debug_trace()
+                        poly2 = shgeo.Polygon(contour.squeeze())
+                        cut_neck = poly2.difference(poly1)
+                        x,y = cut_neck.exterior.xy
+                        Contours.append(np.vstack([x,y]).T)
+                    except:
+                        Contours.append(contour.squeeze())
                     AvgWidth.append(w*SimVars.Unit)
-                    Contours.append(contour.squeeze())
+
                 S.neck_contours = Contours
                 S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
                 S.neck_width = AvgWidth
@@ -640,6 +658,14 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
 
                 c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
                 S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
+                try:
+                    poly1 = shgeo.Polygon(S.points)
+                    poly2 = shgeo.Polygon(S.neck_contours)
+                    cut_neck = poly2.difference(poly1)
+                    x,y = cut_neck.exterior.xy
+                    S.neck_contours = np.vstack([x,y]).T
+                except:
+                    pass
                 S.neck_width    = [w*SimVars.Unit]
                 if(SimVars.multitime_flag):
                     S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]).T.tolist()
@@ -650,6 +676,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
             else:
                 S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
                 frame.ContourLines.append([])
+
 def Luminosity_from_contour(contour,image):
 
     height,width = image.shape[1:]
