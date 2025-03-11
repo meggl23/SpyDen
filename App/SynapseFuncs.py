@@ -352,7 +352,9 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
 
     all_points = GetAllpointsonPath(np.round(neck_path).astype(int))
 
-    gaussian_x = gaussian_filter1d(        input=all_points[:, 1], mode="nearest", sigma=sigma    ).astype(int)
+    gaussian_x = gaussian_filter1d(        
+        input=all_points[:, 1], mode="nearest", sigma=sigma    
+    ).astype(int)
     gaussian_y = gaussian_filter1d(
         input=all_points[:, 0], mode="nearest", sigma=sigma
     ).astype(int)
@@ -705,7 +707,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                             row.extend(s.neck_mean[c])
                             writer.writerow(row)
 
-    else: # TODO: Adapt this one like the one above! - Puncta analysis!
+    else: 
         custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
             'Center dist to dend','Min. dist to Dend'] + 
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  

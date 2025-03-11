@@ -845,6 +845,14 @@ class DataReadWindow(QWidget):
         function that takes the calculated ROIS and obtains various statistics
         Returns: None
         """
+
+        try:
+            self.update_plot_handle(
+                self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
+            )
+        except:
+            pass
+
         self.command_box.clear()
         self.show_stuff_coll([])
         for Dend in self.DendArr:
@@ -1023,14 +1031,14 @@ class DataReadWindow(QWidget):
         self.set_status_message.setText(self.status_msg["11"])
         QCoreApplication.processEvents()
         self.set_status_message.repaint()
-        somas = self.get_soma_polygons()
+        somas,necks = self.get_soma_polygons()
 
         soma_thresh = self.puncta_soma_slider.value()/100.0
         dend_thresh = self.puncta_dend_slider.value()/100.0
         sigmas =  self.puncta_sigma_range_slider.value()
-        PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,self.DendArr,dend_thresh,soma_thresh,sigmas)
-        somatic_punctas, dendritic_punctas = PD.GetPunctas()
-        self.punctas = [somatic_punctas,dendritic_punctas]
+        PD = PunctaDetection(self.SimVars,self.tiff_Arr,somas,necks,self.DendArr,dend_thresh,soma_thresh,sigmas)
+        somatic_punctas, dendritic_punctas,neck_punctas = PD.GetPunctas()
+        self.punctas = [somatic_punctas,dendritic_punctas,neck_punctas]
         self.display_puncta()
         self.measure_puncta_button.setChecked(False)
         self.PunctaCalc = True
@@ -1059,6 +1067,8 @@ class DataReadWindow(QWidget):
         self.mpl.canvas.draw()
         for i,S in enumerate(self.SpineArr):
             polygon = np.array(S.points)
+            if(polygon.ndim>2):
+                polygon = polygon[0]
             pol = Polygon(polygon, fill=False, closed=True,color='w')
             self.mpl.axes.add_patch(pol)
         self.mpl.canvas.draw()
@@ -1071,6 +1081,7 @@ class DataReadWindow(QWidget):
         try:
             self.plot_puncta(self.punctas[0][int(self.timestep_slider.value())][int(self.channel_slider.value())],"soma")
             self.plot_puncta(self.punctas[1][int(self.timestep_slider.value())][int(self.channel_slider.value())],"dendrite")
+            self.plot_puncta(self.punctas[2][int(self.timestep_slider.value())][int(self.channel_slider.value())],"neck")
         except:
             print("No puncta detected anywhere, try lowering the thresholds")
             pass
@@ -1090,8 +1101,10 @@ class DataReadWindow(QWidget):
             puncta_r          = p.radius
             if(flag=='dendrite'):
                 c = plt.Circle((puncta_x, puncta_y), puncta_r, color="red", linewidth=2, fill=False)
-            else:
+            elif flag == 'soma':
                 c = plt.Circle((puncta_x, puncta_y), puncta_r, color="y", linewidth=2, fill=False)
+            elif flag == 'neck':
+                c = plt.Circle((puncta_x, puncta_y), puncta_r, color="g", linewidth=2, fill=False)
             self.mpl.axes.add_patch(c)
         QCoreApplication.processEvents()
         self.mpl.canvas.draw()
@@ -1109,14 +1122,18 @@ class DataReadWindow(QWidget):
         """
         soma_count = 0
         soma_dict = []
-        for i,R in enumerate(self.roi_interactor_list):
+        neck_dict = []
+        self.SaveROIstoSpine()
+        for S in self.SpineArr:
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                self.SpineArr[i].points = R.poly.xy.tolist()[:-1]
-                soma_dict.append(np.asarray(self.SpineArr[i].points))
+                soma_dict.append(np.asarray(S.points))
+                neck_dict.append(np.asarray(S.neck))
             else:
-                self.SpineArr[i].points[self.actual_timestep] = R.poly.xy.tolist()[:-1]
-                soma_dict.append(np.asarray(self.SpineArr[i].points[0]))
-        return soma_dict
+                soma_dict.append(np.asarray(S.points[0]))
+                neck_dict.append(np.asarray(S.neck[0]))
+
+
+        return soma_dict,neck_dict
 
     def save_results(self):
         """Save the results of the evaluation.
@@ -1258,11 +1275,10 @@ class DataReadWindow(QWidget):
                         p2.distance = self.SpineArr[p2.RoiID].distance
             try:
                 puncta_Dir = self.SimVars.Dir + "/Puncta/"
-                os.makedirs(puncta_Dir, exist_ok=True)
-
                 if os.path.exists(puncta_Dir):
                     shutil.rmtree(puncta_Dir)
-                os.makedirs(puncta_Dir,exist_ok=True)
+                os.makedirs(puncta_Dir, exist_ok=True)
+
                 save_puncta(puncta_Dir,self.punctas,[self.SimVars.yLims,self.SimVars.xLims])
             except Exception as e:
                 if DevMode: print(e)
@@ -1530,7 +1546,7 @@ class DataReadWindow(QWidget):
                     else:
                         self.line_interactor_list.append([])
                 if(not self.local_shift):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,loc=point))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -1620,7 +1636,7 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 if(not self.local_shift):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,loc=point))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,self.SpineArr[-1].shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -1653,6 +1669,7 @@ class DataReadWindow(QWidget):
         Returns:
             None
         """
+
         self.PunctaCalc = False
         self.spine_marker.disconnect()
         self.SpineArr = np.array(self.SpineArr)[[sp.location in self.spine_marker.points.astype(int).tolist() for sp in self.SpineArr]].tolist()
@@ -1688,7 +1705,7 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 if(S.shift is None):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,loc=S.location))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,S.location,S.shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -1713,7 +1730,7 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 if(S.shift is None):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,loc=S.location))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,S.location,S.shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -1755,7 +1772,7 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 if(not self.local_shift):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,loc=point))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -1881,7 +1898,7 @@ class DataReadWindow(QWidget):
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 self.mpl.axes.add_patch(pol)
                 if(not self.local_shift):
-                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol))
+                    self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas,pol,loc=point))
                 else:
                     self.roi_interactor_list.append(RoiInteractor(self.mpl.axes, self.mpl.canvas, 
                         pol,point,self.SpineArr[-1].shift,self.actual_timestep,self.SimVars.Snapshots))
@@ -2826,7 +2843,6 @@ class DataReadWindow(QWidget):
         try:
             if(self.SimVars.Mode=="Luminosity"):
                 for i,(R,L) in enumerate(zip(self.roi_interactor_list,self.line_interactor_list)):
-
                     R.poly.xy = R.poly.xy - R.shift[R.Snapshot]
                     self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
                     OldSnapshot = R.Snapshot
@@ -2835,10 +2851,15 @@ class DataReadWindow(QWidget):
                     if(self.local_shift):
                         R.poly.xy = R.poly.xy + R.shift[R.Snapshot]
                         R.loc = [R.OgLoc[0]+R.shift[R.Snapshot][0],R.OgLoc[1]+R.shift[R.Snapshot][1]]
+                        x_coord = R.OgLoc[0] + R.shift[R.Snapshot][0]
+                        y_coord = R.OgLoc[1] + R.shift[R.Snapshot][1]
+                        R.line_centre.set_data([x_coord], [y_coord])
+                    else:                        
+                        x_coord = R.OgLoc[0]
+                        y_coord = R.OgLoc[1]
+                        R.line_centre.set_data([x_coord], [y_coord])
+
                     R.line.set_data(zip(*R.poly.xy))
-                    x_coord = R.OgLoc[0] + R.shift[R.Snapshot][0]
-                    y_coord = R.OgLoc[1] + R.shift[R.Snapshot][1]
-                    R.line_centre.set_data([x_coord], [y_coord])
                     if(self.SpineArr[i].type<2):
                         if(self.local_shift):
                             self.SpineArr[i].shift[R.Snapshot] = R.shift[R.Snapshot]
@@ -2884,6 +2905,13 @@ class DataReadWindow(QWidget):
                         else:
                             R.line_centre.set_color('gray')
                             R.line_centre.set_markerfacecolor('gray')
+                    elif(not self.SimVars.multitime_flag):
+                        OldSnapshot = R.Snapshot
+                        self.SpineArr[i].points = (R.poly.xy)[:-1].tolist()
+                        if(self.SpineArr[i].type<2):
+                            self.SpineArr[i].neck[OldSnapshot] = (L.poly.xy).tolist()
+                            L.poly.xy = self.SpineArr[i].neck[R.Snapshot]
+                            L.line.set_data(zip(*L.poly.xy))
                     else: # Need to fix this as well TODO
                         OldSnapshot = R.Snapshot
                         self.SpineArr[i].points[R.Snapshot] = (R.poly.xy)[:-1].tolist()
