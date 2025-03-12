@@ -501,9 +501,10 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     # - if there is only one snap we can just directly compare the ROI with the spine neck
     # - if we have local-shifts then each timestep is a different spine neck that needs to computer
     # - if we have areas then we have additionally a separate area
+    WarningNecks = False
     NewNecks = []
     if(Snaps==1):
-        for S in SynArr:
+        for i,S in enumerate(SynArr):
             if(S.type < 2):
                 try:
                     if(np.array(S.neck).ndim>2):
@@ -512,11 +513,14 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     else:
                         Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
                         new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])[np.newaxis,:]
+                    S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                    frame.line_interactor_list[i].line.set_color('green')
                 except:
-                    new_neck = np.array(S.neck)
+                    S.neck_length = [GetLength(np.array(S.neck))*SimVars.Unit]
+                    frame.line_interactor_list[i].line.set_color('red')
+                    WarningNecks = True
+                    new_neck = []
 
-
-                S.neck_length = [GetLength(new_neck)*SimVars.Unit]
                 NewNecks.append(new_neck)
             else:
                 S.neck_length = [0]
@@ -524,16 +528,21 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     elif(SimVars.Mode=="Luminosity"):
         if(SimVars.frame.local_shift):
             
-            for S in SynArr:
+            for i,S in enumerate(SynArr):
                 if(S.type < 2):
                     nn = []
                     for n,s in zip(S.neck,S.shift):
                         try:
                             Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
                             new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                            S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            frame.line_interactor_list[i].line.set_color('green')
                         except:
-                            new_neck = np.array(n) 
-                        S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            new_neck = []
+                            S.neck_length.append(GetLength(np.array(n))*SimVars.Unit)
+    
+                            frame.line_interactor_list[i].line.set_color('red')
+                            WarningNecks = True
                         nn.append(new_neck)
 
                     NewNecks.append(nn)
@@ -541,30 +550,40 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.neck_length = [0]
                     NewNecks.append([])
         else:   
-            for S in SynArr:
+            for i,S in enumerate(SynArr):
                 if(S.type < 2):
                     try:
                         Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
                         new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
+                        S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                        frame.line_interactor_list[i].line.set_color('green')
                     except:
-                        new_neck = np.array(S.neck)
-                    S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                        new_neck = []
+                        S.neck_length = [GetLength(np.array(S.neck))*SimVars.Unit]
+
+                        frame.line_interactor_list[i].line.set_color('red')
+                        WarningNecks = True
                     NewNecks.append(new_neck)
                 else:
                     S.neck_length = [0]
                     NewNecks.append([])
     elif(SimVars.Mode=="Area"):
         if(SimVars.frame.local_shift):
-            for S in SynArr:
+            for i,S in enumerate(SynArr):
                 if(S.type < 2):
                     nn = []
                     for n,s,p in zip(S.neck,S.shift,S.points):
                         try:
                             Intersection_pt, seg_idx = find_intersection(n, np.array(p)+ [s[0],s[1]])
                             new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                            S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            frame.line_interactor_list[i].line.set_color('green')
                         except:
-                            new_neck = np.array(n) 
-                        S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            S.neck_length.append(GetLength(np.array(n))*SimVars.Unit)
+                            new_neck = []
+    
+                            frame.line_interactor_list[i].line.set_color('red')
+                            WarningNecks = True
                         nn.append(new_neck)
 
                     NewNecks.append(nn)
@@ -572,16 +591,21 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.neck_length = [0]
                     NewNecks.append([])
         else:
-            for S in SynArr:
+            for i,S in enumerate(SynArr):
                 nn = []
                 if(S.type < 2):
                     for n,p in zip(S.neck,S.points):
                         try:
                             Intersection_pt, seg_idx = find_intersection(n, p)
                             new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                            S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            frame.line_interactor_list[i].line.set_color('green')
                         except:
-                            new_neck = np.array(n)
-                        S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            S.neck_length.append(GetLength(np.array(n))*SimVars.Unit)
+                            new_neck = []
+    
+                            frame.line_interactor_list[i].line.set_color('red')
+                            WarningNecks = True
                         nn.append(new_neck)
                     NewNecks.append(nn)
                 else:
@@ -605,9 +629,10 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
         pass
 
     frame.ContourLines = []
-    for N,S in zip(NewNecks,SynArr):
+    for kk,(N,S) in enumerate(zip(NewNecks,SynArr)):
         if((SimVars.Mode == "Luminosity" and frame.local_shift) or (SimVars.Mode == "Area" and SimVars.multitime_flag)):
-            if(S.type < 2):
+            No_Neck = False
+            if(S.type < 2 and np.all([len(n)>0 for n in N] )):
                 Contours = []
                 AvgWidth = []
                 AvgLum   = []
@@ -622,32 +647,39 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                         poly1 = shgeo.Polygon(np.array(S.points[i]))
 
                     n = np.round(n).astype(int)
-                    bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0))
+                    bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0)) 
                     bbmax = (min(np.max(n[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, tiff_Arr.shape[-1]))
                     n_shift = n-bbmin[::-1]
                     tiff_Arr_small = tiff_Arr[i,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
                     c,w = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
-                    contour = c[0] + bbmin[::-1]
-                    try:
-                        debug_trace()
-                        poly2 = shgeo.Polygon(contour.squeeze())
-                        cut_neck = poly2.difference(poly1)
-                        x,y = cut_neck.exterior.xy
-                        Contours.append(np.vstack([x,y]).T)
-                    except:
-                        Contours.append(contour.squeeze())
-                    AvgWidth.append(w*SimVars.Unit)
-
-                S.neck_contours = Contours
-                S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
-                S.neck_width = AvgWidth
-                line, = plt.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
-                frame.ContourLines.append(line)
+                    if(w == 0 and c == 0):
+                        No_Neck = True
+                        WarningNecks = True
+                    else:
+                        contour = c[0] + bbmin[::-1]
+                        try:
+                            poly2 = shgeo.Polygon(contour.squeeze())
+                            cut_neck = poly2.difference(poly1)
+                            x,y = cut_neck.exterior.xy
+                            Contours.append(np.vstack([x,y]).T)
+                        except:
+                            Contours.append(contour.squeeze())
+                        AvgWidth.append(w*SimVars.Unit)
+                if(not No_Neck):
+                    S.neck_contours = Contours
+                    S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
+                    S.neck_width = AvgWidth
+                    line, = plt.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
+                    frame.ContourLines.append(line)
+                else:
+                    S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                    frame.ContourLines.append([])
+                    frame.line_interactor_list[kk].line.set_color('red')
             else:
                 S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
                 frame.ContourLines.append([])
         else:
-            if(S.type < 2):
+            if(S.type < 2 and len(N) > 0):
                 N = np.round(N).astype(int)
                 if(N.ndim > 2):
                     N = N[0]
@@ -657,25 +689,37 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 tiff_Arr_small = tiff_Arr[frame.actual_timestep,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
 
                 c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
-                S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
-                try:
-                    poly1 = shgeo.Polygon(S.points)
-                    poly2 = shgeo.Polygon(S.neck_contours)
-                    cut_neck = poly2.difference(poly1)
-                    x,y = cut_neck.exterior.xy
-                    S.neck_contours = np.vstack([x,y]).T
-                except:
-                    pass
-                S.neck_width    = [w*SimVars.Unit]
-                if(SimVars.multitime_flag):
-                    S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]).T.tolist()
+                if(w == 0 and c == 0):
+                    S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                    frame.ContourLines.append([])
+                    frame.line_interactor_list[kk].line.set_color('red')
+                    WarningNecks = True
                 else:
-                    S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])]).T.tolist()
-                line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
-                frame.ContourLines.append(line)
+                    S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
+                    try:
+                        poly1 = shgeo.Polygon(S.points)
+                        poly2 = shgeo.Polygon(S.neck_contours)
+                        cut_neck = poly2.difference(poly1)
+                        x,y = cut_neck.exterior.xy
+                        S.neck_contours = np.vstack([x,y]).T
+                    except:
+                        pass
+                    S.neck_width    = [w*SimVars.Unit]
+                    if(SimVars.multitime_flag):
+                        S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]).T.tolist()
+                    else:
+                        S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])]).T.tolist()
+                    line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
+                    frame.ContourLines.append(line)
             else:
                 S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
                 frame.ContourLines.append([])
+
+    if(not WarningNecks):
+        frame.set_status_message.setText("Measuring ROI statistics")
+    else:
+        frame.set_status_message.setText("Measuring ROI statistics - but some necks couldn't be generated, proceed with care!")
+
 
 def Luminosity_from_contour(contour,image):
 

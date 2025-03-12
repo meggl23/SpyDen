@@ -26,7 +26,7 @@ import platform
 import time
 
 DevMode = False
-version = '1.0.4'
+version = '1.1.0'
 
 def catch_exceptions(func):
 
@@ -846,6 +846,12 @@ class DataReadWindow(QWidget):
         Returns: None
         """
 
+        # I really want to clear the plot and re-plot only the Spine ROIs but 
+        # im not sure how to do this with multiple time points
+        # I also want the bounding boxes of the spines to be the maximum width of the necks
+        # I also want to remove the overlap between spine ROIs and Spine NEcks
+
+
         try:
             self.update_plot_handle(
                 self.tiff_Arr[self.actual_timestep, self.actual_channel, :, :]
@@ -904,7 +910,6 @@ class DataReadWindow(QWidget):
         self.mpl.canvas.draw()
         self.measure_spine_button.setChecked(False)
         MakeButtonActive(self.save_button)
-        self.set_status_message.setText("Measuring ROI statistics")
         self.SpinesMeasured = True
         self.show_stuff_coll(["MeasureROI"])
         return None
@@ -1127,10 +1132,13 @@ class DataReadWindow(QWidget):
         for S in self.SpineArr:
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                 soma_dict.append(np.asarray(S.points))
-                neck_dict.append(np.asarray(S.neck))
+                neck_dict.append(np.asarray(S.neck_contours))
             else:
                 soma_dict.append(np.asarray(S.points[0]))
-                neck_dict.append(np.asarray(S.neck[0]))
+                if(len(S.neck_contours)>0):
+                    neck_dict.append(np.asarray(S.neck_contours[0]))
+                else:
+                    neck_dict.append(np.asarray(S.neck_contours))
 
 
         return soma_dict,neck_dict
@@ -1242,16 +1250,16 @@ class DataReadWindow(QWidget):
                 nChans = self.number_channels if self.SimVars.multiwindow_flag else 1
                 try:
                     SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
-                    SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims])
+                    SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,self.SimVars.Mode,[self.SimVars.yLims,self.SimVars.xLims],self.local_shift)
                     SpineSave_imj(Spine_Dir,orderedSpineArr)
                 except:
                     if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                         SaveSynDict(orderedSpineArr, Spine_Dir, "Luminosity",[[],[]])
-                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,"Luminosity",[[],[]])
+                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,"Luminosity",[[],[]],self.local_shift)
                         SpineSave_imj(Spine_Dir,orderedSpineArr)
                     else:
                         SaveSynDict(orderedSpineArr, Spine_Dir, self.SimVars.Mode,[[],[]])
-                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,"Luminosity",[[],[]])
+                        SpineSave_csv(Spine_Dir,orderedSpineArr,nChans,nSnaps,"Luminosity",[[],[]],self.local_shift)
                         SpineSave_imj(Spine_Dir,orderedSpineArr)
                 self.PlotSyn()
                 if os.path.exists(Spine_Dir[:-1]+'temp/'):

@@ -24,7 +24,7 @@ from .PathFinding import (
 from scipy.ndimage import gaussian_filter1d, gaussian_filter
 from scipy.ndimage import distance_transform_edt
 
-
+from .MPL_Widget import *
 def SpineShift(tiff_Arr_small):
 
     """
@@ -386,6 +386,8 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
         mask[rr, cc] = 1
     
     gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
+    if(gaussian_mask.sum() == gaussian_mask.size):
+        return 0,0
     contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
 
     # Compute the distance transform
@@ -401,6 +403,7 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
             widths.append(2 * dist_transform[y, x])
 
     # Now you can compute the median or mean width
+
     final_width = np.mean(widths) if widths else None
     
 
@@ -618,7 +621,7 @@ def ReadSynDict(Dir, SimVars):
        return []
     return SynArr
 
-def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
+def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
     """
     Save Spine data into CSV files.
 
@@ -652,7 +655,11 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)])
         if(not OnlySoma):
-            custom_header +=['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[FirstNonSoma].neck_length))] + ['Timestep '+ str(i+1) +' (neck width)' for i in range(len(Spine_Arr[FirstNonSoma].neck_width))] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+            if(local_shift):
+                custom_header +=['Timestep '+ str(i+1) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i+1) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+            else:
+                custom_header +=['Neck length'] + ['Neck width'] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_l_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
@@ -674,7 +681,6 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                         writer.writerow(row)
                 else:
                     for i,s in enumerate(Spine_Arr):
-
                         if(s.type == 2):
                             row = ['Spine: '+str(i),s.type,
                                              str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
@@ -687,8 +693,11 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend(s.local_bg[c])
-                            row += ['' for n in Spine_Arr[FirstNonSoma].neck_length] +['' for n in Spine_Arr[FirstNonSoma].neck_width]
-                            row.extend(np.zeros_like(Spine_Arr[FirstNonSoma].neck_mean[c]))
+                            if(local_shift):
+                                row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
+                            else:
+                                row += [''] +['']
+                            row.extend(np.zeros(nSnaps))
                             writer.writerow(row)
                         else:
                             row = ['Spine: '+str(i),s.type,
@@ -703,8 +712,12 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend(s.local_bg[c])
-                            row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
-                            row.extend(s.neck_mean[c])
+                            if(len(s.neck_mean)==0):
+                                row.extend(np.zeros(nSnaps))
+                                row += ['' for n in s.neck_length] +['' for n in s.neck_width]
+                            else:
+                                row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
+                                row.extend(s.neck_mean[c])
                             writer.writerow(row)
 
     else: 
@@ -718,8 +731,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
         ['Timestep '+ str(i) +' (Widths)' for i in range(1,nSnaps+1)])
         if(not OnlySoma):
-            custom_header +=['Timestep '+ str(i+1) +' (neck length)' for i in range(len(Spine_Arr[FirstNonSoma].neck_length))] + ['Timestep '+ str(i+1) +' (neck width)' for i in range(len(Spine_Arr[FirstNonSoma].neck_width))] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
-       
+            custom_header +=['Timestep '+ str(i+1) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i+1) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
@@ -752,8 +765,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend([str(w) for w in s.widths])
-                            row += ['' for n in Spine_Arr[FirstNonSoma].neck_length] +['' for n in Spine_Arr[FirstNonSoma].neck_width]
-                            row.extend(np.zeros_like(Spine_Arr[FirstNonSoma].neck_mean[c]))
+                            row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
+                            row.extend(np.zeros(nSnaps))
                             writer.writerow(row)
                         else:
                             row = ['Spine: '+str(i),s.type,
@@ -766,8 +779,12 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend([str(w) for w in s.widths])
-                            row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
-                            row.extend(s.neck_mean[c])
+                            if(len(s.neck_mean)==0):
+                                row += [str(n) for n in s.neck_length] +['' for n in s.neck_width]
+                                row.extend(np.zeros(nSnaps))
+                            else:
+                                row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
+                                row.extend(s.neck_mean[c])
                             writer.writerow(row)
 
 def SpineSave_imj(Dir,Spine_Arr):
@@ -785,13 +802,16 @@ def SpineSave_imj(Dir,Spine_Arr):
             roi.roitype = rf.ROI_TYPE.POLYGON
             roi.tofile(Dir2+'Spine_'+str(i)+'.roi')
         if(S.type < 2):
-            necks = S.neck_contours
-            if(len(necks[0])>2):
-                for j,p in enumerate(necks):
-                    roi = rf.ImagejRoi.frompoints(p)
+            try:
+                necks = S.neck_contours
+                if(len(necks[0])>2):
+                    for j,p in enumerate(necks):
+                        roi = rf.ImagejRoi.frompoints(p)
+                        roi.roitype = rf.ROI_TYPE.POLYGON
+                        roi.tofile(Dir2+'Spine_neck_'+str(i)+'_t'+str(j)+'.roi')
+                else:
+                    roi = rf.ImagejRoi.frompoints(necks)
                     roi.roitype = rf.ROI_TYPE.POLYGON
-                    roi.tofile(Dir2+'Spine_neck_'+str(i)+'_t'+str(j)+'.roi')
-            else:
-                roi = rf.ImagejRoi.frompoints(necks)
-                roi.roitype = rf.ROI_TYPE.POLYGON
-                roi.tofile(Dir2+'Spine_neck_'+str(i)+'.roi')
+                    roi.tofile(Dir2+'Spine_neck_'+str(i)+'.roi')
+            except:
+                pass
