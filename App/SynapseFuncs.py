@@ -656,7 +656,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
         ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)])
         if(not OnlySoma):
             if(local_shift):
-                custom_header +=['Timestep '+ str(i+1) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i+1) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+                custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
             else:
                 custom_header +=['Neck length'] + ['Neck width'] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
 
@@ -731,7 +731,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
         ['Timestep '+ str(i) +' (Widths)' for i in range(1,nSnaps+1)])
         if(not OnlySoma):
-            custom_header +=['Timestep '+ str(i+1) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i+1) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+            custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
 
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
