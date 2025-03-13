@@ -168,7 +168,7 @@ class DataReadWindow(QWidget):
         else:
             self.NN = False
 
-        self.SimVars = Simulation(0, 0, 0, 0,0,0)
+        self.SimVars = Simulation(0, 0, 0, 0,0,0,frame=self)
         self.status_msg = {
             "0": "Select Folder Path",
             "1": "Set Parameters",
@@ -707,7 +707,6 @@ class DataReadWindow(QWidget):
     def download_NN(self):
 
         self.button_set_NN.setChecked(True)
-        self.set_status_message.setText('Downloading NN from web')
         QCoreApplication.processEvents()
         self.set_status_message.repaint()
         try:

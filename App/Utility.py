@@ -11,6 +11,8 @@ import torchvision.transforms as transforms
 from skimage import feature
 from skimage.draw import ellipse
 
+from PyQt5.QtCore import QCoreApplication
+
 
 data_transforms = {
     "train": transforms.Compose(
@@ -120,26 +122,43 @@ def MakeButtonInActive(button):
     button.setEnabled(False)
     
 
-def download_model(model_url,save_path):
+def download_model(model_url,save_path,Simvars):
 
 
-    response = requests.get(model_url)
-    with open(save_path, 'wb') as f:
-        f.write(response.content)
+    response = requests.get(model_url,stream = True)
+    total_size = int(response.headers.get('content-length', 0))
+    downloaded = 0
+    Simvars.frame.set_status_message.setText("Downloading:")
+    try:
+        with open(save_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    percent = int((downloaded / total_size) * 100) if total_size else 0
+                    # Update the text field with the current progress
+                    Simvars.frame.set_status_message.setText(f"Downloading: {percent}%")
+                    # Process pending GUI events so the text field updates
+                    QCoreApplication.processEvents()
+    except Exception as e:
+        print(e)
+        os.remove(save_path)
 
 def load_model(Simvars):
 
     # Create the full path
+    Simvars.frame.set_status_message.setText("Loading model")
+
     folder_path = os.path.expanduser("~")
     file_name = 'model.pth'
     model_path = os.path.join(folder_path, file_name)
 
     if not os.path.exists(model_path):
-        download_model(Simvars.ML_URL,model_path)
-    model = torch.load(model_path, map_location=torch.device('cpu'))
+        download_model(Simvars.ML_URL,model_path,Simvars)
+    model = torch.load(model_path, map_location=torch.device('cpu'),weights_only=False)
     # Additional model setup, if needed
     try:
-        os.remove('model.pth')
+        os.remove(model_path)
     except:
         pass
     Simvars.model = model
