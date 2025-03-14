@@ -543,7 +543,7 @@ def ReadSynDict(Dir, SimVars):
     nSnaps = SimVars.Snapshots
     NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation','neck', 'neck_thresh']
 
-    AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'DendDist' : [0,0,0],'Orientation' : 0,'neck' : [], 'neck_thresh' : 0}
+    AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'distance_to_Dend' : [0,0,0],'Orientation' : 0,'neck' : [], 'neck_thresh' : 0}
 
     if(len(SimVars.xLims)==0):
         xLim = 0
