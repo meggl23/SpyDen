@@ -464,6 +464,22 @@ def DendSave_imj(Dir,Dend_Arr,shift):
 
         roi.tofile(Dir2+'DendSeg_'+str(i)+'.roi')
 
+def DendRead_imj(path,shift):
+    roi = rf.ImagejRoi.fromfile(path)
+    coords = roi.coordinates()
+    coords = np.flip(coords- shift, axis=1) 
+    _, first_idx = np.unique(coords, return_index=True, axis=0)
+    coords = coords[np.sort(first_idx)]
+
+    x, y = coords[:, 0], coords[:, 1]
+    _,_,_,_,_, H = curvature_polygon(x, y)
+    H = H / len(H)
+    sampling, _, _ = curvature_dependent_sampling(H, 50)
+    x, y = x[sampling], y[sampling]
+    coords_sampled = np.array([y.T, x.T]).T.astype(int)
+
+    return coords_sampled
+
 
 def MeasureDend(mask, tiff_Arr, Unit,Snapshots):
 

@@ -19,6 +19,7 @@ from .SynapseFuncs import ROI_And_Neck
 from .RoiInteractor import RoiInteractor,RoiInteractor_BG
 from .PunctaDetection import save_puncta,PunctaDetection,Puncta
 from .PathFinding import GetLength
+from .Dendrite import DendRead_imj
 
 from superqt import QLabeledRangeSlider
 import webbrowser as wb
@@ -26,7 +27,7 @@ import platform
 import time
 
 DevMode = False
-version = '1.1.0'
+version = '1.2.0'
 
 def catch_exceptions(func):
 
@@ -283,7 +284,7 @@ class DataReadWindow(QWidget):
         self.folderpath_label.setReadOnly(True)
         self.folderpath_label.setText(str(self.folderpath))
         self.grid.addWidget(self.folderpath_label, 0, 2, 1, 10)
-        self.folderpath_button.setToolTip('Provide the path to the folder holding the cell_* folders')
+        self.folderpath_button.setToolTip('Provide the path to the folder holding the experimental data')
 
         #============= path input ==================
 
@@ -381,6 +382,16 @@ class DataReadWindow(QWidget):
         self.grid.addWidget(self.medial_axis_path_button, 7, 0, 1, 2)
         self.medial_axis_path_button.clicked.connect(self.medial_axis_eval_handle)
         self.medial_axis_path_button.setToolTip('Calculate the medial axis paths by selecting the start and end of the dendrites')
+
+
+        self.load_Dendrite_button = QPushButton(self)
+        self.load_Dendrite_button.setText("Load Dendrite Path")
+
+        MakeButtonActive(self.load_Dendrite_button)
+        self.load_Dendrite_button.clicked.connect(self.LoadDendFiles)
+        self.grid.addWidget(self.load_Dendrite_button, 5, 2, 1, 2)
+        self.hide_stuff([self.load_Dendrite_button])
+
 
         #============= dendritic width button ==================
         self.dendritic_width_button = QPushButton(self)
@@ -2380,13 +2391,80 @@ class DataReadWindow(QWidget):
             except:
                 pass
             MakeButtonActive(self.medial_axis_path_button)
-            self.CheckOldDend()
+            self.CheckOldDend_and_spines()
         self.mpl.canvas.setFocus()
         
     def get_actual_multiple_factor(self):
         return 0.1*self.dend_width_mult_slider.value()
 
-    def CheckOldDend(self):
+    def LoadDendFiles(self):
+
+        self.DendArr = []
+
+        files, _ = QFileDialog.getOpenFileNames(
+            self,
+            "Select .npy or .roi Files",    # Dialog title
+            "",                             # Starting directory (empty = current)
+            "ROI Files (*.roi);;Numpy Files (*.npy)"
+        )
+        if(len(files)>0):
+            self.mpl.clear_plot()
+            for f in files:
+                if f[-4:] == '.roi':
+                    try:
+                        coords = DendRead_imj(f,-np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]]))
+                    except:
+                        coords = DendRead_imj(f,[0,0])
+                elif f[-4:] == '.npy':
+                    coords = np.load(f)
+
+                Dend = Dendrite(self.tiff_Arr,self.SimVars)
+                Dend.control_points = coords 
+                self.DendArr.append(Dend)
+            for Dend in self.DendArr:
+                Dend.UpdateParams(self.tiff_Arr)
+                if(len(self.SimVars.xLims)>0):
+                    Dend.control_points = Dend.control_points+np.array([self.SimVars.yLims[0],self.SimVars.xLims[0]])
+                Dend.complete_medial_axis_path = GetAllpointsonPath(Dend.control_points)[:, :]
+                Dend.medial_axis = Dend.control_points
+                Dend.thresh      = int(self.thresh_slider.value())
+                Dend.curvature_sampled = Dend.control_points
+                Dend.length            = GetLength(Dend.complete_medial_axis_path)*self.SimVars.Unit
+            self.DendMeasure= medial_axis_eval(self.SimVars,self.DendArr,self)
+
+            self.load_Dendrite_button.setChecked(False)
+
+            MakeButtonActive(self.dendritic_width_button)
+
+            MakeButtonActive(self.spine_button)
+
+            if self.NN: MakeButtonActive(self.spine_button_NN)
+
+            MakeButtonActive(self.delete_old_result_button)
+            SpineDir = self.SimVars.Dir+'Spine/'
+            if os.path.isfile(SpineDir+'Synapse_l.json') or os.path.isfile(SpineDir+'Synapse_a.json'):
+                self.SpineArr = ReadSynDict(SpineDir, self.SimVars)
+                self.spine_marker = spine_eval(self.SimVars,np.array([S.location for S in self.SpineArr]),np.array([1 for S in self.SpineArr]),np.array([S.type for S in self.SpineArr]),False)
+                self.spine_marker.disconnect()
+                MakeButtonActive(self.spine_button_ROI)
+                if(self.SpineArr[0].shift is None):
+                    self.local_shift = False
+                    self.local_shift_check.blockSignals(True)
+                    self.local_shift_check.setChecked(False)
+                    self.local_shift_check.blockSignals(False)
+
+            if((os.path.isfile(SpineDir+'Synapse_l.json') and self.SimVars.Mode=="Luminosity") or
+                (os.path.isfile(SpineDir+'Synapse_a.json') and self.SimVars.Mode=="Area" and self.SimVars.multitime_flag)
+                or (os.path.isfile(SpineDir+'Synapse_l.json') and self.SimVars.Mode=="Area" and not self.SimVars.multitime_flag)):
+                MakeButtonActive(self.old_ROI_button)
+            self.set_status_message.setText(self.status_msg["10"])
+
+        else:
+            pass
+        return 0
+        
+
+    def CheckOldDend_and_spines(self):
         """Checks for the existence of old dendrite data and updates the corresponding buttons and plots.
 
         The method checks for the existence of old dendrite data files and updates the dendrite objects,
@@ -2957,7 +3035,7 @@ class DataReadWindow(QWidget):
             None
         """
 
-        self.hide_stuff([self.puncta_dend_label,self.puncta_dend_slider,self.puncta_dend_counter])
+        self.hide_stuff([self.puncta_dend_label,self.puncta_dend_slider,self.puncta_dend_counter,self.load_Dendrite_button])
         self.hide_stuff([self.puncta_soma_label,self.puncta_soma_slider,self.puncta_soma_counter])
         self.hide_stuff([self.puncta_sigma_label, self.puncta_sigma_range_slider])
         self.hide_stuff([self.thresh_slider, self.thresh_label])
@@ -2977,7 +3055,7 @@ class DataReadWindow(QWidget):
                 self.show_stuff([self.puncta_sigma_label, self.puncta_sigma_range_slider])
 
             if(Name=="MedAx"):
-                self.show_stuff([self.thresh_slider, self.thresh_label])
+                self.show_stuff([self.thresh_slider, self.thresh_label,self.load_Dendrite_button])
             if(Name=="DendWidth"):
                 self.show_stuff([self.neighbour_counter,self.neighbour_slider,self.neighbour_label,
                                  self.dend_width_mult_label, self.dend_width_mult_slider, self.dend_width_mult_counter])
