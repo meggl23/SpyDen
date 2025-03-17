@@ -639,7 +639,7 @@ class DataReadWindow(QWidget):
         self.Dend_shift = False
         self.Dend_shift_check.stateChanged.connect(lambda state: self.check_changed(state,3))
 
-        self.Dend_shift_check.setToolTip('Check if you only want to use the calculated dendrite to correct for temporal shifting, otherwise uses whole image')
+        self.Dend_shift_check.setToolTip('Check if you only want to use the calculated dendrite to correct for temporal shifting, otherwise uses whole image - experimental feature proceed with caution')
 
         #============= Local shifting button ==================
         self.local_shift_check = QCheckBox(self)
@@ -1995,6 +1995,7 @@ class DataReadWindow(QWidget):
                 l.remove()
             del self.line_interactor_list
         self.roi_interactor_list = []
+        self.line_interactor_list = []
         self.roi_interactor_list_bg = []
         try:
             self.spine_marker.disconnect
@@ -2889,7 +2890,6 @@ class DataReadWindow(QWidget):
         self.mpl.canvas.setFocus()
     
     def SaveROIstoSpine(self):
-
         for i,(R,L) in enumerate(zip(self.roi_interactor_list,self.line_interactor_list)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
                 try:
@@ -3010,9 +3010,7 @@ class DataReadWindow(QWidget):
                             L.line.set_data(zip(*L.poly.xy))
         except Exception as e:
            # Print the error message associated with the exception
-            import traceback
-            tb = traceback.extract_tb(e.__traceback__)
-            print(f"Error on line {tb[-1].lineno}: {e}")
+           pass
         self.mpl.update_plot(image)
         
     
