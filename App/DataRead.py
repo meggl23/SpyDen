@@ -513,7 +513,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     else:
                         Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
                         new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])[np.newaxis,:]
-                    S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                    S.neck_length = [GetLength(new_neck[0])*SimVars.Unit]
                     frame.line_interactor_list[i].line.set_color('green')
                 except:
                     S.neck_length = [GetLength(np.array(S.neck))*SimVars.Unit]
