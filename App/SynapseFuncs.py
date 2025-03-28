@@ -100,7 +100,7 @@ def ROI_And_Neck(
     OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
     OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
     o_arr = np.asarray(other_pts)
-    
+
     neck_thresh = 0
     if(Mode=='Both'):
         xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc,sigma=sigma,tol=tol,SpineShift_flag=SpineShift_flag)
@@ -655,7 +655,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
         Lims = np.array([xLims[0][0],xLims[1][0]])
     if(Mode=='Luminosity'):
         custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
-            'Center dist to dend','Min, dist to Dend','Widths'] + 
+            'Center dist to dend','Min, dist to Dend','head_bbox'] + 
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
@@ -677,7 +677,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                     for i,s in enumerate(Spine_Arr):
                         row = ['Spine: '+str(i),s.type,
                                          str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                         ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)]
+                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in s.head_bbox])]
                         
 
                         row.extend(s.mean[c])
@@ -692,7 +692,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                         if(s.type == 2):
                             row = ['Spine: '+str(i),s.type,
                                              str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                             ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)]
+                                             ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in s.head_bbox])]
                             
 
                             row.extend(s.mean[c])
@@ -711,7 +711,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row = ['Spine: '+str(i),s.type,
 
                                          str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                         ]+[str(d) for d in s.distance_to_Dend] + [str(s.widths)]
+                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in s.head_bbox])]
                         
 
                             row.extend(s.mean[c])
@@ -737,7 +737,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
-        ['Timestep '+ str(i) +' (Widths)' for i in range(1,nSnaps+1)])
+        ['Timestep '+ str(i) +' (head bounding box)' for i in range(1,nSnaps+1)])
         if(not OnlySoma):
             custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
 
@@ -757,7 +757,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                         row.extend(s.max[c])
                         row.extend(s.RawIntDen[c])
                         row.extend(s.IntDen[c])
-                        row.extend([str(w) for w in s.widths])
+                        row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
                         writer.writerow(row)   
                 else:
                     for i,s in enumerate(Spine_Arr):
@@ -772,7 +772,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.max[c])
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
-                            row.extend([str(w) for w in s.widths])
+                            row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
                             row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
                             row.extend(np.zeros(nSnaps))
                             writer.writerow(row)
@@ -786,7 +786,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.max[c])
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
-                            row.extend([str(w) for w in s.widths])
+                            row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
                             if(len(s.neck_mean)==0):
                                 row += [str(n) for n in s.neck_length] +['' for n in s.neck_width]
                                 row.extend(np.zeros(nSnaps))
