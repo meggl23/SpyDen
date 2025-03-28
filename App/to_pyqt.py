@@ -786,7 +786,7 @@ class DataReadWindow(QWidget):
 
         for index, (point,flag) in enumerate(zip(points,flags)):
             if(self.SimVars.Mode=="Luminosity" or not self.SimVars.multitime_flag):
-                xpert, shift, bgloc,closest_Dend,DendDist,Orientation,_,_ = ROI_And_Neck(
+                xpert, shift, bgloc,closest_Dend,DendDist,_,_,_ = ROI_And_Neck(
                 tf,
                 point,
                 medial_axis_Arr,
@@ -808,8 +808,9 @@ class DataReadWindow(QWidget):
                 self.roi_interactor_list[index].line.set_data(pol.xy[:, 0], pol.xy[:, 1])
                 OldNeck = self.SpineArr[index].neck
                 OldNeckthresh = self.SpineArr[index].neck_thresh
+                OldOrientation = self.SpineArr[index].Orientation
                 self.SpineArr[index] = Synapse(list(point),list(bgloc),pts=xpert,shift=shift,
-                    channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,DendDist = DendDist*self.SimVars.Unit,Orientation=Orientation,neck = OldNeck,
+                    channel=self.actual_channel,Syntype=flag,closest_Dend=closest_Dend,DendDist = DendDist*self.SimVars.Unit,Orientation=OldOrientation,neck = OldNeck,
                     neck_thresh = OldNeckthresh)
             else:
                 self.SpineArr[index].points = []
@@ -834,7 +835,6 @@ class DataReadWindow(QWidget):
                     self.SpineArr[index].points.append(xpert)
                     self.SpineArr[index].closest_Dend = closest_Dend
                     self.SpineArr[index].distance_to_Dend = DendDist*self.SimVars.Unit
-                    self.SpineArr[index].Orientation = Orientation
                 polygon = np.array(self.SpineArr[index].points[self.actual_timestep])
                 pol = Polygon(polygon, fill=False, closed=True, animated=True)
                 pol.set_edgecolor('white')
@@ -1604,11 +1604,10 @@ class DataReadWindow(QWidget):
 
                     self.SpineArr[-1].points.append(xpert)
                     self.SpineArr[-1].closest_Dend = closest_Dend
-                    self.SpineArr[-1].Orientation  = Orientation
                     self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
                     
                     if(self.local_shift):
-                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                        _, _, _,_,_,Orientation,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             np.array(self.SpineArr[-1].location)+ np.array([self.SpineArr[-1].shift[i][0],self.SpineArr[-1].shift[i][1]]),
                             medial_axis_Arr,
@@ -1621,7 +1620,7 @@ class DataReadWindow(QWidget):
                             Mode = 'Neck'
                         )
                     else:
-                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                        _, _, _,_,_,Orientation,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             np.array(self.SpineArr[-1].location),
                             medial_axis_Arr,
@@ -1633,6 +1632,9 @@ class DataReadWindow(QWidget):
                             SpineShift_flag = False,
                             Mode = 'Neck'
                         )
+                    if(i==0):
+                        self.SpineArr[-1].Orientation  = Orientation
+
                     if(self.DendArr[closest_Dend].get_contours() is not None):
                         cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
                         inside = cp.contains_points(neck)
@@ -1869,14 +1871,10 @@ class DataReadWindow(QWidget):
                         sigma=self.sigma_val,
                         tol  = self.tol_val,
                     )
-                    if(i==0):
-                        self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
-                        self.SpineArr[-1].closest_Dend = closest_Dend
-                        self.SpineArr[-1].Orientation  = Orientation
                     self.SpineArr[-1].points.append(xpert)
 
                     if(self.local_shift):
-                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                        _, _, _,_,_,Orientation,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             np.array(self.SpineArr[-1].location)+ np.array([self.SpineArr[-1].shift[i][0],self.SpineArr[-1].shift[i][1]]),
                             medial_axis_Arr,
@@ -1889,7 +1887,7 @@ class DataReadWindow(QWidget):
                             Mode = 'Neck'
                         )
                     else:
-                        _, _, _,_,_,_,neck,neck_thresh = ROI_And_Neck(
+                        _, _, _,_,_,Orientation,neck,neck_thresh = ROI_And_Neck(
                             tf[i],
                             np.array(self.SpineArr[-1].location),
                             medial_axis_Arr,
@@ -1901,6 +1899,10 @@ class DataReadWindow(QWidget):
                             SpineShift_flag = False,
                             Mode = 'Neck'
                         )
+                    if(i==0):
+                        self.SpineArr[-1].distance_to_Dend = x*self.SimVars.Unit
+                        self.SpineArr[-1].closest_Dend = closest_Dend
+                        self.SpineArr[-1].Orientation  = Orientation
                     if(self.DendArr[closest_Dend].get_contours() is not None):
                         cp = Path(self.DendArr[closest_Dend].get_contours()[0].squeeze())
                         inside = cp.contains_points(neck)
