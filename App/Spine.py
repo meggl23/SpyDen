@@ -20,7 +20,7 @@ class Synapse(object):
         self.local_bg = []
 
         self.area = []
-        self.widths = []
+        self.head_bbox = []
 
         if dist == None:
             self.distance = 0

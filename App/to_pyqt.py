@@ -912,7 +912,7 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].IntDen = []
             self.SpineArr[i].area = []
             self.SpineArr[i].local_bg = []
-            self.SpineArr[i].widths = []
+            self.SpineArr[i].head_bbox = []
             self.SpineArr[i].neck_length = []
 
         Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)

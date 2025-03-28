@@ -918,7 +918,7 @@ def SpineBoundingBox(S,Unit,Mode,Snaps):
         xmin, xmax = x_r.min(), x_r.max()
         ymin, ymax = y_r.min(), y_r.max()
         
-        S.widths.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
+        S.head_bbox.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
     else:
         for pts in S.points:
                 # Apply the rotation
@@ -928,7 +928,7 @@ def SpineBoundingBox(S,Unit,Mode,Snaps):
                 xmin, xmax = x_r.min(), x_r.max()
                 ymin, ymax = y_r.min(), y_r.max()
                 
-                S.widths.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
+                S.head_bbox.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
     return 0
 
                 
