@@ -677,7 +677,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                     for i,s in enumerate(Spine_Arr):
                         row = ['Spine: '+str(i),s.type,
                                          str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in s.head_bbox])]
+                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in sublist]) for sublist in s.head_bbox]
                         
 
                         row.extend(s.mean[c])
@@ -692,7 +692,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                         if(s.type == 2):
                             row = ['Spine: '+str(i),s.type,
                                              str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                             ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in s.head_bbox])]
+                                             ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in sublist]) for sublist in s.head_bbox]
                             
 
                             row.extend(s.mean[c])
@@ -711,7 +711,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row = ['Spine: '+str(i),s.type,
 
                                          str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in s.head_bbox])]
+                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in sublist]) for sublist in s.head_bbox]
                         
 
                             row.extend(s.mean[c])
