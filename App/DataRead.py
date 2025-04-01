@@ -626,7 +626,8 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     pass
             del frame.ContourLines
     except Exception as e:
-        pass
+        print(e)
+
 
     frame.ContourLines = []
     for kk,(N,S) in enumerate(zip(NewNecks,SynArr)):
@@ -669,14 +670,14 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.neck_contours = Contours
                     S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
                     S.neck_width = AvgWidth
-                    line, = plt.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
+                    line, = self.mpl.axes.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
                     frame.ContourLines.append(line)
                 else:
-                    S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                    S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
                     frame.ContourLines.append([])
                     frame.line_interactor_list[kk].line.set_color('red')
             else:
-                S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
                 frame.ContourLines.append([])
         else:
             if(S.type < 2 and len(N) > 0):
@@ -690,7 +691,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
 
                 c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
                 if(w == 0 and c == 0):
-                    S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                    S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
                     frame.ContourLines.append([])
                     frame.line_interactor_list[kk].line.set_color('red')
                     WarningNecks = True
@@ -709,17 +710,17 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                         S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]).T.tolist()
                     else:
                         S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])]).T.tolist()
-                    line, = plt.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
+
+                    line, = frame.mpl.axes.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
                     frame.ContourLines.append(line)
             else:
-                S.neck_contours,S.neck_mean,S.neck_width = [],[],[]
+                S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
                 frame.ContourLines.append([])
 
     if(not WarningNecks):
         frame.set_status_message.setText("Measuring ROI statistics")
     else:
         frame.set_status_message.setText("Measuring ROI statistics - but some necks couldn't be generated, proceed with care!")
-
 
 def Luminosity_from_contour(contour,image):
 

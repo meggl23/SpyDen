@@ -408,7 +408,7 @@ def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int =
         # Make sure indices are within bounds
         if 0 <= y < dist_transform.shape[0] and 0 <= x < dist_transform.shape[1]:
             # The width at this point is approximately twice the distance to the edge
-            widths.append(2 * dist_transform[y, x])
+            widths.append(2 * dist_transform[x, y])
 
     # Now you can compute the median or mean width
 
