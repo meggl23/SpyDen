@@ -105,8 +105,12 @@ def ROI_And_Neck(
     if(Mode=='Both'):
         xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc,sigma=sigma,tol=tol,SpineShift_flag=SpineShift_flag)
         neck_path,neck_thresh      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
-        dy = neck_path[1][1] - neck_path[0][1] 
-        dx =  neck_path[1][0] - neck_path[0][0]
+        try:
+            dy = neck_path[1][1] - neck_path[0][1] 
+            dx =  neck_path[1][0] - neck_path[0][0]
+        except:
+            dx = pt_proc[0]-pt[0]
+            dy = pt_proc[1]-pt[1]
         Orientation = np.arctan2(dy,dx)
 
     elif(Mode=='ROI'):
@@ -114,11 +118,14 @@ def ROI_And_Neck(
         dx = pt_proc[0]-pt[0]
         dy = pt_proc[1]-pt[1]
         Orientation = np.arctan2(dy,dx)
-        o_arr = np.asarray(other_pts)
     else:
         neck_path,neck_thresh      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
-        dy = neck_path[1][1] - neck_path[0][1] 
-        dx =  neck_path[1][0] - neck_path[0][0]
+        try:
+            dy = neck_path[1][1] - neck_path[0][1] 
+            dx =  neck_path[1][0] - neck_path[0][0]
+        except:
+            dx = pt_proc[0]-pt[0]
+            dy = pt_proc[1]-pt[1]
         Orientation = np.arctan2(dy,dx)
         xpert = []
         DendDist = [0,0,0]

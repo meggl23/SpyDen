@@ -670,7 +670,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.neck_contours = Contours
                     S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
                     S.neck_width = AvgWidth
-                    line, = self.mpl.axes.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
+                    line, = frame.mpl.axes.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
                     frame.ContourLines.append(line)
                 else:
                     S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
