@@ -830,3 +830,25 @@ def SpineSave_imj(Dir,Spine_Arr):
                     roi.tofile(Dir2+'Spine_neck_'+str(i)+'.roi')
             except:
                 pass
+
+
+def SpineClassification(Spine_Arr):
+    spine_classes = ["stubby","mushroom","thin","outlier"]
+    spn = 0
+    print("*"*30)
+    for spine in Spine_Arr:
+        spn += 1
+        print("spine_number = {}, spine-neck lenght = {}, spine-neck width {} , spine hbox = {}".format(spn,spine.neck_length,spine.neck_width,spine.head_bbox))
+        # breakpoint()
+        if spine.neck_width == []:
+            spine.sp_class = spine_classes[0]
+        elif spine.neck_width[0]/spine.head_bbox[0][1] < 0.5:
+            spine.sp_class = spine_classes[1]
+        elif 0.5 <  spine.neck_width[0]/spine.head_bbox[0][1] < 1.1:
+            spine.sp_class = spine_classes[2]
+        else:
+            spine.sp_class = spine_classes[3]
+        print("assigned class = ",spine.sp_class)
+    breakpoint()
+    print("*" * 30)
+    return None
