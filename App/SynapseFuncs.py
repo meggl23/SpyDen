@@ -499,6 +499,7 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
         Lims = np.array([xLims[0][0],xLims[1][0]])
    
     # For each object, subtract Lims where possible and convert attributes to lists.
+    breakpoint()
     for S in modifiedSynArr:
         # Subtract Lims from attributes if they exist.
         for attr in ['points', 'location', 'bgloc']:
@@ -744,9 +745,10 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
-        ['Timestep '+ str(i) +' (head bounding box)' for i in range(1,nSnaps+1)])
+        ['Timestep '+ str(i) +' (head bounding box)' for i in range(1,nSnaps+1)] +
+        ['Timestep ' + str(i) + '(spine class)' for i in range(1, nSnaps + 1)])
         if(not OnlySoma):
-            custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+            custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (spine class)' for i in range(1,nSnaps+1)]
 
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
@@ -765,6 +767,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                         row.extend(s.RawIntDen[c])
                         row.extend(s.IntDen[c])
                         row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
+                        row.extend(s.sp_class[c])
                         writer.writerow(row)   
                 else:
                     for i,s in enumerate(Spine_Arr):
@@ -780,6 +783,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
+                            row.extend(s.sp_class[c])
                             row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
                             row.extend(np.zeros(nSnaps))
                             writer.writerow(row)
@@ -794,6 +798,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
+                            row.extend(s.sp_class[c])
                             if(len(s.neck_mean)==0):
                                 row += [str(n) for n in s.neck_length] +['' for n in s.neck_width]
                                 row.extend(np.zeros(nSnaps))
@@ -834,21 +839,18 @@ def SpineSave_imj(Dir,Spine_Arr):
 
 def SpineClassification(Spine_Arr):
     spine_classes = ["stubby","mushroom","thin","outlier"]
-    spn = 0
-    print("*"*30)
     for spine in Spine_Arr:
-        spn += 1
-        print("spine_number = {}, spine-neck lenght = {}, spine-neck width {} , spine hbox = {}".format(spn,spine.neck_length,spine.neck_width,spine.head_bbox))
-        # breakpoint()
-        if spine.neck_width == []:
-            spine.sp_class = spine_classes[0]
-        elif spine.neck_width[0]/spine.head_bbox[0][1] < 0.5:
-            spine.sp_class = spine_classes[1]
-        elif 0.5 <  spine.neck_width[0]/spine.head_bbox[0][1] < 1.1:
-            spine.sp_class = spine_classes[2]
-        else:
-            spine.sp_class = spine_classes[3]
-        print("assigned class = ",spine.sp_class)
-    breakpoint()
-    print("*" * 30)
+        assigned_classes = []
+        # making sure that the neck length and width has same length
+        assert len(spine.neck_length) == len(spine.neck_width)
+        for t in range(0,len(spine.head_bbox)):
+            if spine.neck_width == []:
+                assigned_classes.append(spine_classes[0])
+            elif spine.neck_width[t]/spine.head_bbox[t][1] < 0.5:
+                assigned_classes.append(spine_classes[1])
+            elif 0.5 <  spine.neck_width[t]/spine.head_bbox[t][1] < 1.1:
+                assigned_classes.append(spine_classes[2])
+            else:
+                assigned_classes.append(spine_classes[3])
+        spine.sp_class = assigned_classes
     return None

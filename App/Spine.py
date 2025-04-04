@@ -42,6 +42,7 @@ class Synapse(object):
         self.neck_contours = []
         self.neck_length   = []
 
+        self.sp_class = []
 class Spine_Marker:
 
     Epsilon = 10

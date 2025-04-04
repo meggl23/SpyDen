@@ -916,7 +916,7 @@ class DataReadWindow(QWidget):
             self.SpineArr[i].neck_length = []
 
         Measure(self.SpineArr,self.tiff_Arr,self.SimVars,self)
-
+        SpineClassification(self.SpineArr)
         self.mpl.canvas.draw()
         self.measure_spine_button.setChecked(False)
         MakeButtonActive(self.save_button)
