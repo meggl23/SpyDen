@@ -766,7 +766,6 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                         row.extend(s.RawIntDen[c])
                         row.extend(s.IntDen[c])
                         row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
-                        row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
                         writer.writerow(row)   
                 else:
                     for i,s in enumerate(Spine_Arr):
