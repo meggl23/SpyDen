@@ -803,7 +803,7 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
             mask[cc, rr] = 1
             props = regionprops(mask.astype(int))
             try:
-                roi  = tiff_Arr[i].astype(np.float64)
+                roi  = tiff_Arr[SimVars.frame.actual_timestep].astype(np.float64)
                 roi[np.where(mask == 0)] = math.nan
                 area_pix = np.sum(mask)
                 area.append(int(area_pix) * SimVars.Unit**2)

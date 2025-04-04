@@ -499,7 +499,6 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
         Lims = np.array([xLims[0][0],xLims[1][0]])
    
     # For each object, subtract Lims where possible and convert attributes to lists.
-    breakpoint()/
     for S in modifiedSynArr:
         # Subtract Lims from attributes if they exist.
         for attr in ['points', 'location', 'bgloc']:
@@ -675,7 +674,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                 custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
             else:
                 custom_header +=['Neck length'] + ['Neck width'] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
-
+            custom_header += ['Spine class']
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_l_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
@@ -734,6 +733,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             else:
                                 row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
                                 row.extend(s.neck_mean[c])
+                            row.extend([sp for sp in s.sp_class])
                             writer.writerow(row)
 
     else: 
@@ -745,8 +745,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
-        ['Timestep '+ str(i) +' (head bounding box)' for i in range(1,nSnaps+1)] +
-        ['Timestep ' + str(i) + '(spine class)' for i in range(1, nSnaps + 1)])
+        ['Timestep '+ str(i) +' (head bounding box)' for i in range(1,nSnaps+1)])
         if(not OnlySoma):
             custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (spine class)' for i in range(1,nSnaps+1)]
 
@@ -767,7 +766,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                         row.extend(s.RawIntDen[c])
                         row.extend(s.IntDen[c])
                         row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
-                        row.extend(s.sp_class[c])
+                        row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
                         writer.writerow(row)   
                 else:
                     for i,s in enumerate(Spine_Arr):
@@ -783,7 +782,6 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
-                            row.extend(s.sp_class[c])
                             row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
                             row.extend(np.zeros(nSnaps))
                             writer.writerow(row)
@@ -798,13 +796,13 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.RawIntDen[c])
                             row.extend(s.IntDen[c])
                             row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
-                            row.extend(s.sp_class[c])
                             if(len(s.neck_mean)==0):
                                 row += [str(n) for n in s.neck_length] +['' for n in s.neck_width]
                                 row.extend(np.zeros(nSnaps))
                             else:
                                 row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
                                 row.extend(s.neck_mean[c])
+                            row.extend([sp for sp in s.sp_class])
                             writer.writerow(row)
 
 def SpineSave_imj(Dir,Spine_Arr):

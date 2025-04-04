@@ -27,7 +27,7 @@ import platform
 import time
 
 DevMode = False
-version = '1.2.0'
+version = '1.3.0'
 
 def catch_exceptions(func):
 
