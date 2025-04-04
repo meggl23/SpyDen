@@ -499,7 +499,7 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
         Lims = np.array([xLims[0][0],xLims[1][0]])
    
     # For each object, subtract Lims where possible and convert attributes to lists.
-    breakpoint()
+    breakpoint()/
     for S in modifiedSynArr:
         # Subtract Lims from attributes if they exist.
         for attr in ['points', 'location', 'bgloc']:
