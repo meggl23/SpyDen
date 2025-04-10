@@ -67,6 +67,7 @@ PyQt5
 imageio
 roifile
 superqt
+shapely
 ```
 
 ***
