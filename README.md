@@ -72,9 +72,7 @@ shapely
 
 ***
 ## Future features
-- Vertical distance of spine from dendrite
 - Circle of analysis (spine counting) around a given point
-- Spine classification into different types
 - 3D analysis
   
 ***
