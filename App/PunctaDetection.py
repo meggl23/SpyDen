@@ -36,14 +36,15 @@ class Puncta:
         self.RoiID     = 0
 
 class PunctaDetection:
-    """
+    """ 
     class that holds meta data for puncta detection and methods for puncta stats calculations
     """
 
-    def __init__(self, SimVars, tiff_Arr, somas, dendrites, dend_thresh=0.75,soma_thresh=0.5,sigmas=(1,1)):
+    def __init__(self, SimVars, tiff_Arr, somas,necks, dendrites, dend_thresh=0.75,soma_thresh=0.5,sigmas=(1,1)):
         self.Dir = SimVars.Dir
         self.tiff_Arr = tiff_Arr
         self.somas = somas  
+        self.necks = necks
         self.dendrites = dendrites  
         self.channels = SimVars.Channels
         self.snaps    = SimVars.Snapshots
@@ -177,16 +178,21 @@ class PunctaDetection:
         NoDendrite = False
         all_c_t_somatic_puncta = []
         all_c_t_dendritic_puncta = []
+        all_c_t_neck_puncta = []
         for t in range(self.snaps):
             all_c_somatic_puncta = []
             all_c_dendritic_puncta = []
+            all_c_neck_puncta = []
             for ch in range(self.channels):
                 orig_img = self.tiff_Arr[t, ch, :, :].astype(float)
                 if(Soma):
-                    somatic_puncta,anti_soma   = self.GetPunctasSoma(orig_img,ch,t)
+                    somatic_puncta,anti_soma   = self.GetPunctasSoma(orig_img,ch,t,self.somas)
                     all_c_somatic_puncta.append(somatic_puncta)
+                    neck_puncta,anti_neck   = self.GetPunctasSoma(orig_img,ch,t,self.necks)
+                    all_c_neck_puncta.append(neck_puncta)
                 else:
                     anti_soma = np.ones(np.shape(orig_img), "uint8")
+                    anti_neck = np.ones(np.shape(orig_img), "uint8")
                 try:
                     dendritic_puncta = self.GetPunctasDend(orig_img,anti_soma,ch,t)
                 except:
@@ -196,13 +202,14 @@ class PunctaDetection:
 
             all_c_t_somatic_puncta.append(all_c_somatic_puncta)
             all_c_t_dendritic_puncta.append(all_c_dendritic_puncta)
+            all_c_t_neck_puncta.append(all_c_neck_puncta)
         if(not NoDendrite):
             self.SimVars.frame.set_status_message.setText("Puncta are available on all snaphshots/channels")
         else:
             self.SimVars.frame.set_status_message.setText("Puncta are available on all snaphshots/channels, but there was no dendrite, so no dendritic puncta")
-        return all_c_t_somatic_puncta, all_c_t_dendritic_puncta
+        return all_c_t_somatic_puncta, all_c_t_dendritic_puncta,all_c_t_neck_puncta
 
-    def GetPunctasSoma(self,orig_img,ch,t_snape):
+    def GetPunctasSoma(self,orig_img,ch,t_snape,polys):
         """Detects and returns somatic puncta in the given image.
 
         Performs puncta detection on the soma regions of the image and returns the detected puncta.
@@ -218,31 +225,34 @@ class PunctaDetection:
 
         soma_img = np.zeros(np.shape(orig_img), "uint8")
         anti_soma = np.ones(np.shape(orig_img), "uint8")
-        for i,soma_instance in enumerate(self.somas):
-            lsm_img = np.zeros(np.shape(orig_img), "uint8")
-
-            xs = soma_instance[:, 0]
-            ys = soma_instance[:, 1]
-
-            rr, cc = polygon(ys, xs, lsm_img.shape)
-            lsm_img[rr, cc] = 1
-
-            anti_soma = np.multiply(anti_soma, 1 - lsm_img)
-            soma_img = np.multiply(orig_img, lsm_img)
-            if np.max(soma_img[rr,cc]) > self.SimVars.bgmean[0, ch]+1:
-                t = np.max(soma_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
-                blobs_log = blob_log(soma_img, threshold=t, max_sigma=self.sigmas[1], min_sigma=self.sigmas[0])
-                blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
-
-                for blob in blobs_log:
-                    y, x, r = blob
-                    puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
-                    sp = Puncta([x, y], r, puncta_stats, False, 0, i, ch, t_snape)
-                    sp.RoiID = i
-                    somatic_puncta.append(sp)
+        for i,soma_instance in enumerate(polys):
+            if(soma_instance.ndim<2):
+                pass 
             else:
-                "ommit the rois which is  < background"
-                pass
+                lsm_img = np.zeros(np.shape(orig_img), "uint8")
+
+                xs = soma_instance[:, 0]
+                ys = soma_instance[:, 1]
+
+                rr, cc = polygon(ys, xs, lsm_img.shape)
+                lsm_img[rr, cc] = 1
+
+                anti_soma = np.multiply(anti_soma, 1 - lsm_img)
+                soma_img = np.multiply(orig_img, lsm_img)
+                if np.max(soma_img[rr,cc]) > self.SimVars.bgmean[0, ch]+1:
+                    t = np.max(soma_img[rr,cc])*self.soma_thresh#np.max((np.max(orig_img[rr,cc])*self.soma_thresh,self.SimVars.bgmean[0, ch]+1))
+                    blobs_log = blob_log(soma_img, threshold=t, max_sigma=self.sigmas[1], min_sigma=self.sigmas[0])
+                    blobs_log[:, 2] = blobs_log[:, 2] * sqrt(2)
+
+                    for blob in blobs_log:
+                        y, x, r = blob
+                        puncta_stats = self.GetPunctaStats(x, y, r, orig_img)
+                        sp = Puncta([x, y], r, puncta_stats, False, 0, i, ch, t_snape)
+                        sp.RoiID = i
+                        somatic_puncta.append(sp)
+                else:
+                    "ommit the rois which is  < background"
+                    pass
 
 
         return somatic_puncta,anti_soma
@@ -307,40 +317,63 @@ def save_puncta(puncta_Dir,punctas,xLims):
     Both files are stored in the corresponding subdirectory of the puncta directory.
     """
     if(len(xLims[0])==0):
-        Lims = np.array(0)
+        Lims = 0
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
 
-    somatic_punctas,dendritic_punctas = punctas[0],punctas[1]
+    #-> for some reason ehre the list is not rigth
+
+    somatic_punctas,dendritic_punctas,neck_punctas = punctas[0],punctas[1],punctas[2]
     somatic_punctas_flat = [item for sublist in somatic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
+    neck_punctas_flat = [item for sublist in neck_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
     dendritic_punctas_flat =  [item for sublist in dendritic_punctas for subsublist in sublist for item in (subsublist if isinstance(subsublist, list) else [subsublist])]
     try:
         for sp in somatic_punctas_flat:
-            sp.location = (sp.location - Lims).tolist()
             sp.RoiID = sp.RoiID.tolist()
+            try:
+                sp.location = (sp.location - Lims).tolist()
+            except:
+                pass
     except:
         pass
     try:
-        for dp in dendritic_punctas_flat:
-            dp.location = (dp.location - Lims).tolist()
-            dp.RoiID = dp.RoiID.tolist()
+        for nep in neck_punctas_flat:
+            nep.RoiID = nep.RoiID.tolist()
+            try:
+                ne.location = (nep.location - Lims).tolist()
+            except:
+                pass
     except:
         pass
 
+    try:
+        for dp in dendritic_punctas_flat:
+            dp.RoiID = dp.RoiID.tolist()
+            try:
+                dp.location = (dp.location - Lims).tolist()
+            except:
+                pass
+    except:
+        pass
+    
     with open(
         puncta_Dir + "soma_puncta.json",
         "w",
     ) as f:
-        json.dump([vars(P) for P in somatic_punctas_flat], f, indent=4)
+            json.dump([vars(P) for P in somatic_punctas_flat], f, indent=4)
+    with open(
+        puncta_Dir + "neck_puncta.json",
+        "w",
+    ) as f:
+        json.dump([vars(P) for P in neck_punctas_flat], f, indent=4)
     with open(
         puncta_Dir + "dend_puncta.json",
         "w",
     ) as f:
         json.dump([vars(P) for P in dendritic_punctas_flat], f, indent=4)
+    PunctaSave_csv(puncta_Dir,somatic_punctas_flat,dendritic_punctas_flat,neck_punctas_flat)
 
-    PunctaSave_csv(puncta_Dir,somatic_punctas_flat,dendritic_punctas_flat)
-
-def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat):
+def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat,neck_punctas_flat):
     """
     Saves somatic and dendritic puncta data to separate CSV files.
 
@@ -359,6 +392,15 @@ def PunctaSave_csv(Dir,somatic_punctas_flat,dendritic_punctas_flat):
         writer = csv.writer(file)
         writer.writerow(custom_header) 
         for i,p in enumerate(somatic_punctas_flat):
+            row = ['Puncta: '+str(i),p.channel,p.RoiID,p.snapshot,str(p.location),
+                   p.radius,p.max,p.min,p.mean,p.std,p.median,p.distance]
+            writer.writerow(row)
+
+    csv_file_path = Dir+'neck_puncta.csv'
+    with open(csv_file_path, 'w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(custom_header) 
+        for i,p in enumerate(neck_punctas_flat):
             row = ['Puncta: '+str(i),p.channel,p.RoiID,p.snapshot,str(p.location),
                    p.radius,p.max,p.min,p.mean,p.std,p.median,p.distance]
             writer.writerow(row)

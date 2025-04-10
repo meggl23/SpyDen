@@ -21,6 +21,7 @@ import math
 import json
 
 import roifile as rf
+from scipy.ndimage import distance_transform_edt
 
 class Dendrite:
     """this class holds all the params for the dendrite like tif_arr"""
@@ -206,7 +207,6 @@ class Dendrite:
 
     def get_dendritic_surface_matrix(self) -> np.ndarray:
         return self.dendritic_surface_matrix
-
 
 class DendriteMeasurement:
     """this class handles the communication between the gui and the data calculation classes
@@ -463,6 +463,22 @@ def DendSave_imj(Dir,Dend_Arr,shift):
         roi = rf.ImagejRoi.frompoints(pts)
 
         roi.tofile(Dir2+'DendSeg_'+str(i)+'.roi')
+
+def DendRead_imj(path,shift):
+    roi = rf.ImagejRoi.fromfile(path)
+    coords = roi.coordinates()
+    coords = np.flip(coords- shift, axis=1) 
+    _, first_idx = np.unique(coords, return_index=True, axis=0)
+    coords = coords[np.sort(first_idx)]
+
+    x, y = coords[:, 0], coords[:, 1]
+    _,_,_,_,_, H = curvature_polygon(x, y)
+    H = H / len(H)
+    sampling, _, _ = curvature_dependent_sampling(H, 50)
+    x, y = x[sampling], y[sampling]
+    coords_sampled = np.array([y.T, x.T]).T.astype(int)
+
+    return coords_sampled
 
 
 def MeasureDend(mask, tiff_Arr, Unit,Snapshots):

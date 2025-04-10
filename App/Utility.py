@@ -1,5 +1,6 @@
 import sys
 import matplotlib.pyplot as plt
+from matplotlib.path import Path
 import numpy as np
 import torchvision.transforms as transforms
 import os
@@ -9,6 +10,8 @@ import torch
 import torchvision.transforms as transforms
 from skimage import feature
 from skimage.draw import ellipse
+
+from PyQt5.QtCore import QCoreApplication
 
 
 data_transforms = {
@@ -119,26 +122,43 @@ def MakeButtonInActive(button):
     button.setEnabled(False)
     
 
-def download_model(model_url,save_path):
+def download_model(model_url,save_path,Simvars):
 
 
-    response = requests.get(model_url)
-    with open(save_path, 'wb') as f:
-        f.write(response.content)
+    response = requests.get(model_url,stream = True)
+    total_size = int(response.headers.get('content-length', 0))
+    downloaded = 0
+    Simvars.frame.set_status_message.setText("Downloading:")
+    try:
+        with open(save_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+                    downloaded += len(chunk)
+                    percent = int((downloaded / total_size) * 100) if total_size else 0
+                    # Update the text field with the current progress
+                    Simvars.frame.set_status_message.setText(f"Downloading: {percent}%")
+                    # Process pending GUI events so the text field updates
+                    QCoreApplication.processEvents()
+    except Exception as e:
+        print(e)
+        os.remove(save_path)
 
 def load_model(Simvars):
 
     # Create the full path
+    Simvars.frame.set_status_message.setText("Loading model")
+
     folder_path = os.path.expanduser("~")
     file_name = 'model.pth'
     model_path = os.path.join(folder_path, file_name)
 
     if not os.path.exists(model_path):
-        download_model(Simvars.ML_URL,model_path)
-    model = torch.load(model_path, map_location=torch.device('cpu'))
+        download_model(Simvars.ML_URL,model_path,Simvars)
+    model = torch.load(model_path, map_location=torch.device('cpu'),weights_only=False)
     # Additional model setup, if needed
     try:
-        os.remove('model.pth')
+        os.remove(model_path)
     except:
         pass
     Simvars.model = model
@@ -204,7 +224,7 @@ def RunNN(Simvars, DendArr, tiff_Arr):
     return pPoints, score
 
 
-def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
+def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor = 1):
     """
     Calculates the width of the dendrite along the provided points.
 
@@ -223,7 +243,6 @@ def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
     edges1 = feature.canny(img, sigma=sigma)
 
 
-    i_img = np.zeros(img.shape)
     width_arr = np.zeros(all_ps.shape[0])
     degrees = np.zeros(all_ps.shape[0])
     for dxd, d in enumerate(all_ps[1:]):
@@ -243,23 +262,15 @@ def getWidthnew(img, all_ps, sigma, max_neighbours, width_factor: int=1):
             0,
             max_neighbours=max_neighbours,
         )
-
-        rr, cc = ellipse(
-            all_ps[dxd][1],
-            all_ps[dxd][0],
-            width_arr[dxd],
-            4,
-            rotation=degrees[dxd],
-            shape=img.shape,
-        )
-
-        i_img[rr, cc] = edges1[rr, cc]
     ########################## try to remove abrupt changes
     for i in range(len(width_arr) - 1):
         if width_arr[i + 1] > width_arr[i] + max_neighbours:
             width_arr[i + 1] = width_arr[i]
-
-    width_arr[-1] = width_arr[-2]
+    try:
+        width_arr[-1] = width_arr[-2]
+    except Exception as e:
+       # Print the error message associated with the exception
+        pass
     ##########################
     reverted = np.flip(width_arr, axis=0)
     for i in range(len(reverted) - 1):
@@ -373,6 +384,76 @@ def dist_point_to_segment(p, s0, s1):
     b = c1 / c2
     pb = s0 + b * v
     return dist(p, pb)
+
+def segment_intersection(p, r, q, s):
+    """
+    Compute the intersection of two line segments:
+      Segment 1: from point p in direction r
+      Segment 2: from point q in direction s
+
+    Solves for parameters t and u in: p + t*r = q + u*s.
+    Returns (t, u) if an intersection exists, else returns None.
+    """
+    p = np.array(p, dtype=float)
+    q = np.array(q, dtype=float)
+    r = np.array(r, dtype=float)
+    s = np.array(s, dtype=float)
+    
+    r_cross_s = np.cross(r, s)
+    if np.abs(r_cross_s) < 1e-8:
+        return None  # lines are parallel or collinear
+    t = np.cross((q - p), s) / r_cross_s
+    u = np.cross((q - p), r) / r_cross_s
+    return t, u
+
+def find_intersection(polyline, polygon):
+    """
+    Given a polyline (Nx2 numpy array) and a closed polygon (Mx2 numpy array),
+    find the intersection point along the first polyline segment that goes
+    from inside the polygon (using matplotlib Path) to outside.
+    
+    Returns the intersection point and the index of the segment, or (None, None)
+    if no intersection is found.
+    """
+    # Create a Path object from the polygon.
+    # If the polygon is not explicitly closed (first != last), Path will close it.
+    polyline = np.array(polyline)
+    polygon = np.array(polygon)
+    if not np.array_equal(polygon[0], polygon[-1]):
+        polygon = np.vstack([polygon, polygon[0]])
+
+    path = Path(polygon)
+    # Determine which polyline points are inside the polygon.
+    inside = path.contains_points(polyline)
+    
+    # Loop over segments of the polyline.
+    for i in range(len(polyline) - 1):
+        if inside[i] and not inside[i+1]:
+            p_inside = polyline[i]
+            p_outside = polyline[i+1]
+            seg_vec = p_outside - p_inside
+            intersections = []
+            # Loop through polygon edges.
+            # Assume polygon is closed. If not, you can force it with:
+            # polygon = np.vstack([polygon, polygon[0]])
+            for j in range(len(polygon)-1):
+                edge_start = polygon[j]
+                edge_end = polygon[j+1]
+                edge_vec = edge_end - edge_start
+                result = segment_intersection(p_inside, seg_vec, edge_start, edge_vec)
+                if result is None:
+                    continue
+                t, u = result
+                if 0 <= t <= 1 and 0 <= u <= 1:
+                    ip = p_inside + t * seg_vec
+                    intersections.append(ip)
+            if intersections:
+                intersections = np.array(intersections)
+                # Choose the intersection closest to the inside point.
+                dists = np.linalg.norm(intersections - p_inside, axis=1)
+                idx = np.argmin(dists)
+                return intersections[idx], i
+    return None, None
 
 
 
@@ -506,27 +587,34 @@ def averager(arr: np.array, n: int) -> tuple[np.array, np.array]:
             averages.append(res)
         return np.array(averages), boarders
 
-
-def curvature_dependent_sampling(arr: np.array, pixels_per_intervall: int) -> np.array:
+def curvature_dependent_sampling(arr: np.array, pixels_per_intervall: int, min_points: int = 10) -> np.array:
     """
-    function to calculate the points for piecewise linear approximation of the medial axis
-    to reduce the medial axis path to make it presentable in the GUI
-    high curvature means high sampling and vice versa
-    :param arr: curvature per pixel of dendrite path
-    :param pixels_per_intervall: size of interval for average
-    :return: indices of the curvature sampled points
+    Calculate points for a piecewise linear approximation of the medial axis
+    based on curvature-dependent sampling. High curvature regions will have more sampling.
+    
+    :param arr: Curvature per pixel along the dendrite path.
+    :param pixels_per_intervall: Interval size for averaging.
+    :param min_points: Minimum number of points to guarantee in the final sampling.
+    :return: A tuple (sampling, boarders, aver) where:
+             - sampling: indices of the sampled points,
+             - boarders: interval borders from the averaging,
+             - aver: the averaged curvature values.
     """
-    aver, boarders = averager(arr, pixels_per_intervall)  # sub averaging
-    res = list(
-        map(curvature_eval, aver)
-    )  # evaluate mean curvature to get number of points in a sample
+    aver, boarders = averager(arr, pixels_per_intervall)  # sub-averaging
+    res = list(map(curvature_eval, aver))  # evaluate curvature to get number of points per sample
 
     sampling = np.array([])
     for i in range(len(aver)):
+        # For each interval, generate points based on the computed number plus one.
         intervall = np.linspace(boarders[i], boarders[i + 1], res[i] + 1)
+        # Exclude the last point to avoid duplicates (except for the final interval)
         sampling = np.append(sampling, intervall[:-2])
     sampling = np.append(sampling, boarders[-1])
     sampling = sampling.astype(int)
+
+    # Ensure a minimum number of points.
+    if sampling.size < min_points:
+        sampling = np.linspace(boarders[0], boarders[-1], min_points, dtype=int)
 
     return sampling, boarders, aver
 

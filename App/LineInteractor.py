@@ -21,7 +21,7 @@ class LineInteractor:
     showverts = True
     epsilon = 5  # max pixel distance to count as a vertex hit
 
-    def __init__(self, ax, canvas, poly,Flag):
+    def __init__(self, ax, canvas, poly,Flag,markerprops = ['r','C0',1.5]):
         if poly.figure is None:
             raise RuntimeError(
                 "You must first add the polygon to a figure "
@@ -38,11 +38,12 @@ class LineInteractor:
             x,
             y,
             marker="o",
-            markerfacecolor="r",
-            markersize=1.5 * self.epsilon,
+            markerfacecolor=markerprops[0],
+            markersize=markerprops[2] * self.epsilon,
             fillstyle="full",
             linestyle=None,
             linewidth=1.5,
+            color=markerprops[1],
             animated=True,
             antialiased=True,
         )
