@@ -204,7 +204,7 @@ def GetAllpointsonPath(xys):
 
 
 def medial_axis_path(
-    mesh: np.ndarray, start: np.ndarray, end: np.ndarray, scale=1
+    mesh: np.ndarray, start: np.ndarray, end: np.ndarray, scale=1,verbose = False
 ) -> tuple[np.ndarray, float]:
     """
     converts image to graph module networkx, computes shortest path between two points where
@@ -216,6 +216,7 @@ def medial_axis_path(
     :param scale: scaling factor units [scaling] = mum/pixel
     :return: shortest path shape (Nx2)
     """
+
     a = np.stack((start, end), axis=0)
     if (mesh[a[:, 0], a[:, 1]]).all():
         len_y = len(mesh[:, 0])
@@ -230,41 +231,29 @@ def medial_axis_path(
             if val == 1:
                 G.add_node(i)
                 pos[i] = (i % side_length, len_x - mt.floor(i / side_length))
-
+                
+                # add horizontal edge if not at the right edge
+                if (i + 1) % side_length != 0 and flatimg[i + 1] == 1:
+                    G.add_edge(i, i + 1, weight=scale * 1)
+                
+                # for vertical and diagonal edges, ensure that we're not in the last row
                 if i < len(flatimg) - side_length:
-                    if (i + 1) % side_length != 0 and flatimg[
-                        i + 1
-                    ] == 1:  # add horizontal edges
-                        G.add_edge(i, i + 1, weight=scale * 1)
-
-                    if (i + side_length) < side_length**2 and flatimg[
-                        i + side_length
-                    ] == 1:  # add vertical edges
+                    # add vertical edge
+                    if flatimg[i + side_length] == 1:
                         G.add_edge(i, i + side_length, weight=scale * 1)
 
-                    if (
-                        (i + 1 + side_length) < side_length**2
-                        and (i + 1 + side_length) % side_length != 0
-                        and flatimg[i + side_length + 1] == 1
-                    ):  # one diagonal direction
-                        G.add_edge(i, i + 1 + side_length, weight=scale * mt.sqrt(2))
+                    # add diagonal edge (down-right)
+                    if (i + 1) % side_length != 0 and flatimg[i + side_length + 1] == 1:
+                        G.add_edge(i, i + side_length + 1, weight=scale * mt.sqrt(2))
 
-                    if (
-                        (i - 1 + side_length) < side_length**2
-                        and (i - 1 + side_length) % side_length != side_length - 1
-                        and flatimg[i - 1 + side_length] == 1
-                    ):  # the other diagonal direction
-                        G.add_edge(i, i - 1 + side_length, weight=scale * mt.sqrt(2))
+                    # add diagonal edge (down-left)
+                    if i % side_length != 0 and flatimg[i + side_length - 1] == 1:
+                        G.add_edge(i, i + side_length - 1, weight=scale * mt.sqrt(2))
 
         """
         find shortest path between two nodes and draw network with path in different color
         """
-
         node1, node2 = start[0] * len_x + start[1], end[0] * len_x + end[1]
-        path = nx.dijkstra_path(
-            G, node1, node2, weight="weight"
-        )  # shortest path as list of nodes
-        w = nx.path_weight(G, path, weight="weight")
 
         """
         for each node find distance to dendrite boundary
@@ -273,7 +262,7 @@ def medial_axis_path(
         border_dist = 0
         while (
             len(G2.nodes) > 0
-        ):  # iteratively remove outermost layer of graph until nothing is left
+        ):  # iteratively remove outermostx layer of graph until nothing is left
             neighbor_numbers = np.array([len(list(G2.neighbors(n))) for n in G2.nodes])
             border_indices = np.where(neighbor_numbers < 8)[
                 0
@@ -310,14 +299,12 @@ def medial_axis_path(
             x = path[ind] - len_x * y
             coords[ind] = x, y
 
-        coords[:, 0] = gaussian_filter1d(coords[:, 0], mode="nearest", sigma=10)
-        coords[:, 1] = gaussian_filter1d(coords[:, 1], mode="nearest", sigma=10)
 
         # calculate length of path in pixels
         length = GetLength(coords)
         return coords, length * scale
     else:
-        print("points were not on the dendrit, press Go again!")
+        if verbose: print("points were not eligible, change threshold and start again!")
 
 def GetLength(coords):
     length = 0

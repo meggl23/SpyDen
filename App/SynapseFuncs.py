@@ -1,16 +1,30 @@
 from .Utility import *
 from skimage.feature import canny
 from skimage.registration import phase_cross_correlation
+from scipy.signal import medfilt2d
 
 import json
 import copy
 from .Spine import Synapse
 import csv
+import cv2 as cv
 
 import traceback
 
 import roifile as rf
 
+from .PathFinding import (
+    medial_axis_path,
+    downsampling_max_pool,
+    curvature_polygon,
+    curvature_eval,
+    GetAllpointsonPath
+)
+
+from scipy.ndimage import gaussian_filter1d, gaussian_filter
+from scipy.ndimage import distance_transform_edt
+
+from .MPL_Widget import *
 def SpineShift(tiff_Arr_small):
 
     """
@@ -34,14 +48,98 @@ def SpineShift(tiff_Arr_small):
 
     return MinDirCum
 
-
-def FindShape(
+def ROI_And_Neck(
     tiff_Arr_m,
     pt,
     DendArr_m,
     other_pts,
     bg,
     ErrorCorrect=False,
+    sigma=1.5,
+    CheckVec=[True, True, True, True],
+    tol=3,
+    SpineShift_flag = True,
+    Mode = 'Both'):
+    
+    SpineMinDir = None
+    neck_path = []
+
+    if tiff_Arr_m.ndim > 2:
+        tiff_Arr = tiff_Arr_m.max(axis=0)
+        if(SpineShift_flag and ErrorCorrect):
+            tiff_Arr_small = tiff_Arr_m[
+                :,
+                max(pt[1] - 70, 0) : min(pt[1] + 70, tiff_Arr_m.shape[-2]),
+                max(pt[0] - 70, 0) : min(pt[0] + 70, tiff_Arr_m.shape[-1]),
+            ]
+            SpineMinDir = SpineShift(tiff_Arr_small).T.astype(int).tolist()
+            tiff_Arr = np.array(
+                [
+                    np.roll(tiff_Arr_m, -np.array(m), axis=(-2, -1))[i, :, :]
+                    for i, m in enumerate(SpineMinDir)
+                ]
+            ).max(axis=0)
+    else:
+        tiff_Arr = tiff_Arr_m
+
+    Closest = 0
+    if len(DendArr_m) > 1:
+        Closest = [np.min(np.linalg.norm(pt - d, axis=1)) for d in DendArr_m]
+        DendArr = DendArr_m[np.argmin(Closest)]
+        Closest = np.argmin(Closest)
+    else:
+        DendArr = DendArr_m[0]
+    Order0 = np.sort(
+        np.argsort(np.linalg.norm(np.asarray(DendArr) - np.asarray(pt), axis=1))[
+            0:2
+        ]
+    )
+
+    pt_proc = np.array(projection(DendArr[Order0[0]], DendArr[Order0[1]], pt))
+    OppDir = np.array(3 * pt - 2 * pt_proc).astype(int)
+    OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
+    OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
+    o_arr = np.asarray(other_pts)
+
+    neck_thresh = 0
+    if(Mode=='Both'):
+        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc,sigma=sigma,tol=tol,SpineShift_flag=SpineShift_flag)
+        neck_path,neck_thresh      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+        try:
+            dy = neck_path[1][1] - neck_path[0][1] 
+            dx =  neck_path[1][0] - neck_path[0][0]
+        except:
+            dx = pt_proc[0]-pt[0]
+            dy = pt_proc[1]-pt[1]
+        Orientation = np.arctan2(dy,dx)
+
+    elif(Mode=='ROI'):
+        xpert,DendDist = FindShape(tiff_Arr,pt,o_arr,DendArr,bg,pt_proc,sigma=sigma,tol=tol,SpineShift_flag=SpineShift_flag)
+        dx = pt_proc[0]-pt[0]
+        dy = pt_proc[1]-pt[1]
+        Orientation = np.arctan2(dy,dx)
+    else:
+        neck_path,neck_thresh      = FindNeck(pt,pt_proc,tiff_Arr,DendArr)
+        try:
+            dy = neck_path[1][1] - neck_path[0][1] 
+            dx =  neck_path[1][0] - neck_path[0][0]
+        except:
+            dx = pt_proc[0]-pt[0]
+            dy = pt_proc[1]-pt[1]
+        Orientation = np.arctan2(dy,dx)
+        xpert = []
+        DendDist = [0,0,0]
+
+    return xpert, SpineMinDir, OppDir,Closest,DendDist,Orientation,neck_path,neck_thresh
+
+def FindShape(
+    tiff_Arr,
+    pt,
+    o_arr,
+    DendArr,
+    bg,
+    pt_proc,
+    ErrorCorrect=True,
     sigma=1.5,
     CheckVec=[True, True, True, True],
     tol=3,
@@ -70,25 +168,8 @@ def FindShape(
             and pass this out via xpert. Current rules are, "Sanity check", "Fall-off"
             "Dendrite criterion", "Overlap criterion" and "Fallback criterion"
     """
-    SpineMinDir = None
+
     DendDist = None
-    if tiff_Arr_m.ndim > 2:
-        tiff_Arr = tiff_Arr_m.max(axis=0)
-        if(SpineShift_flag and ErrorCorrect):
-            tiff_Arr_small = tiff_Arr_m[
-                :,
-                max(pt[1] - 70, 0) : min(pt[1] + 70, tiff_Arr_m.shape[-2]),
-                max(pt[0] - 70, 0) : min(pt[0] + 70, tiff_Arr_m.shape[-1]),
-            ]
-            SpineMinDir = SpineShift(tiff_Arr_small).T.astype(int).tolist()
-            tiff_Arr = np.array(
-                [
-                    np.roll(tiff_Arr_m, -np.array(m), axis=(-2, -1))[i, :, :]
-                    for i, m in enumerate(SpineMinDir)
-                ]
-            ).max(axis=0)
-    else:
-        tiff_Arr = tiff_Arr_m
 
     cArr = canny(tiff_Arr, sigma=sigma)
 
@@ -106,28 +187,6 @@ def FindShape(
 
     xpert = np.array([pt, pt, pt, pt, pt, pt, pt, pt])
     maxval = tiff_Arr[pt[1], pt[0]]
-
-    Closest = 0
-    if CheckVec[2]:
-        if len(DendArr_m) > 1:
-            Closest = [np.min(np.linalg.norm(pt - d, axis=1)) for d in DendArr_m]
-            DendArr = DendArr_m[np.argmin(Closest)]
-            Closest = np.argmin(Closest)
-        else:
-            DendArr = DendArr_m[0]
-        Order0 = np.sort(
-            np.argsort(np.linalg.norm(np.asarray(DendArr) - np.asarray(pt), axis=1))[
-                0:2
-            ]
-        )
-
-        pt_proc = np.array(projection(DendArr[Order0[0]], DendArr[Order0[1]], pt))
-        OppDir = np.array(3 * pt - 2 * pt_proc).astype(int)
-        OppDir[0] = np.clip(OppDir[0],10,tiff_Arr.shape[-1] - 10)
-        OppDir[1] = np.clip(OppDir[1],10,tiff_Arr.shape[-2] - 10)
-    else:
-        OppDir = pt
-    o_arr = np.asarray(other_pts)
 
     if CheckVec[3]:
         for keys in Directions.keys():
@@ -214,24 +273,24 @@ def FindShape(
 
     if ErrorCorrect:
         o_arr2 = np.delete(o_arr, np.where(np.all(o_arr == pt, axis=1)), axis=0)
-        xpert1, _, _,_,_ = FindShape(
-            tiff_Arr, pt + [0, 1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert1, _ = FindShape(
+            tiff_Arr, pt + [0, 1], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
-        xpert2, _, _,_,_ = FindShape(
-            tiff_Arr, pt + [0, -1], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert2, _ = FindShape(
+            tiff_Arr, pt + [0, -1], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
-        xpert3, _, _,_,_ = FindShape(
-            tiff_Arr, pt + [1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert3, _ = FindShape(
+            tiff_Arr, pt + [1, 0], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
-        xpert4, _, _,_,_ = FindShape(
-            tiff_Arr, pt + [-1, 0], DendArr_m, o_arr2, bg, False, sigma, CheckVec, tol
+        xpert4, _ = FindShape(
+            tiff_Arr, pt + [-1, 0], o_arr2, DendArr,bg,pt_proc, False, sigma, CheckVec, tol
         )
         xpert = np.stack((xpert, xpert1, xpert2, xpert3, xpert4)).mean(0)
         dists = np.linalg.norm(np.array(xpert)-pt_proc,axis=1)
         DendDist = np.array([dists.max(),np.linalg.norm(pt_proc - pt),dists.min()])
         xpert = xpert.tolist()
 
-    return xpert, SpineMinDir, OppDir,Closest,DendDist
+    return xpert,DendDist
 
 
 def SynDistance(SynArr, DendArr_m, Unit):
@@ -255,6 +314,115 @@ def SynDistance(SynArr, DendArr_m, Unit):
         S.distance = SynDendDistance(S.location, DendArr, DendArr[0]) * Unit
 
     return SynArr
+
+def FindNeck(SpineC,DendProj,image,DendArr):
+
+
+    start = SpineC.astype(int)[::-1]
+    end = DendProj.astype(int)[::-1]
+
+    bbox_min = np.max([np.min(np.stack([end,start]),axis=0)-50,[0,0]],axis=0)
+    bbox_max = np.min([np.max(np.stack([end,start]),axis=0)+50,image.shape],axis=0)
+
+    img = image[bbox_min[0]:bbox_max[0]+1,bbox_min[1]:bbox_max[1]+1]
+    median = medfilt2d(img, kernel_size=5)
+    success = False
+    k = 1
+    while success == False:
+        try:
+            median_thresh = median >= 2*np.mean(median)//(1.1**(k-1))
+
+            medial_axis, length = medial_axis_path(
+                mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
+            success = True
+            neck_thresh = 2*np.mean(median)//(1.1**(k-1))
+        except:
+            k+=1
+            if(k==50):
+                median_thresh = median >= 0
+
+                medial_axis, length = medial_axis_path(
+                    mesh=median_thresh, start=start-bbox_min, end=end-bbox_min)
+                success = True
+                neck_thresh = 0
+
+    x, y = medial_axis[:, 0], medial_axis[:, 1]
+    if((x == x[0]).all() or (y == y[0]).all()):
+        curvature_sampled = np.array([x[[0,len(x)//3,2*len(x)//3,-1]].T, y[[0,len(x)//3,2*len(x)//3,-1]].T]).T
+    else:
+        Tx, Ty, Hx, Hy, T, H = curvature_polygon(x, y)
+        H = H / len(H)
+        sampling, _, _ = curvature_dependent_sampling(H, 100)
+        x, y = x[sampling], y[sampling]
+        curvature_sampled = np.array([x.T, y.T]).T
+
+    shifted_path = curvature_sampled+bbox_min[::-1]
+
+    distances = np.array([np.min(np.linalg.norm(t-DendArr,axis=-1)) for t in shifted_path])
+    cutoff = np.argmin(distances)
+
+    return shifted_path[:cutoff].tolist(),neck_thresh.astype(np.float64)
+
+def FindNeckWidth(neck_path,image, thresh, max_neighbours: int = 1, sigma: int = 10, width_factor: int=0.1):
+
+    all_points = GetAllpointsonPath(np.round(neck_path).astype(int))
+
+    gaussian_x = gaussian_filter1d(        
+        input=all_points[:, 1], mode="nearest", sigma=sigma    
+    ).astype(int)
+    gaussian_y = gaussian_filter1d(
+        input=all_points[:, 0], mode="nearest", sigma=sigma
+    ).astype(int)
+    smoothed_all_pts = np.stack((gaussian_y, gaussian_x), axis=1)
+
+    median = medfilt2d(image, kernel_size=5)
+    if(thresh > 0):
+        median_thresh = median >= thresh
+    else:
+        median_thresh = median >= np.mean(median)
+    width_arr, degrees = getWidthnew(
+        median_thresh,
+        smoothed_all_pts,
+        sigma=sigma,
+        max_neighbours=max_neighbours,
+        width_factor=width_factor
+    )
+    mask = np.zeros(shape=image.shape)
+
+    for pdx, p in enumerate(smoothed_all_pts[1:]):
+        rr, cc = ellipse(
+            p[1],
+            p[0],
+            width_arr[pdx],
+            0.1,
+            rotation=degrees[pdx],
+            shape=image.shape,
+        )
+        mask[rr, cc] = 1
+    
+    gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)
+    if(gaussian_mask.sum() == gaussian_mask.size):
+        return 0,0
+    contours, _ = cv.findContours(gaussian_mask, cv.RETR_TREE, cv.CHAIN_APPROX_NONE)
+
+    # Compute the distance transform
+    dist_transform = distance_transform_edt(gaussian_mask)
+
+    # For each point along your centerline (smoothed_all_pts), sample the distance
+    widths = []
+    for p in smoothed_all_pts:
+        y, x = p  # note: p is (y, x)
+        # Make sure indices are within bounds
+        if 0 <= y < dist_transform.shape[0] and 0 <= x < dist_transform.shape[1]:
+            # The width at this point is approximately twice the distance to the edge
+            widths.append(2 * dist_transform[x, y])
+
+    # Now you can compute the median or mean width
+
+    final_width = np.mean(widths) if widths else None
+    
+
+    return contours,final_width
 
 def SynDendDistance(loc, DendArr, loc0):
 
@@ -304,7 +472,8 @@ class NumpyEncoder(json.JSONEncoder):
         if isinstance(obj, np.integer):
             return int(obj)
         return json.JSONEncoder.default(self, obj)
-
+def to_list(val):
+    return val.tolist() if hasattr(val, 'tolist') else val
 
 def SaveSynDict(SynArr, Dir, Mode,xLims):
 
@@ -320,31 +489,44 @@ def SaveSynDict(SynArr, Dir, Mode,xLims):
     Function:
             Save list of spines as json file
     """
-
     modifiedSynArr = copy.deepcopy(SynArr)
-
+    for S in modifiedSynArr:
+        if hasattr(S, 'neck_contours'):
+            delattr(S, 'neck_contours')
     if(len(xLims[0])==0):
         Lims = np.array([0,0])
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
+   
+    # For each object, subtract Lims where possible and convert attributes to lists.
     for S in modifiedSynArr:
-        try:
-            S.points   = S.points   - Lims
-            S.location = S.location - Lims
-            S.bgloc    = S.bgloc    - Lims
-        except Exception as e:
-            pass
-        try:
-            S.points   = [arr.tolist() for arr in S.points]
-            S.location = S.location.tolist()
-            S.distance_to_Dend = S.distance_to_Dend.tolist()
-            S.bgloc    = S.bgloc.tolist()
-        except:
-            pass
-        try:
-            S.bgloc = S.bgloc.tolist()
-        except:
-            pass
+        # Subtract Lims from attributes if they exist.
+        for attr in ['points', 'location', 'bgloc']:
+            if hasattr(S, attr):
+                try:
+                    # Subtraction should work if the attribute is a NumPy array or similar.
+                    setattr(S, attr, getattr(S, attr) - Lims)
+                except Exception as e:
+                    pass
+        
+        # Convert attributes to lists.
+        # For 'points', we handle nested conversion if needed.
+        if hasattr(S, 'points'):
+            try:
+                if isinstance(S.points, list):
+                    S.points = [to_list(item) for item in S.points]
+                else:
+                    S.points = to_list(S.points)
+            except Exception as e:
+                pass
+        
+        for attr in ['location', 'distance_to_Dend', 'bgloc', 'neck', 'neck_mean']:
+            if hasattr(S, attr):
+                try:
+                    setattr(S, attr, to_list(getattr(S, attr)))
+                except Exception as e:
+                    pass
+
     if Mode == "Area":
         with open(Dir + "Synapse_a.json", "w") as fp:
             json.dump([vars(S) for S in modifiedSynArr], fp, indent=4,cls=NumpyEncoder)
@@ -374,6 +556,10 @@ def ReadSynDict(Dir, SimVars):
     unit   = SimVars.Unit
     Mode   = SimVars.Mode
     nSnaps = SimVars.Snapshots
+    NecessaryKeys = ['location','bgloc','type','distance','points','shift','channel','local_bg','closest_Dend','distance_to_Dend','Orientation','neck', 'neck_thresh']
+
+    AppliedVals = {'points':[],'dist':None,'type':None,'shift':[],'channel':0,'local_bg':0,'closest_Dend':0,'distance_to_Dend' : [0,0,0],'Orientation' : 0,'neck' : [], 'neck_thresh' : 0}
+
     if(len(SimVars.xLims)==0):
         xLim = 0
         yLim = 0
@@ -399,46 +585,58 @@ def ReadSynDict(Dir, SimVars):
         SynArr = []
 
         for t in temp:
-                try:
-                    SynArr.append(
-                        Synapse(
-                            (t["location"]+np.array([yLim,xLim])).tolist(),
-                            (t["bgloc"]+np.array([yLim,xLim])).tolist(),
-                            Syntype=t["type"],
-                            dist=t["distance"],
-                            pts=(t["points"]+np.array([yLim,xLim])).tolist(),
-                            shift=t["shift"],
-                            channel=t["channel"],
-                            local_bg=t["local_bg"],
-                            closest_Dend=t["closest_Dend"],
-                            DendDist = t["distance_to_Dend"]
-                        )
+
+            for k in NecessaryKeys:
+                if k in t:
+                    AppliedVals[k] = t[k]
+
+            try:
+                SynArr.append(
+                    Synapse(
+                        (AppliedVals["location"]+np.array([yLim,xLim])).tolist(),
+                        (AppliedVals["bgloc"]+np.array([yLim,xLim])).tolist(),
+                        Syntype=AppliedVals["type"],
+                        dist=AppliedVals["distance"],
+                        pts=(AppliedVals["points"]+np.array([yLim,xLim])).tolist(),
+                        shift=AppliedVals["shift"],
+                        channel=AppliedVals["channel"],
+                        local_bg=AppliedVals["local_bg"],
+                        closest_Dend=AppliedVals["closest_Dend"],
+                        DendDist = AppliedVals["distance_to_Dend"],
+                        Orientation = AppliedVals["Orientation"],
+                        neck       = AppliedVals["neck"],
+                        neck_thresh       = AppliedVals["neck_thresh"]
+
                     )
-                except:
-                    pts = []
-                    for pt in t['points']: 
-                        pts.append((pt+np.array([yLim,xLim])).tolist())
-                    SynArr.append(
-                        Synapse(
-                            (t["location"]+np.array([yLim,xLim])).tolist(),
-                            t["bgloc"],
-                            Syntype=t["type"],
-                            dist=t["distance"],
-                            pts=pts,
-                            shift=t["shift"],
-                            channel=t["channel"],
-                            local_bg=t["local_bg"],
-                            closest_Dend=t["closest_Dend"],
-                            DendDist = t["distance_to_Dend"]
-                        )
+                )
+            except:
+                pts = []
+                for pt in AppliedVals['points']: 
+                    pts.append((pt+np.array([yLim,xLim])).tolist())
+                SynArr.append(
+                    Synapse(
+                        (AppliedVals["location"]+np.array([yLim,xLim])).tolist(),
+                        AppliedVals["bgloc"],
+                        Syntype=AppliedVals["type"],
+                        dist=AppliedVals["distance"],
+                        pts=pts,
+                        shift=AppliedVals["shift"],
+                        channel=AppliedVals["channel"],
+                        local_bg=AppliedVals["local_bg"],
+                        closest_Dend=AppliedVals["closest_Dend"],
+                        DendDist = AppliedVals["distance_to_Dend"],
+                        Orientation = AppliedVals["Orientation"],
+                        neck       = AppliedVals["neck"],
+                        neck_thresh       = AppliedVals["neck_thresh"]
                     )
-                    SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
+                )
+                SynArr[-1].shift = np.zeros([nSnaps, 2]).tolist()
     except Exception as e:
        print(e)
        return []
     return SynArr
 
-def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
+def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
     """
     Save Spine data into CSV files.
 
@@ -452,36 +650,93 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
     Returns:
         None
     """   
+    OnlySoma = False
+    if(np.all([S.type == 2 for S in Spine_Arr])):
+        OnlySoma = True
+    else:
+        FirstNonSoma = np.argmin([S.type == 2 for S in Spine_Arr])
+
     if(len(xLims[0])==0):
         Lims = np.array(0)
     else:
         Lims = np.array([xLims[0][0],xLims[1][0]])
     if(Mode=='Luminosity'):
         custom_header =(['', 'type','location','bgloc','area','distance','closest_Dend','Max, dist to Dend',
-            'Center dist to dend','Min, dist to Dend'] + 
+            'Center dist to dend','Min, dist to Dend','head_bbox'] + 
         ['Timestep '+ str(i) +' (mean)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (bg mean)' for i in range(1,nSnaps+1)])
+        if(not OnlySoma):
+            if(local_shift):
+                custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+            else:
+                custom_header +=['Neck length'] + ['Neck width'] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)]
+            custom_header += ['Spine class']
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_l_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(custom_header) 
-                for i,s in enumerate(Spine_Arr):
-                    row = ['Spine: '+str(i),s.type,
-                                     str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend]
-                    row.extend(s.mean[c])
-                    row.extend(s.min[c])
-                    row.extend(s.max[c])
-                    row.extend(s.RawIntDen[c])
-                    row.extend(s.IntDen[c])
-                    row.extend(s.local_bg[c])
-                    writer.writerow(row)   
-    else:
+                if(OnlySoma):
+                    for i,s in enumerate(Spine_Arr):
+                        row = ['Spine: '+str(i),s.type,
+                                         str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
+                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in sublist]) for sublist in s.head_bbox]
+                        
+
+                        row.extend(s.mean[c])
+                        row.extend(s.min[c])
+                        row.extend(s.max[c])
+                        row.extend(s.RawIntDen[c])
+                        row.extend(s.IntDen[c])
+                        row.extend(s.local_bg[c])
+                        writer.writerow(row)
+                else:
+                    for i,s in enumerate(Spine_Arr):
+                        if(s.type == 2):
+                            row = ['Spine: '+str(i),s.type,
+                                             str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
+                                             ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in sublist]) for sublist in s.head_bbox]
+                            
+
+                            row.extend(s.mean[c])
+                            row.extend(s.min[c])
+                            row.extend(s.max[c])
+                            row.extend(s.RawIntDen[c])
+                            row.extend(s.IntDen[c])
+                            row.extend(s.local_bg[c])
+                            if(local_shift):
+                                row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
+                            else:
+                                row += [''] +['']
+                            row.extend(np.zeros(nSnaps))
+                            writer.writerow(row)
+                        else:
+                            row = ['Spine: '+str(i),s.type,
+
+                                         str(s.location-Lims),str(s.bgloc-Lims),s.area,s.distance,s.closest_Dend
+                                         ]+[str(d) for d in s.distance_to_Dend] + [str([float(x) for x in sublist]) for sublist in s.head_bbox]
+                        
+
+                            row.extend(s.mean[c])
+                            row.extend(s.min[c])
+                            row.extend(s.max[c])
+                            row.extend(s.RawIntDen[c])
+                            row.extend(s.IntDen[c])
+                            row.extend(s.local_bg[c])
+                            if(len(s.neck_mean)==0):
+                                row.extend(np.zeros(nSnaps))
+                                row += ['' for n in s.neck_length] +['' for n in s.neck_width]
+                            else:
+                                row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
+                                row.extend(s.neck_mean[c])
+                            row.extend([sp for sp in s.sp_class])
+                            writer.writerow(row)
+
+    else: 
         custom_header =(['', 'type','location','distance','closest_Dend','Max. dist to Dend',
             'Center dist to dend','Min. dist to Dend'] + 
         ['Timestep '+ str(i) +' (area)' for i in range(1,nSnaps+1)] +  
@@ -489,23 +744,65 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims):
         ['Timestep '+ str(i) +' (min)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (max)' for i in range(1,nSnaps+1)] +
         ['Timestep '+ str(i) +' (RawIntDen)' for i in range(1,nSnaps+1)] +
-        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)])
+        ['Timestep '+ str(i) +' (IntDen)' for i in range(1,nSnaps+1)] + 
+        ['Timestep '+ str(i) +' (head bounding box)' for i in range(1,nSnaps+1)])
+        if(not OnlySoma):
+            custom_header +=['Timestep '+ str(i) +' (neck length)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck width)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (neck mean)' for i in range(1,nSnaps+1)] + ['Timestep '+ str(i) +' (spine class)' for i in range(1,nSnaps+1)]
+
         for c in range(nChans):
             csv_file_path = Dir+'Synapse_a_Channel_' + str(c)+'.csv'
             with open(csv_file_path, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(custom_header) 
-                for i,s in enumerate(Spine_Arr):
-                    row = ['Spine: '+str(i),s.type,
-                                     str(s.location-Lims),s.distance,s.closest_Dend
-                                     ]+[str(d) for d in s.distance_to_Dend]
-                    row.extend(s.area[c])
-                    row.extend(s.mean[c])
-                    row.extend(s.min[c])
-                    row.extend(s.max[c])
-                    row.extend(s.RawIntDen[c])
-                    row.extend(s.IntDen[c])
-                    writer.writerow(row)   
+                if(OnlySoma):
+                    for i,s in enumerate(Spine_Arr):
+                        row = ['Spine: '+str(i),s.type,
+                                         str(s.location-Lims),s.distance,s.closest_Dend
+                                         ]+[str(d) for d in s.distance_to_Dend]
+                        row.extend(s.area[c])
+                        row.extend(s.mean[c])
+                        row.extend(s.min[c])
+                        row.extend(s.max[c])
+                        row.extend(s.RawIntDen[c])
+                        row.extend(s.IntDen[c])
+                        row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
+                        writer.writerow(row)   
+                else:
+                    for i,s in enumerate(Spine_Arr):
+                        if(s.type == 2):
+                            row = ['Spine: '+str(i),s.type,
+                                             str(s.location-Lims),s.distance,s.closest_Dend
+                                             ]+[str(d) for d in s.distance_to_Dend]
+                            
+                            row.extend(s.area[c])
+                            row.extend(s.mean[c])
+                            row.extend(s.min[c])
+                            row.extend(s.max[c])
+                            row.extend(s.RawIntDen[c])
+                            row.extend(s.IntDen[c])
+                            row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
+                            row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
+                            row.extend(np.zeros(nSnaps))
+                            writer.writerow(row)
+                        else:
+                            row = ['Spine: '+str(i),s.type,
+                                         str(s.location-Lims),s.distance,s.closest_Dend
+                                         ]+[str(d) for d in s.distance_to_Dend]
+                            row.extend(s.area[c])
+                            row.extend(s.mean[c])
+                            row.extend(s.min[c])
+                            row.extend(s.max[c])
+                            row.extend(s.RawIntDen[c])
+                            row.extend(s.IntDen[c])
+                            row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
+                            if(len(s.neck_mean)==0):
+                                row += [str(n) for n in s.neck_length] +['' for n in s.neck_width]
+                                row.extend(np.zeros(nSnaps))
+                            else:
+                                row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
+                                row.extend(s.neck_mean[c])
+                            row.extend([sp for sp in s.sp_class])
+                            writer.writerow(row)
 
 def SpineSave_imj(Dir,Spine_Arr):
     os.mkdir(path=Dir+'ImageJ/')
@@ -521,3 +818,36 @@ def SpineSave_imj(Dir,Spine_Arr):
             roi = rf.ImagejRoi.frompoints(pts)
             roi.roitype = rf.ROI_TYPE.POLYGON
             roi.tofile(Dir2+'Spine_'+str(i)+'.roi')
+        if(S.type < 2):
+            try:
+                necks = S.neck_contours
+                if(len(necks[0])>2):
+                    for j,p in enumerate(necks):
+                        roi = rf.ImagejRoi.frompoints(p)
+                        roi.roitype = rf.ROI_TYPE.POLYGON
+                        roi.tofile(Dir2+'Spine_neck_'+str(i)+'_t'+str(j)+'.roi')
+                else:
+                    roi = rf.ImagejRoi.frompoints(necks)
+                    roi.roitype = rf.ROI_TYPE.POLYGON
+                    roi.tofile(Dir2+'Spine_neck_'+str(i)+'.roi')
+            except:
+                pass
+
+
+def SpineClassification(Spine_Arr):
+    spine_classes = ["stubby","mushroom","thin","outlier"]
+    for spine in Spine_Arr:
+        assigned_classes = []
+        # making sure that the neck length and width has same length
+        assert len(spine.neck_length) == len(spine.neck_width)
+        for t in range(0,len(spine.head_bbox)):
+            if spine.neck_width == []:
+                assigned_classes.append(spine_classes[0])
+            elif spine.neck_width[t]/spine.head_bbox[t][1] < 0.5:
+                assigned_classes.append(spine_classes[1])
+            elif 0.5 <  spine.neck_width[t]/spine.head_bbox[t][1] < 1.1:
+                assigned_classes.append(spine_classes[2])
+            else:
+                assigned_classes.append(spine_classes[3])
+        spine.sp_class = assigned_classes
+    return None

@@ -7,7 +7,7 @@ from .Utility import MakeButtonInActive,MakeButtonActive
 
 class Synapse(object):
     """Class that holds the parameters associated with the chosen synapse"""
-    def __init__(self,loc,bgloc,pts=[],dist=None,Syntype=None,shift=[],channel=0,local_bg=0,closest_Dend=0,DendDist = [0,0,0]):
+    def __init__(self,loc,bgloc,pts=[],dist=None,Syntype=None,shift=[],channel=0,local_bg=0,closest_Dend=0,DendDist = [0,0,0],Orientation = 0,neck=[],neck_thresh = []):
         self.type = Syntype
         self.location = loc
         self.bgloc = bgloc
@@ -20,6 +20,8 @@ class Synapse(object):
         self.local_bg = []
 
         self.area = []
+        self.head_bbox = []
+
         if dist == None:
             self.distance = 0
         else:
@@ -32,7 +34,15 @@ class Synapse(object):
         self.closest_Dend = closest_Dend
 
         self.distance_to_Dend = DendDist
+        self.Orientation = Orientation
 
+        self.neck = neck
+        self.neck_thresh = neck_thresh
+
+        self.neck_contours = []
+        self.neck_length   = []
+
+        self.sp_class = []
 class Spine_Marker:
 
     Epsilon = 10
@@ -157,7 +167,10 @@ class Spine_Marker:
                         self.SimVars.scores_NN = np.delete(nn_scores[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10],index)
                         self.SimVars.flags_NN = np.delete(nn_flags[nn_scores>self.SimVars.frame.ml_confidence_slider.value()/10],index)
             if len(self.points) == 0:
-                self.scatter.set_visible(False)
+                try:
+                    self.scatter.set_visible(False)
+                except:
+                    pass
             self.draw_points()
 
     def _on_key_release(self, event):
@@ -192,7 +205,6 @@ class Spine_Marker:
         """
         zoom_flag = self.SimVars.frame.mpl.toolbox.mode == "zoom rect"
         pan_flag = self.SimVars.frame.mpl.toolbox.mode == "pan/zoom"
-
         if zoom_flag or pan_flag or not event.inaxes:
             pass
         else:
@@ -202,6 +214,8 @@ class Spine_Marker:
                 self.scores = np.array([1])
                 if(self.shift_is_held):
                     self.flags = np.array([1])
+                elif(self.control_is_held):
+                    self.flags = np.array([2])
                 else:
                     self.flags = np.array([0])
             else:

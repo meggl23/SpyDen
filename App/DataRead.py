@@ -1,5 +1,7 @@
 from skimage.registration import phase_cross_correlation
 from skimage.draw import polygon
+from skimage.measure import regionprops
+import shapely.geometry as shgeo
 import imageio.v2 as imageio
 import tifffile as tf
 import math
@@ -8,12 +10,14 @@ import re
 from .Utility import *
 from .Spine    import *
 from .Dendrite import *
-
+from .PathFinding import GetLength
 from .SynapseFuncs import *
+from .MPL_Widget import *
 
 import json
 
 from PyQt5.QtCore import QCoreApplication
+from matplotlib.path import Path
 
 
 def Measure_BG(tiff_Arr_m, FileLen, z_type):
@@ -440,7 +444,7 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
     else:
         Chans = 1
     if(Chans>1):
-        if(SimVars.Mode=="Luminosity" or Snaps==1):
+        if(SimVars.Mode=="Luminosity"):
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 for i in range(SimVars.Channels):
@@ -452,18 +456,22 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                     S.mean.append(Mean)
                     S.local_bg.append(local_bg)
                 S.area.append(Area[0])
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = 1)
+
         else:
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
-                Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
-                S.max.append(Max)
-                S.min.append(Mean)
-                S.RawIntDen.append(RawIntDen)
-                S.IntDen.append(IntDen)
-                S.mean.append(Mean)
-                S.area.append(Area)
+                for i in range(SimVars.Channels):
+                    Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,i,:,:], SimVars,Snaps)
+                    S.max.append(Max)
+                    S.min.append(Min)
+                    S.RawIntDen.append(RawIntDen)
+                    S.IntDen.append(IntDen)
+                    S.mean.append(Mean)
+                    S.area.append(Area)
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = Snaps)
     else:
-        if(SimVars.Mode=="Luminosity" or Snaps==1):
+        if(SimVars.Mode=="Luminosity"):
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 Mean,Area,Max,Min,RawIntDen,IntDen,local_bg = MeasureShape_and_BG(S, tiff_Arr[:,SimVars.frame.actual_channel,:,:], SimVars,Snaps)
@@ -474,17 +482,258 @@ def Measure(SynArr, tiff_Arr, SimVars,frame=None):
                 S.mean.append(Mean)
                 S.local_bg.append(local_bg)
                 S.area.append(Area[0])
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = 1)
         else:
             for S in SynArr:
                 frame.set_status_message.setText(frame.set_status_message.text()+'.')
                 Mean,Area,Max,Min,RawIntDen,IntDen = MeasureShape(S, tiff_Arr[:,SimVars.frame.actual_channel,:,:], SimVars,Snaps)
                 S.max.append(Max)
-                S.min.append(Mean)
+                S.min.append(Min)
                 S.RawIntDen.append(RawIntDen)
                 S.IntDen.append(IntDen)
                 S.mean.append(Mean)
                 S.area.append(Area)
-    return 0
+                SpineBoundingBox(S,SimVars.Unit,SimVars.Mode,Snaps = Snaps)
+
+
+
+    # We are going to exlude the part of the spine neck thats inside the ROI first before doing any further measurements:
+    # - if there is only one snap we can just directly compare the ROI with the spine neck
+    # - if we have local-shifts then each timestep is a different spine neck that needs to computer
+    # - if we have areas then we have additionally a separate area
+    WarningNecks = False
+    NewNecks = []
+    if(Snaps==1):
+        for i,S in enumerate(SynArr):
+            if(S.type < 2):
+                try:
+                    if(np.array(S.neck).ndim>2):
+                        Intersection_pt, seg_idx = find_intersection(S.neck[0], S.points[0])
+                        new_neck =np.vstack([Intersection_pt, S.neck[0][seg_idx+1:]])[np.newaxis,:]
+                    else:
+                        Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
+                        new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])[np.newaxis,:]
+                    S.neck_length = [GetLength(new_neck[0])*SimVars.Unit]
+                    frame.line_interactor_list[i].line.set_color('green')
+                except:
+                    S.neck_length = [GetLength(np.array(S.neck))*SimVars.Unit]
+                    frame.line_interactor_list[i].line.set_color('red')
+                    WarningNecks = True
+                    new_neck = []
+
+                NewNecks.append(new_neck)
+            else:
+                S.neck_length = [0]
+                NewNecks.append([])
+    elif(SimVars.Mode=="Luminosity"):
+        if(SimVars.frame.local_shift):
+            
+            for i,S in enumerate(SynArr):
+                if(S.type < 2):
+                    nn = []
+                    for n,s in zip(S.neck,S.shift):
+                        try:
+                            Intersection_pt, seg_idx = find_intersection(n, np.array(S.points)+ [s[0],s[1]])
+                            new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                            S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            frame.line_interactor_list[i].line.set_color('green')
+                        except:
+                            new_neck = []
+                            S.neck_length.append(GetLength(np.array(n))*SimVars.Unit)
+    
+                            frame.line_interactor_list[i].line.set_color('red')
+                            WarningNecks = True
+                        nn.append(new_neck)
+
+                    NewNecks.append(nn)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
+        else:   
+            for i,S in enumerate(SynArr):
+                if(S.type < 2):
+                    try:
+                        Intersection_pt, seg_idx = find_intersection(S.neck, S.points)
+                        new_neck =np.vstack([Intersection_pt, S.neck[seg_idx+1:]])
+                        S.neck_length = [GetLength(new_neck)*SimVars.Unit]
+                        frame.line_interactor_list[i].line.set_color('green')
+                    except:
+                        new_neck = []
+                        S.neck_length = [GetLength(np.array(S.neck))*SimVars.Unit]
+
+                        frame.line_interactor_list[i].line.set_color('red')
+                        WarningNecks = True
+                    NewNecks.append(new_neck)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
+    elif(SimVars.Mode=="Area"):
+        if(SimVars.frame.local_shift):
+            for i,S in enumerate(SynArr):
+                if(S.type < 2):
+                    nn = []
+                    for n,s,p in zip(S.neck,S.shift,S.points):
+                        try:
+                            Intersection_pt, seg_idx = find_intersection(n, np.array(p)+ [s[0],s[1]])
+                            new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                            S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            frame.line_interactor_list[i].line.set_color('green')
+                        except:
+                            S.neck_length.append(GetLength(np.array(n))*SimVars.Unit)
+                            new_neck = []
+    
+                            frame.line_interactor_list[i].line.set_color('red')
+                            WarningNecks = True
+                        nn.append(new_neck)
+
+                    NewNecks.append(nn)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
+        else:
+            for i,S in enumerate(SynArr):
+                nn = []
+                if(S.type < 2):
+                    for n,p in zip(S.neck,S.points):
+                        try:
+                            Intersection_pt, seg_idx = find_intersection(n, p)
+                            new_neck =np.vstack([Intersection_pt, n[seg_idx+1:]])
+                            S.neck_length.append(GetLength(new_neck)*SimVars.Unit)
+                            frame.line_interactor_list[i].line.set_color('green')
+                        except:
+                            S.neck_length.append(GetLength(np.array(n))*SimVars.Unit)
+                            new_neck = []
+    
+                            frame.line_interactor_list[i].line.set_color('red')
+                            WarningNecks = True
+                        nn.append(new_neck)
+                    NewNecks.append(nn)
+                else:
+                    S.neck_length = [0]
+                    NewNecks.append([])
+
+
+    neck_factor ="{:.1f}".format(frame.spine_neck_width_mult_slider.value()*0.1)
+    frame.spine_neck_width_mult_counter.setText(neck_factor)
+    frame.spine_neck_sigma_counter.setText(str(frame.spine_neck_sigma_slider.value()))
+
+    try:
+        if hasattr(frame,"ContourLines"):
+            for l in frame.ContourLines:
+                try:
+                    l.remove()
+                except:
+                    pass
+            del frame.ContourLines
+    except Exception as e:
+        print(e)
+
+
+    frame.ContourLines = []
+    for kk,(N,S) in enumerate(zip(NewNecks,SynArr)):
+        if((SimVars.Mode == "Luminosity" and frame.local_shift) or (SimVars.Mode == "Area" and SimVars.multitime_flag)):
+            No_Neck = False
+            if(S.type < 2 and np.all([len(n)>0 for n in N] )):
+                Contours = []
+                AvgWidth = []
+                AvgLum   = []
+                for i,n in enumerate(N):
+                    if((SimVars.Mode == "Luminosity" and frame.local_shift)):
+                        poly1 = shgeo.Polygon(np.array(S.points)+ [S.shift[i][0],S.shift[i][1]])
+                    elif((SimVars.Mode == "Luminosity" and not frame.local_shift)):
+                        poly1 = shgeo.Polygon(np.array(S.points))
+                    elif((SimVars.Mode == "Area" and frame.local_shift)):
+                        poly1 = shgeo.Polygon(np.array(S.points[i])+ [S.shift[i][0],S.shift[i][1]])
+                    else:
+                        poly1 = shgeo.Polygon(np.array(S.points[i]))
+
+                    n = np.round(n).astype(int)
+                    bbmin = (max(np.min(n[:,1]) - 50, 0),max(np.min(n[:,0]) - 50, 0)) 
+                    bbmax = (min(np.max(n[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(n[:,0]) + 50, tiff_Arr.shape[-1]))
+                    n_shift = n-bbmin[::-1]
+                    tiff_Arr_small = tiff_Arr[i,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+                    c,w = FindNeckWidth(n_shift,tiff_Arr_small,S.neck_thresh[i],sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
+                    if(w == 0 and c == 0):
+                        No_Neck = True
+                        WarningNecks = True
+                    else:
+                        contour = c[0] + bbmin[::-1]
+                        try:
+                            poly2 = shgeo.Polygon(contour.squeeze())
+                            cut_neck = poly2.difference(poly1)
+                            x,y = cut_neck.exterior.xy
+                            Contours.append(np.vstack([x,y]).T)
+                        except:
+                            Contours.append(contour.squeeze())
+                        AvgWidth.append(w*SimVars.Unit)
+                if(not No_Neck):
+                    S.neck_contours = Contours
+                    S.neck_mean  = np.array([Luminosity_from_contour(c,tiff_Arr[i]) for i,c in enumerate(S.neck_contours)]).T.tolist()
+                    S.neck_width = AvgWidth
+                    line, = frame.mpl.axes.plot(S.neck_contours[frame.actual_timestep][:, 0], S.neck_contours[frame.actual_timestep][:, 1], 'y')
+                    frame.ContourLines.append(line)
+                else:
+                    S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
+                    frame.ContourLines.append([])
+                    frame.line_interactor_list[kk].line.set_color('red')
+            else:
+                S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
+                frame.ContourLines.append([])
+        else:
+            if(S.type < 2 and len(N) > 0):
+                N = np.round(N).astype(int)
+                if(N.ndim > 2):
+                    N = N[0]
+                bbmin = (max(np.min(N[:,1]) - 50, 0),max(np.min(N[:,0]) - 50, 0))
+                bbmax = (min(np.max(N[:,1]) + 50, tiff_Arr.shape[-2]),min(np.max(N[:,0]) + 50, tiff_Arr.shape[-1]))
+                N_shift = N-bbmin[::-1]
+                tiff_Arr_small = tiff_Arr[frame.actual_timestep,frame.actual_channel,bbmin[0]:bbmax[0], bbmin[1]:bbmax[1]]
+
+                c,w = FindNeckWidth(N_shift,tiff_Arr_small,S.neck_thresh,sigma = frame.spine_neck_sigma_slider.value(),width_factor = frame.spine_neck_width_mult_slider.value()*0.1)
+                if(w == 0 and c == 0):
+                    S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
+                    frame.ContourLines.append([])
+                    frame.line_interactor_list[kk].line.set_color('red')
+                    WarningNecks = True
+                else:
+                    S.neck_contours = (c[0] + bbmin[::-1]).squeeze()
+                    try:
+                        poly1 = shgeo.Polygon(S.points)
+                        poly2 = shgeo.Polygon(S.neck_contours)
+                        cut_neck = poly2.difference(poly1)
+                        x,y = cut_neck.exterior.xy
+                        S.neck_contours = np.vstack([x,y]).T
+                    except:
+                        pass
+                    S.neck_width    = [w*SimVars.Unit]
+                    if(SimVars.multitime_flag):
+                        S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[i]) for i in range(SimVars.Snapshots)]).T.tolist()
+                    else:
+                        S.neck_mean  = np.array([Luminosity_from_contour(S.neck_contours,tiff_Arr[frame.actual_timestep])]).T.tolist()
+
+                    line, = frame.mpl.axes.plot(S.neck_contours[:, 0], S.neck_contours[:, 1], 'y')
+                    frame.ContourLines.append(line)
+            else:
+                S.neck_contours,S.neck_mean,S.neck_width,S.neck_length = [],[],[],[]
+                frame.ContourLines.append([])
+
+    if(not WarningNecks):
+        frame.set_status_message.setText("Measuring ROI statistics")
+    else:
+        frame.set_status_message.setText("Measuring ROI statistics - but some necks couldn't be generated, proceed with care!")
+
+def Luminosity_from_contour(contour,image):
+
+    height,width = image.shape[1:]
+    x, y = np.meshgrid(np.arange(width), np.arange(height))
+    points = np.vstack((x.flatten(), y.flatten())).T
+
+    path_contour = Path(contour)
+
+    mask_flat = path_contour.contains_points(points)
+    mask = mask_flat.reshape((height, width))
+    return image[:,mask].mean(axis=-1)
+
 
 def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
 
@@ -507,12 +756,42 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
     Min  = []
     RawIntDen = []
     IntDen = []
-    for i in range(Snapshots):
-        try:
-            SynL = np.array(SynA[i]) + S.shift[i]
-        except:
-            SynL = np.array(SynA[i])
+    if(np.array(SynA).ndim == 3):
+        for i in range(Snapshots):
+            try:
+                SynL = np.array(SynA[i]) + S.shift[i]
+            except:
+                SynL = np.array(SynA[i])
+            SynL[:,0] = np.clip(SynL[:,0],0,tiff_Arr.shape[-1]-1)
+            SynL[:,1] = np.clip(SynL[:,1],0,tiff_Arr.shape[-2]-1)
+            
+            if SynL.ndim == 2:
+                mask = np.zeros(shape=tiff_Arr.shape[-2:], dtype=np.uint8)
+                c = SynL[:, 1]
+                r = SynL[:, 0]
+                rr, cc = polygon(r, c)
+                mask[cc, rr] = 1
+                props = regionprops(mask.astype(int))
+                try:
+                    roi  = tiff_Arr[i].astype(np.float64)
+                    roi[np.where(mask == 0)] = math.nan
+                    area_pix = np.sum(mask)
+                    area.append(int(area_pix) * SimVars.Unit**2)
+                    Max.append(int(np.nanmax(roi)))
+                    Min.append(int(np.nanmin(roi)))
+                    RawIntDen.append(int(np.nansum(roi)))
+                    IntDen.append(np.nansum(roi) * SimVars.Unit**2)
+                    Mean.append(np.nanmean(roi))
 
+                except Exception as ex:
+                    area.append(math.nan)
+                    Mean.append(math.nan)
+                    Max.append(math.nan)
+                    Min.append(math.nan)
+                    RawIntDen.append(math.nan)
+                    IntDen.append(math.nan)
+    else:
+        SynL = np.array(SynA)
         SynL[:,0] = np.clip(SynL[:,0],0,tiff_Arr.shape[-1]-1)
         SynL[:,1] = np.clip(SynL[:,1],0,tiff_Arr.shape[-2]-1)
         
@@ -522,9 +801,9 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
             r = SynL[:, 0]
             rr, cc = polygon(r, c)
             mask[cc, rr] = 1
-
+            props = regionprops(mask.astype(int))
             try:
-                roi  = tiff_Arr[i].astype(np.float64)
+                roi  = tiff_Arr[SimVars.frame.actual_timestep].astype(np.float64)
                 roi[np.where(mask == 0)] = math.nan
                 area_pix = np.sum(mask)
                 area.append(int(area_pix) * SimVars.Unit**2)
@@ -541,6 +820,8 @@ def MeasureShape(S, tiff_Arr, SimVars,Snapshots):
                 Min.append(math.nan)
                 RawIntDen.append(math.nan)
                 IntDen.append(math.nan)
+
+
 
     return Mean,area,Max,Min,RawIntDen,IntDen
 
@@ -586,11 +867,11 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
             r = SynL[:, 0]
             rr, cc = polygon(r, c)
             mask[cc, rr] = 1
+            props = regionprops(mask.astype(int))
             c = SynBg[:,1]
             r = SynBg[:,0]
             rr, cc = polygon(r, c)
             mask2[cc, rr] = 1
-
 
             try:
                 roi  = tiff_Arr[i].astype(np.float64)
@@ -606,6 +887,7 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
                 Mean.append(np.nanmean(roi))
                 local_bg.append(np.nanmean(roi2))
 
+
             except Exception as ex:
                 print(ex)
                 area.append(math.nan)
@@ -615,7 +897,40 @@ def MeasureShape_and_BG(S, tiff_Arr, SimVars, Snapshots):
                 RawIntDen.append(math.nan)
                 IntDen.append(math.nan)
                 local_bg.append(math.nan)
+
     return Mean,area,Max,Min,RawIntDen,IntDen,local_bg
+
+def SpineBoundingBox(S,Unit,Mode,Snaps):
+    """
+    Rotate coordinates (x, y) by angle `theta` (radians).
+    (x, y) can be arrays. 
+    Returns (x_rot, y_rot).
+    
+    Positive theta => counterclockwise rotation in standard Cartesian coords.
+    """
+    cos_t = np.cos(-S.Orientation)
+    sin_t = np.sin(-S.Orientation)
+    
+    if(Snaps == 1):
+        # Apply the rotation
+        x_r = cos_t * np.array(S.points)[:,0] - sin_t * np.array(S.points)[:,1]
+        y_r = sin_t * np.array(S.points)[:,0] + cos_t * np.array(S.points)[:,1]
+        
+        xmin, xmax = x_r.min(), x_r.max()
+        ymin, ymax = y_r.min(), y_r.max()
+        
+        S.head_bbox.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
+    else:
+        for pts in S.points:
+                # Apply the rotation
+                x_r = cos_t * np.array(pts)[:,0] - sin_t * np.array(pts)[:,1]
+                y_r = sin_t * np.array(pts)[:,0] + cos_t * np.array(pts)[:,1]
+                
+                xmin, xmax = x_r.min(), x_r.max()
+                ymin, ymax = y_r.min(), y_r.max()
+                
+                S.head_bbox.append([(xmax - xmin)*Unit,(ymax - ymin)*Unit])
+    return 0
 
                 
 def medial_axis_eval(SimVars,DendArr=None, window_instance:object=None) -> None:

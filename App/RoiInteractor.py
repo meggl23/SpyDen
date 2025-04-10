@@ -149,7 +149,7 @@ class RoiInteractor:
             return ind
         else:
             d1 = np.hypot(self.loc[0] - event.xdata, self.loc[1] - event.ydata)
-            if d[ind] >= self.epsilon and d1 > self.epsilon:
+            if d[ind] >= self.epsilon and d1 > self.epsilon*0.1:
                 ind = None
             elif d1 > d[ind]:
                 return ind

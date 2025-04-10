@@ -67,18 +67,17 @@ PyQt5
 imageio
 roifile
 superqt
+shapely
 ```
 
 ***
 ## Future features
-- Vertical distance of spine from dendrite
 - Circle of analysis (spine counting) around a given point
-- Spine classification into different types
 - 3D analysis
   
 ***
 ## How to cite
-The preprint of SpyDen can be found [here](https://anaconda.org/meggl23/spyden/). 
+The preprint of SpyDen can be found [here](https://www.biorxiv.org/content/10.1101/2024.06.07.597872v1). 
 
 Eggl*, M. F., Wagle*, S., Filling*, J. P. Chater, T. E., Goda, Y., Tchumatchenko, T.  (2024). SpyDen: Automating molecular and structural analysis across
 spines and dendrites. bioRxiv, 2024-06.
