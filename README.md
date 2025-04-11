@@ -41,7 +41,7 @@ To find information on how to operate, we suggest that users watch the following
 - [Loading data into Spyden](https://youtu.be/1o-l9o2W514)
 - [Getting started analyzing](https://youtu.be/1DYjQp4MUGA)
 - [Analyzing dendrites](https://youtu.be/bU41g8NW8Ts)
-- [Analyzing synapses](https://youtu.be/DiqYDdBQRz8)
+- [Analyzing synapses](https://youtu.be/hCaSBPzPwic)
 - [Analyzing puncta](https://youtu.be/fgDD-Ucr3ms)
 - [Understanding the output](https://youtu.be/3QC2gGxzXi0)
 
