@@ -3360,7 +3360,7 @@ class TutorialWindow(QWidget):
 
         self.dendurl = 'https://youtu.be/bU41g8NW8Ts'
 
-        self.spineurl = 'https://youtu.be/DiqYDdBQRz8'
+        self.spineurl = 'https://youtu.be/hCaSBPzPwic'
 
         self.punctaurl = 'https://youtu.be/fgDD-Ucr3ms'
 
