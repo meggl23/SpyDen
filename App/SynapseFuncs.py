@@ -728,8 +728,8 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.IntDen[c])
                             row.extend(s.local_bg[c])
                             if(len(s.neck_mean)==0):
+                                row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
                                 row.extend(np.zeros(nSnaps))
-                                row += ['' for n in s.neck_length] +['' for n in s.neck_width]
                             else:
                                 row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
                                 row.extend(s.neck_mean[c])
@@ -796,7 +796,7 @@ def SpineSave_csv(Dir,Spine_Arr,nChans,nSnaps,Mode,xLims,local_shift):
                             row.extend(s.IntDen[c])
                             row.extend([str([float(x) for x in sublist]) for sublist in s.head_bbox])
                             if(len(s.neck_mean)==0):
-                                row += [str(n) for n in s.neck_length] +['' for n in s.neck_width]
+                                row += ['' for n in range(nSnaps)] +['' for n in range(nSnaps)]
                                 row.extend(np.zeros(nSnaps))
                             else:
                                 row += [str(n) for n in s.neck_length] +[str(n) for n in s.neck_width]
