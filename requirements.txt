@@ -1,0 +1,15 @@
+matplotlib
+numpy
+networkx
+scikit-image
+regex
+torch>=2.0
+torchvision>=0.15
+tifffile
+opencv-python
+PyQt5
+imageio
+roifile
+superqt
+shapely
+requests
