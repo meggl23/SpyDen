@@ -6,7 +6,7 @@ regex
 torch>=2.0
 torchvision>=0.15
 tifffile
-opencv-python
+opencv-python-headless
 PyQt5
 imageio
 roifile
