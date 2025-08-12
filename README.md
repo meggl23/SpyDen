@@ -68,6 +68,7 @@ imageio
 roifile
 superqt
 shapely
+requests
 ```
 
 ***
