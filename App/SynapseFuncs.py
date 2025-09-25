@@ -591,11 +591,12 @@ def ReadSynDict(Dir, SimVars):
                     AppliedVals[k] = t[k]
 
             try:
+                SynType_backComp = AppliedVals["type"] if len(AppliedVals["neck"])>0 else 2
                 SynArr.append(
                     Synapse(
                         (AppliedVals["location"]+np.array([yLim,xLim])).tolist(),
                         (AppliedVals["bgloc"]+np.array([yLim,xLim])).tolist(),
-                        Syntype=AppliedVals["type"],
+                        Syntype=SynType_backComp,
                         dist=AppliedVals["distance"],
                         pts=(AppliedVals["points"]+np.array([yLim,xLim])).tolist(),
                         shift=AppliedVals["shift"],
@@ -617,7 +618,7 @@ def ReadSynDict(Dir, SimVars):
                     Synapse(
                         (AppliedVals["location"]+np.array([yLim,xLim])).tolist(),
                         AppliedVals["bgloc"],
-                        Syntype=AppliedVals["type"],
+                        Syntype=SynType_backComp,
                         dist=AppliedVals["distance"],
                         pts=pts,
                         shift=AppliedVals["shift"],

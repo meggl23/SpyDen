@@ -223,10 +223,19 @@ class Spine_Marker:
                 if(self.shift_is_held):
                     if(np.linalg.norm(self.points-coords,axis=-1)<10).any():
                         indx1 = np.argmin(np.linalg.norm(self.points-coords,axis=-1))
-                        self.flags[indx1] = 1
+                        identity = self.flags[indx1]
+                        if(identity == 0 or identity == 2):
+                            self.flags[indx1] = 1
+                        elif(identity == 1):
+                            self.flags[indx1] = 0
+
                         if(hasattr(self.SimVars,'points_NN')):
                             indx2 = np.argmin(np.linalg.norm(self.SimVars.points_NN-coords,axis=-1))
-                            self.SimVars.flags_NN[indx2] = 1
+                            identity = self.SimVars.flags_NN[indx2]
+                            if(identity == 0 or identity == 2):
+                                self.SimVars.flags_NN[indx2] = 1
+                            elif(identity == 1):
+                                self.SimVars.flags_NN[indx2] = 0
 
                         New = False
                     else:
@@ -236,10 +245,18 @@ class Spine_Marker:
                 elif(self.control_is_held):
                     if(np.linalg.norm(self.points-coords,axis=-1)<10).any():
                         indx1 = np.argmin(np.linalg.norm(self.points-coords,axis=-1))
-                        self.flags[indx1] = 2
+                        identity = self.flags[indx1]
+                        if(identity == 0 or identity == 1):
+                            self.flags[indx1] = 2
+                        elif(identity == 2):
+                            self.flags[indx1] = 0
                         if(hasattr(self.SimVars,'points_NN')):
                             indx2 = np.argmin(np.linalg.norm(self.SimVars.points_NN-coords,axis=-1))
-                            self.SimVars.flags_NN[indx2] = 2
+                            identity = self.SimVars.flags_NN[indx2]
+                            if(identity == 0 or identity == 1):
+                                self.SimVars.flags_NN[indx2] = 2
+                            elif(identity == 2):
+                                self.SimVars.flags_NN[indx2] = 0
 
                         New = False
                     else:
