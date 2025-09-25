@@ -68,6 +68,7 @@ imageio
 roifile
 superqt
 shapely
+requests
 ```
 
 ***
@@ -77,19 +78,19 @@ shapely
   
 ***
 ## How to cite
-The preprint of SpyDen can be found [here](https://www.biorxiv.org/content/10.1101/2024.06.07.597872v1). 
+The publication of SpyDen can be found [here](https://academic.oup.com/bioinformatics/advance-article/doi/10.1093/bioinformatics/btaf339/8163946?login=false). 
 
-Eggl*, M. F., Wagle*, S., Filling*, J. P. Chater, T. E., Goda, Y., Tchumatchenko, T.  (2024). SpyDen: Automating molecular and structural analysis across
-spines and dendrites. bioRxiv, 2024-06.
+Eggl*, M. F., Wagle*, S., Filling*, J. P. Chater, T. E., Goda, Y., Tchumatchenko, T.  (2025). SpyDen: Simplifying molecular and structural analysis across
+spines and dendrites. Bioinformatics, btaf339.
 
 BibTeX entry for LaTeX users:
 
 ```bibtex
-@article{eggl2024spyden,
-  title={SpyDen: Automating molecular and structural analysis across spines and dendrites},
+@article{eggl2025spyden,
+  title={SpyDen: Simplifying molecular and structural analysis across spines and dendrites},
   author={Eggl, Maximilian F and Wagle, Surbhit and Filling, Jean P and Chater, Thomas E and Goda, Yukiko and Tchumatchenko, Tatjana},
-  journal={bioRxiv},
-  pages={2024--06},
-  year={2024},
-  publisher={Cold Spring Harbor Laboratory}
+  journal={Bioinformatics},
+  pages={btaf339},
+  year={2025},
+  publisher={Oxford University Press}
 }
