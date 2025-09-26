@@ -170,6 +170,8 @@ class Dendrite:
             Chans = 1
         self.dend_lumin = np.zeros(shape= (len(self.smoothed_all_pts), Snaps,Chans))
         self.dend_lumin_ell = np.zeros(shape= (len(self.smoothed_all_pts), Snaps,Chans))
+
+        self.SimVars.frame.set_status_message.setText(self.SimVars.frame.set_status_message.text()+' [' + '_'*(1+len(self.smoothed_all_pts)//100) + ']')
         for pdx, p in enumerate(self.smoothed_all_pts):
             self.dend_stat[pdx, 0] = p[1]
             self.dend_stat[pdx, 1] = p[0]
@@ -177,7 +179,9 @@ class Dendrite:
             self.dend_stat[pdx, 4] = degrees[pdx]
             mask = self.GenEllipse(mask,p,pdx,degrees,width_arr,Snaps,Chans)
             if(pdx%100==0):
-                self.SimVars.frame.set_status_message.setText(self.SimVars.frame.set_status_message.text()+'.')
+                text = list(self.SimVars.frame.set_status_message.text())
+                text[-2 -len(self.smoothed_all_pts)//100 + pdx//100] = '-'
+                self.SimVars.frame.set_status_message.setText("".join(text))
                 QCoreApplication.processEvents()
                 self.SimVars.frame.set_status_message.repaint()
         gaussian_mask = (gaussian_filter(input=mask, sigma=sigma) >= np.mean(mask)).astype(np.uint8)

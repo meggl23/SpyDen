@@ -2678,6 +2678,8 @@ class DataReadWindow(QWidget):
         self.set_status_message.setText('Calculating Dendritic width')
         QCoreApplication.processEvents()
         self.SimVars.frame.set_status_message.repaint()
+        self.neighbour_slider.setEnabled(False)
+        self.dend_width_mult_slider.setEnabled(False)
         self.PunctaCalc = False
         if(hasattr(self,'DendMeasure')):
             self.DendArr = self.DendMeasure.DendArr
@@ -2722,7 +2724,8 @@ class DataReadWindow(QWidget):
         MakeButtonActive(self.save_button)
         MakeButtonActive(self.measure_puncta_button)
         self.dendritic_width_button.setChecked(False)
-
+        self.neighbour_slider.setEnabled(True)
+        self.dend_width_mult_slider.setEnabled(True)
         self.set_status_message.setText('Width calculation complete')
         QCoreApplication.processEvents()
         self.SimVars.frame.set_status_message.repaint()
